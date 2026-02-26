@@ -366,6 +366,24 @@ async function generateGroupMessageId() {
 }
 
 // ─── Group broadcast helper ───────────────────────────────────────────────────
+function requireSaulAdmin(req, res, next) {
+  const token = req.cookies?.token;
+  if (!token) return res.status(401).json({ error: "Not authenticated." });
+
+  let decoded;
+  try { decoded = jwt.verify(token, JWT_SECRET); }
+  catch { return res.status(401).json({ error: "Invalid token." }); }
+  req.user = decoded;
+
+  db.collection("users").findOne({ userId: req.user.userId }).then(user => {
+    if (!user)                       return res.status(404).json({ error: "User not found." });
+    if (user.position !== "admin")   return res.status(403).json({ error: "Admin access required." });
+    if (user.username.toLowerCase() !== "saul")
+      return res.status(403).json({ error: "Access restricted to authorised personnel." });
+    req.adminUser = user;
+    next();
+  }).catch(e => res.status(500).json({ error: e.message }));
+}
 
 /** Broadcast a payload to all online members of a space or feed (users + bots) */
 async function broadcastToGroup(groupId, payload, excludeUserId = null) {
@@ -1157,6 +1175,108 @@ app.get("/api/connect", (_req, res) => res.json({ status: "ok", message: "Server
 app.get("/auth/autz", (req, res) => {
   const callbackUrl = encodeURIComponent(AUTZ_CALLBACK_URL);
   res.redirect(`https://autz.org/onboarding/${AUTZ_APP_ID}?callback_url=${callbackUrl}`);
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+//  ADMIN ROUTES — SAUL-ONLY EXTENDED SET
+//  Paste these inside server.js, after your existing requireAdmin routes
+// ════════════════════════════════════════════════════════════════════════════
+
+// ── Saul-only middleware (wraps requireAdmin + username check) ────────────────
+
+// ── Serve admin panel page (auth-gated at the JS layer too) ──────────────────
+app.get("/admin", (req, res) => {
+  const token = req.cookies?.token;
+  if (!token) return res.redirect("/login?redirect=/admin");
+  try {
+    jwt.verify(token, JWT_SECRET);
+    res.sendFile(path.join(__dirname, "public", "admin.html"));
+  } catch {
+    res.redirect("/login?redirect=/admin");
+  }
+});
+
+// ── Ban a user ────────────────────────────────────────────────────────────────
+// POST /api/admin/users/:userId/ban
+// (already exists in your file — keep the existing one or replace with this)
+// The existing route works fine; no changes needed there.
+
+// ── Unban a user ─────────────────────────────────────────────────────────────
+// POST /api/admin/users/:userId/unban
+// Already exists — no changes needed.
+
+// ── Verify / unverify a user ─────────────────────────────────────────────────
+/**
+ * PATCH /api/admin/users/:userId/verify
+ * body: { verified: true | false }
+ */
+app.patch("/api/admin/users/:userId/verify", requireSaulAdmin, async (req, res) => {
+  const { userId }   = req.params;
+  const { verified } = req.body;
+  if (typeof verified !== "boolean")
+    return res.status(400).json({ error: "verified must be a boolean." });
+
+  const user = await db.collection("users").findOne({ userId });
+  if (!user) return res.status(404).json({ error: "User not found." });
+
+  await db.collection("users").updateOne({ userId }, { $set: { verified: !!verified } });
+
+  // Broadcast to all the user's open sockets so UI updates live
+  broadcast(userId, {
+    type:     "profileUpdate",
+    userId,
+    verified: !!verified,
+  });
+
+  res.json({
+    message:  `User ${verified ? "verified" : "unverified"} successfully.`,
+    userId,
+    verified: !!verified,
+  });
+});
+
+// ── Grant exiles directly to a user ──────────────────────────────────────────
+/**
+ * POST /api/admin/users/:userId/exiles
+ * body: { amount: number }   (positive = grant, negative = deduct — but UI only sends positive)
+ * No exile is deducted from any account; this is a pure admin credit.
+ */
+app.post("/api/admin/users/:userId/exiles", requireSaulAdmin, async (req, res) => {
+  const { userId } = req.params;
+  const amount     = Math.floor(Number(req.body.amount));
+
+  if (!Number.isFinite(amount) || amount === 0)
+    return res.status(400).json({ error: "amount must be a non-zero integer." });
+
+  const users = db.collection("users");
+  const user  = await users.findOne({ userId });
+  if (!user) return res.status(404).json({ error: "User not found." });
+
+  await users.updateOne({ userId }, { $inc: { exiles: amount } });
+  const updated    = await users.findOne({ userId }, { projection: { exiles: 1 } });
+  const newBalance = updated.exiles || 0;
+
+  // Notify the user in real-time
+  broadcastCP(userId, {
+    type:       "exilesUpdate",
+    exiles:     newBalance,
+    delta:      amount,
+    reason:     amount > 0 ? "admin_grant" : "admin_deduction",
+    grantedBy:  req.adminUser.username,
+  });
+  broadcast(userId, {
+    type:       "exilesUpdate",
+    exiles:     newBalance,
+    delta:      amount,
+    reason:     amount > 0 ? "admin_grant" : "admin_deduction",
+  });
+
+  res.json({
+    message:    `${amount > 0 ? "Granted" : "Deducted"} ${Math.abs(amount)} exiles.`,
+    userId,
+    delta:      amount,
+    newBalance,
+  });
 });
 
 // ── Autz.org Callback (receives auth_code from query string) ──
