@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EXILE — Sign In</title>
+<style>
+/* ============================================================
+   TOKENS — mirrored from Bridge TV site
+   ============================================================ */
+:root {
+  --dusk-deep:     #120812;
+  --dusk-mid:      #1e0e24;
+  --amber:         #c97b3a;
+  --amber-light:   #e8a85c;
+  --purple-accent: #9b59b6;
+  --purple-glow:   rgba(155,89,182,0.3);
+  --text-primary:  rgba(255,255,255,0.93);
+  --text-sec:      rgba(255,255,255,0.55);
+  --text-dim:      rgba(255,255,255,0.3);
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+}
+
+/* ============================================================
+   DARK MODE OVERRIDES
+   Applied via body.dark-mode — default/black/system all keep light (current) theme.
+   Dark mode flips to near-black backgrounds with muted glass.
+   ============================================================ */
+body.dark-mode {
+  --dusk-deep:     #000000;
+  --dusk-mid:      #0a0a0a;
+  --amber:         #8b5a2b;
+  --amber-light:   #a07038;
+  --purple-accent: #7a46a0;
+  --purple-glow:   rgba(122,70,160,0.2);
+  --text-primary:  rgba(255,255,255,0.88);
+  --text-sec:      rgba(255,255,255,0.45);
+  --text-dim:      rgba(255,255,255,0.22);
+}
+
+body.dark-mode .bg-base {
+  background: #000000;
+}
+
+body.dark-mode .bg-glow {
+  opacity: 0.2;
+}
+
+body.dark-mode .glass {
+  background:
+    linear-gradient(180deg,
+      rgba(255,255,255,0.055) 0%,
+      rgba(255,255,255,0.018) 18%,
+      rgba(255,255,255,0.012) 80%,
+      rgba(255,255,255,0.03) 100%
+    );
+  border-color: rgba(255,255,255,0.07);
+  border-top-color: rgba(255,255,255,0.11);
+}
+
+body.dark-mode .site-header {
+  background:
+    linear-gradient(180deg,
+      rgba(0,0,0,0.75) 0%,
+      rgba(0,0,0,0.6) 100%
+    );
+  border-bottom-color: rgba(255,255,255,0.06);
+}
+
+body.dark-mode .status-area {
+  background: rgba(0,0,0,0.4);
+  border-color: rgba(255,255,255,0.04);
+}
+
+body.dark-mode .stat-item {
+  background: rgba(0,0,0,0.35);
+  border-color: rgba(255,255,255,0.04);
+}
+
+body.dark-mode .autz-btn {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.08);
+}
+body.dark-mode .autz-btn:hover {
+  background: rgba(255,255,255,0.09);
+  border-color: rgba(255,255,255,0.15);
+}
+
+body.dark-mode .user-card {
+  background: rgba(122,70,160,0.06);
+  border-color: rgba(122,70,160,0.16);
+}
+
+body.dark-mode .divider::before,
+body.dark-mode .divider::after {
+  background: rgba(255,255,255,0.05);
+}
+
+body.dark-mode .logo-text {
+  background: linear-gradient(135deg, rgba(255,255,255,0.75) 30%, var(--amber-light) 60%, var(--purple-accent) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+/* Theme toggle button */
+.theme-toggle {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text-sec);
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+  flex-shrink: 0;
+}
+.theme-toggle:hover {
+  background: rgba(255,255,255,0.14);
+  transform: scale(1.05);
+}
+.theme-toggle:active { transform: scale(0.95); }
+.theme-toggle svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: opacity 0.2s;
+}
+
+/* Transition all color changes smoothly */
+body, .bg-base, .bg-glow, .glass, .site-header,
+.status-area, .stat-item, .autz-btn, .user-card,
+.logo-text {
+  transition: background 0.35s ease, border-color 0.35s ease,
+              color 0.35s ease, opacity 0.35s ease;
+}
+
+/* ============================================================
+   RESET
+   ============================================================ */
+*,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
+html,body { height:100%; overflow-x:hidden; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--dusk-deep);
+  color: var(--text-primary);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================================
+   BACKGROUNDS
+   ============================================================ */
+.bg-base {
+  position:fixed; inset:0; z-index:0;
+  background:
+    radial-gradient(ellipse 130% 55% at 50% 0%,  #2e1640 0%, transparent 65%),
+    radial-gradient(ellipse 70% 45% at 15% 75%,  #1f1028 0%, transparent 55%),
+    radial-gradient(ellipse 85% 35% at 85% 55%,  #3a1e45 0%, transparent 50%),
+    radial-gradient(ellipse 60% 30% at 50% 95%,  #1a0c1e 0%, transparent 60%),
+    linear-gradient(180deg, #1c0e25 0%, #130a18 35%, #0d0610 100%);
+  transform: translateZ(0);
+}
+
+.bg-glow {
+  position:fixed; inset:0; z-index:1; pointer-events:none;
+  background:
+    radial-gradient(ellipse 65% 22% at 50% 28%, rgba(201,123,58,0.1) 0%, transparent 70%),
+    radial-gradient(ellipse 45% 18% at 25% 60%, rgba(155,89,182,0.07) 0%, transparent 55%);
+  transform: translateZ(0);
+}
+
+/* ============================================================
+   GLASS — same as Bridge TV
+   ============================================================ */
+.glass {
+  background:
+    linear-gradient(180deg,
+      rgba(255,255,255,0.11) 0%,
+      rgba(255,255,255,0.045) 18%,
+      rgba(255,255,255,0.035) 80%,
+      rgba(255,255,255,0.06) 100%
+    );
+  backdrop-filter: blur(32px) saturate(1.3);
+  -webkit-backdrop-filter: blur(32px) saturate(1.3);
+  border: 1px solid rgba(255,255,255,0.13);
+  border-top-color: rgba(255,255,255,0.22);
+  box-shadow:
+    0 1px 0 inset rgba(255,255,255,0.12),
+    0 6px 28px rgba(0,0,0,0.3),
+    0 1px 2px rgba(0,0,0,0.2);
+  border-radius: var(--r-lg);
+  transform: translateZ(0);
+}
+
+/* ============================================================
+   PAGE SHELL
+   ============================================================ */
+.page {
+  position: relative;
+  z-index: 10;
+  width: 92%;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 72px 0 44px; /* 72px = header height clearance */
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ============================================================
+   STICKY HEADER — full width, compact, logo left
+   ============================================================ */
+.site-header {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background:
+    linear-gradient(180deg,
+      rgba(255,255,255,0.1) 0%,
+      rgba(255,255,255,0.04) 100%
+    );
+  backdrop-filter: blur(32px) saturate(1.3);
+  -webkit-backdrop-filter: blur(32px) saturate(1.3);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 2px 16px rgba(0,0,0,0.25);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.exile-logo-svg {
+  width: 28px;
+  height: 28px;
+}
+
+.logo-text {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, #fff 30%, var(--amber-light) 60%, var(--purple-accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+/* ============================================================
+   TAGLINE
+   ============================================================ */
+.tagline {
+  text-align: center;
+  padding: 4px 16px 0;
+}
+.tagline p {
+  font-size: 11.5px;
+  color: var(--text-dim);
+  letter-spacing: 0.3px;
+}
+
+/* ============================================================
+   CARD — login box
+   ============================================================ */
+.login-card {
+  padding: 22px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: center;
+  letter-spacing: -0.2px;
+}
+
+.card-sub {
+  font-size: 11px;
+  color: var(--text-sec);
+  text-align: center;
+  margin-top: -8px;
+  line-height: 1.5;
+}
+
+/* ============================================================
+   STATUS AREA — checking if already logged in
+   ============================================================ */
+.status-area {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(0,0,0,0.18);
+  border: 1px solid rgba(255,255,255,0.055);
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+  min-height: 44px;
+}
+
+.status-icon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.status-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255,255,255,0.12);
+  border-top-color: var(--purple-accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.status-text {
+  font-size: 11.5px;
+  color: var(--text-sec);
+}
+
+.status-area.success {
+  border-color: rgba(16,185,129,0.3);
+  background: rgba(16,185,129,0.08);
+}
+
+.status-area.success .status-text {
+  color: #6ee7b7;
+}
+
+/* ============================================================
+   DIVIDER
+   ============================================================ */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255,255,255,0.08);
+}
+.divider span {
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   CONTINUE AS (logged-in user card)
+   ============================================================ */
+.user-continue {
+  display: none; /* shown via JS */
+  flex-direction: column;
+  gap: 10px;
+}
+
+.user-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 13px;
+  background: rgba(155,89,182,0.08);
+  border: 1px solid rgba(155,89,182,0.22);
+  border-radius: var(--r-md);
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(155,89,182,0.35);
+  object-fit: cover;
+  background: rgba(155,89,182,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: var(--purple-accent);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.user-info {
+  min-width: 0;
+}
+.user-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.user-handle {
+  font-size: 10.5px;
+  color: var(--text-sec);
+  margin-top: 1px;
+}
+
+.continue-btn {
+  width: 100%;
+  padding: 11px 16px;
+  border-radius: var(--r-md);
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  transition: opacity 0.2s, transform 0.15s;
+  background: linear-gradient(135deg, var(--purple-accent), #7d3f99);
+  color: #fff;
+  box-shadow: 0 2px 12px rgba(155,89,182,0.3);
+}
+.continue-btn:hover  { opacity: 0.88; }
+.continue-btn:active { transform: scale(0.98); opacity: 1; }
+
+.continue-btn svg { width: 15px; height: 15px; fill: currentColor; }
+
+.switch-account-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 10.5px;
+  cursor: pointer;
+  text-align: center;
+  width: 100%;
+  padding: 4px;
+  transition: color 0.2s;
+  display: block;
+}
+.switch-account-btn:hover { color: var(--text-sec); }
+
+/* ============================================================
+   AUTZ SIGN IN BUTTON
+   ============================================================ */
+.autz-btn {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: var(--r-md);
+  border: 1px solid rgba(255,255,255,0.12);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  transition: background 0.22s, border-color 0.22s, transform 0.15s;
+  background: rgba(255,255,255,0.07);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+.autz-btn:hover {
+  background: rgba(255,255,255,0.13);
+  border-color: rgba(255,255,255,0.22);
+}
+.autz-btn:active { transform: scale(0.98); }
+
+/* Autz.org icon — styled "A" badge */
+.autz-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.5px;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   FOOTER NOTE
+   ============================================================ */
+.footer-note {
+  text-align: center;
+  padding: 0 16px;
+}
+.footer-note p {
+  font-size: 9.5px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+.footer-note a {
+  color: var(--purple-accent);
+  text-decoration: none;
+}
+.footer-note a:hover { text-decoration: underline; }
+
+/* ============================================================
+   LIVE PILL  (same as Bridge TV)
+   ============================================================ */
+.live-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(155,89,182,0.18);
+  border: 1px solid rgba(155,89,182,0.28);
+  padding: 3px 10px;
+  border-radius: 18px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.9px;
+  color: #c4b5fd;
+}
+.live-dot {
+  width: 5px;
+  height: 5px;
+  background: var(--purple-accent);
+  border-radius: 50%;
+  animation: livePulse 2s infinite;
+}
+@keyframes livePulse { 0%,100%{opacity:1} 50%{opacity:0.25} }
+
+/* ============================================================
+   STAT ROW  (same from Bridge TV)
+   ============================================================ */
+.stats-row {
+  padding: 0 4px 4px;
+  display: flex;
+  gap: 7px;
+}
+.stat-item {
+  flex: 1;
+  background: rgba(0,0,0,0.18);
+  border: 1px solid rgba(255,255,255,0.055);
+  border-radius: var(--r-sm);
+  padding: 7px 8px;
+  text-align: center;
+}
+.stat-item .s-label { font-size: 8.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 1px; }
+.stat-item .s-value { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: rgba(239,68,68,0.9);
+  color: #fff;
+  padding: 9px 18px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  transition: transform 0.3s ease;
+  z-index: 999;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media(max-width:480px){
+  .page { width: 96%; }
+  .login-card { padding: 18px 16px; }
+}
+</style>
+</head>
+<body>
+
+<div class="bg-base"></div>
+<div class="bg-glow"></div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Sticky header — outside .page so it spans full width -->
+<header class="site-header">
+  <div class="logo">
+    <svg class="exile-logo-svg" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="swordGrad" x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#e8a85c"/>
+          <stop offset="55%" stop-color="#c97b3a"/>
+          <stop offset="100%" stop-color="#9b59b6"/>
+        </linearGradient>
+        <linearGradient id="bladeGrad" x1="22" y1="2" x2="22" y2="38" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#fff" stop-opacity="0.95"/>
+          <stop offset="60%" stop-color="#e8a85c"/>
+          <stop offset="100%" stop-color="#c97b3a"/>
+        </linearGradient>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="1.2" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <circle cx="22" cy="22" r="21" fill="url(#swordGrad)" opacity="0.18"/>
+      <circle cx="22" cy="22" r="21" stroke="url(#swordGrad)" stroke-width="1" opacity="0.45"/>
+      <g filter="url(#glow)">
+        <polygon points="22,4 23.5,26 22,27.5 20.5,26" fill="url(#bladeGrad)"/>
+        <polygon points="22,2 23.2,5.5 22,7 20.8,5.5" fill="#fff" opacity="0.95"/>
+        <line x1="22" y1="8" x2="22" y2="25" stroke="rgba(255,255,255,0.25)" stroke-width="0.6"/>
+      </g>
+      <g filter="url(#glow)">
+        <rect x="13" y="26" width="18" height="3" rx="1.5" fill="url(#swordGrad)" transform="rotate(-8, 22, 27.5)"/>
+        <rect x="15" y="27" width="14" height="0.8" rx="0.4" fill="rgba(255,255,255,0.3)" transform="rotate(-8, 22, 27.5)"/>
+        <circle cx="13.5" cy="26.5" r="1.5" fill="#c97b3a" transform="rotate(-8, 22, 27.5)"/>
+        <circle cx="30.5" cy="26.5" r="1.5" fill="#c97b3a" transform="rotate(-8, 22, 27.5)"/>
+      </g>
+      <rect x="21" y="29.5" width="2" height="8" rx="1" fill="url(#swordGrad)" opacity="0.9"/>
+      <line x1="20.8" y1="31" x2="23.2" y2="31" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+      <line x1="20.8" y1="33" x2="23.2" y2="33" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+      <line x1="20.8" y1="35" x2="23.2" y2="35" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+      <ellipse cx="22" cy="38.5" rx="2.5" ry="1.8" fill="#c97b3a" opacity="0.95"/>
+      <ellipse cx="22" cy="38" rx="1.2" ry="0.8" fill="rgba(255,255,255,0.25)"/>
+    </svg>
+    <div class="logo-text">EXILE</div>
+  </div>
+  <div class="header-right" style="display:flex;align-items:center;gap:8px;">
+    <div class="live-pill"><div class="live-dot"></div>COMMUNITY</div>
+    <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode">
+      <!-- Moon icon (shown in light mode) -->
+      <svg id="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <!-- Sun icon (shown in dark mode, hidden by default) -->
+      <svg id="icon-sun" viewBox="0 0 24 24" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="page">
+
+  <!-- Tagline -->
+  <div class="tagline">
+    <p>Sign in to continue to your exile</p>
+  </div>
+
+  <!-- Stats strip -->
+  <div class="stats-row">
+    <div class="stat-item">
+      <div class="s-label">Members</div>
+      <div class="s-value" id="stat-members">—</div>
+    </div>
+    <div class="stat-item">
+      <div class="s-label">Online</div>
+      <div class="s-value" id="stat-online">—</div>
+    </div>
+    <div class="stat-item">
+      <div class="s-label">Spaces</div>
+      <div class="s-value" id="stat-spaces">—</div>
+    </div>
+  </div>
+
+  <!-- Login Card -->
+  <div class="login-card glass">
+
+    <div class="card-title">Welcome Back</div>
+    <div class="card-sub">Sign in to chat, explore spaces, and connect.</div>
+
+    <!-- Auth status check -->
+    <div class="status-area" id="status-area">
+      <div class="status-icon">
+        <div class="status-spinner" id="status-spinner"></div>
+      </div>
+      <div class="status-text" id="status-text">Checking session…</div>
+    </div>
+
+    <!-- Already logged in: continue as user -->
+    <div class="user-continue" id="user-continue">
+      <div class="divider"><span>Continue as</span></div>
+
+      <div class="user-card">
+        <div class="user-avatar" id="user-avatar">
+          <!-- Avatar or emoji fallback populated by JS -->
+        </div>
+        <div class="user-info">
+          <div class="user-name"  id="user-name">—</div>
+          <div class="user-handle" id="user-handle">—</div>
+        </div>
+      </div>
+
+      <button class="continue-btn" id="continue-btn" onclick="goHome()">
+        <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        Continue to EXILE
+      </button>
+
+      <button class="switch-account-btn" onclick="showSignInOptions()">
+        Sign in with a different account
+      </button>
+    </div>
+
+    <!-- Sign in options (shown when not logged in or switching) -->
+    <div id="signin-options" style="display:none; flex-direction:column; gap:10px;">
+      <div class="divider"><span>Sign in with</span></div>
+
+      <a class="autz-btn" href="/auth/autz" id="autz-btn">
+        <div class="autz-icon">A</div>
+        Continue with Autz.org
+      </a>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <div class="footer-note">
+    <p>By signing in you agree to EXILE's
+      <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
+      Authentication is handled securely by <a href="https://autz.org" target="_blank">Autz.org</a>.
+    </p>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// THEME — runs immediately to avoid flash
+// Rules:
+//   localStorage "theme" === "dark"          → dark mode
+//   localStorage "theme" === "default"       → light (current purple/amber)
+//   localStorage "theme" === "black"         → light
+//   localStorage "theme" === "system"        → light
+//   anything else / missing                  → light
+// ============================================================
+(function() {
+  const stored = localStorage.getItem('theme');
+  const isDark = stored === 'dark';
+  if (isDark) document.body.classList.add('dark-mode');
+})();
+
+// ── Theme toggle ────────────────────────────────────────────────────────────
+function initThemeToggle() {
+  const btn     = document.getElementById('theme-toggle');
+  const iconMoon = document.getElementById('icon-moon');
+  const iconSun  = document.getElementById('icon-sun');
+
+  function syncIcons() {
+    const dark = document.body.classList.contains('dark-mode');
+    iconMoon.style.display = dark ? 'none'  : '';
+    iconSun.style.display  = dark ? ''      : 'none';
+  }
+
+  syncIcons(); // set correct icon on load
+
+  btn.addEventListener('click', () => {
+    const nowDark = document.body.classList.toggle('dark-mode');
+    localStorage.setItem('theme', nowDark ? 'dark' : 'default');
+    syncIcons();
+  });
+}
+
+// ============================================================
+// EXILE login.html — auth flow
+// Routes: GET /api/me  →  already logged in?
+//         GET /auth/autz  →  redirect to Autz.org
+// ============================================================
+
+const toastEl = document.getElementById('toast');
+function showToast(msg, color) {
+  toastEl.textContent = msg;
+  toastEl.style.background = color || 'rgba(239,68,68,0.9)';
+  toastEl.classList.add('show');
+  setTimeout(() => toastEl.classList.remove('show'), 3200);
+}
+
+function goHome() {
+  window.location.href = '/home.html';
+}
+
+function setStatus(text, success) {
+  const area     = document.getElementById('status-area');
+  const statusTx = document.getElementById('status-text');
+  const spinner  = document.getElementById('status-spinner');
+
+  statusTx.textContent = text;
+
+  if (success) {
+    area.classList.add('success');
+    spinner.style.display = 'none';
+    const check = document.createElement('div');
+    check.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6ee7b7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+    document.getElementById('status-area').querySelector('.status-icon').appendChild(check);
+  }
+}
+
+function showUserContinue(user) {
+  const block = document.getElementById('user-continue');
+  block.style.display = 'flex';
+
+  document.getElementById('user-name').textContent   = user.name   || 'Unknown';
+  document.getElementById('user-handle').textContent = '@' + (user.username || '') + ' · ' + (user.contactNumber || '');
+
+  const avatarEl = document.getElementById('user-avatar');
+  if (user.profilePicture) {
+    const img = document.createElement('img');
+    img.src = user.profilePicture;
+    img.alt = user.name;
+    avatarEl.appendChild(img);
+  } else {
+    avatarEl.textContent = user.spiritEmoji || '👤';
+    avatarEl.style.fontSize = '20px';
+    avatarEl.style.textAlign = 'center';
+    avatarEl.style.lineHeight = '40px';
+  }
+}
+
+function showSignInOptions() {
+  document.getElementById('user-continue').style.display = 'none';
+  document.getElementById('signin-options').style.display = 'flex';
+  document.getElementById('status-area').style.display = 'none';
+}
+
+// ── Check if already authenticated ─────────────────────────────────────────
+async function checkAuth() {
+  try {
+    const res = await fetch('/api/me', { credentials: 'include' });
+
+    if (res.ok) {
+      const data = await res.json();
+      const user = data.user;
+      setStatus('Session active · ' + user.name, true);
+      setTimeout(() => showUserContinue(user), 600);
+
+    } else if (res.status === 401) {
+      setStatus('No active session');
+      setTimeout(() => {
+        document.getElementById('status-area').style.display = 'none';
+        document.getElementById('signin-options').style.display = 'flex';
+      }, 600);
+
+    } else {
+      throw new Error('Server error');
+    }
+  } catch (err) {
+    setStatus('Could not reach server');
+    setTimeout(() => {
+      document.getElementById('signin-options').style.display = 'flex';
+    }, 800);
+    showToast('Connection error — check your network', 'rgba(245,158,11,0.9)');
+  }
+}
+
+// ── Check for error/redirect params ────────────────────────────────────────
+function checkUrlParams() {
+  const p = new URLSearchParams(location.search);
+  if (p.get('error') === 'auth_failed') showToast('Sign-in failed — please try again');
+  if (p.get('error') === 'banned')      showToast('Your account has been suspended', 'rgba(239,68,68,0.95)');
+  if (p.get('loggedIn') === 'true')     window.location.replace('/home.html');
+}
+
+// ── Stats ───────────────────────────────────────────────────────────────────
+function loadStats() {
+  fetch('/api/stats')
+    .then(r => r.ok ? r.json() : null)
+    .catch(() => null)
+    .then(data => {
+      if (!data) return;
+      document.getElementById('stat-members').textContent = data.members?.toLocaleString() ?? '—';
+      document.getElementById('stat-online').textContent  = data.online?.toLocaleString()  ?? '—';
+      document.getElementById('stat-spaces').textContent  = data.spaces?.toLocaleString()  ?? '—';
+    });
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+initThemeToggle();
+checkUrlParams();
+checkAuth();
+loadStats();
+</script>
+</body>
+</html>
