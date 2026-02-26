@@ -2800,7 +2800,21 @@ app.post("/api/bots/:botId/regenerate-token", requireAuth, async (req, res) => {
 
   res.json({ botToken: newToken });
 });
+router.get('/blocks/check/:userId', requireAuth, async (req, res) => {
+  try {
+    const blockerId = req.user.userId;
+    const blockedId = req.params.userId;
 
+    const block = await db.blocks.findOne({
+      where: { blockerId, blockedId }
+    });
+
+    return res.json({ blocked: !!block });
+  } catch (err) {
+    console.error('block check error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
 // ── Delete a bot ──────────────────────────────────────────────────────────────
 app.delete("/api/bots/:botId", requireAuth, async (req, res) => {
   const bots = db.collection("bots");
