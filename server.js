@@ -3581,6 +3581,21 @@ app.get("/api/admin/reported-users", requireAdmin, async (req, res) => {
   });
 });
 
+// Add this BEFORE your requireAuth routes, near the other /auth/ routes
+app.get("/auth/check-username", async (req, res) => {
+  const { username } = req.query;
+  if (!username?.trim()) return res.status(400).json({ error: "username is required." });
+
+  const err = validateUsername(username.trim());
+  if (err) return res.json({ available: false, reason: err });
+
+  const taken = await db.collection("users").findOne({ 
+    usernameLower: username.trim().toLowerCase() 
+  });
+  
+  res.json({ available: !taken });
+});
+
 // ── Ban / unban / warn a user (direct admin action) ───────────────────────────
 app.post("/api/admin/users/:userId/ban", requireAdmin, async (req, res) => {
   const { userId } = req.params;
