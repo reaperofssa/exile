@@ -27,7 +27,7 @@ const DB_NAME      = process.env.DB_NAME     || "exileye";
 const PORT         = process.env.PORT        || 3000;
 
 const AUTZ_APP_ID  = process.env.AUTZ_APP_ID  || "chiq1ujiq";
-const AUTZ_CALLBACK_URL = process.env.AUTZ_CALLBACK_URL || "http://exile.nett.to/auth/autz/callback";
+const AUTZ_CALLBACK_URL = process.env.AUTZ_CALLBACK_URL || "https://exile.nett.to/auth/autz/callback";
 
 const MSG_TEXT_MAX    = 1020;   // chars for plain text
 const MSG_CAPTION_MAX = 500;    // chars for media caption
