@@ -997,7 +997,7 @@ let oldestId = null, newestId = null;
 let loadingOlder = false, allLoaded = false;
 
 // websocket
-let ws = null, wsReady = false;
+let ws = null, wsReady = false, wsHeartbeat = null, wsReconnectTimer = null, wsReconnectAttempts = 0;
 let typingTimer = null, isTyping = false;
 let recipientTyping = false, typingTimeout = null;
 
@@ -1470,27 +1470,57 @@ function convId() {
 }
 
 function connectWS() {
+  // Don't stack connections
+  if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  ws = new WebSocket(`${proto}//${location.host}`);
+  // Pass token as query param to work around server-side cookie parsing of JWTs with '=' chars
+  const token = document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('token='))?.slice(6) || '';
+  ws = new WebSocket(`${proto}//${location.host}${token ? '?token='+encodeURIComponent(token) : ''}`);
 
   ws.onopen = () => {
     wsReady = true;
+    wsReconnectAttempts = 0;
     console.log('WS connected');
+
+    // Immediate ping so reverse proxies don't drop the idle connection
+    ws.send(JSON.stringify({ type: 'ping' }));
+
+    // Mark messages as read on connect
     if (newestId) {
       sendWS({ type: 'read', conversationId: convId(), upToMessageId: newestId });
     }
-    // Heartbeat every 25s
-    setInterval(() => { if(ws.readyState===1) ws.send(JSON.stringify({type:'ping'})); }, 25000);
+
+    // Heartbeat — always clear previous interval to avoid leaks on reconnect
+    if (wsHeartbeat) clearInterval(wsHeartbeat);
+    wsHeartbeat = setInterval(() => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'ping' }));
+      }
+    }, 20000);
   };
 
   ws.onclose = (e) => {
     wsReady = false;
-    console.log('WS closed, reconnecting...', e.code, e.reason);
-    setTimeout(connectWS, 3000);
+    if (wsHeartbeat) { clearInterval(wsHeartbeat); wsHeartbeat = null; }
+    if (wsReconnectTimer) { clearTimeout(wsReconnectTimer); wsReconnectTimer = null; }
+
+    // Don't reconnect on intentional close codes
+    if (e.code === 4001 || e.code === 4003) {
+      console.warn('WS auth/ban close:', e.code, e.reason);
+      return;
+    }
+
+    // Exponential backoff: 2s, 3s, 4.5s... max 30s
+    wsReconnectAttempts++;
+    const delay = Math.min(2000 * Math.pow(1.5, wsReconnectAttempts - 1), 30000);
+    console.log(`WS closed (${e.code}), reconnecting in ${Math.round(delay/1000)}s...`);
+    wsReconnectTimer = setTimeout(connectWS, delay);
   };
 
-  ws.onerror = (e) => {
-    console.error('WS error:', e);
+  ws.onerror = () => {
+    // onerror always fires before onclose — just log, don't reconnect here
+    console.warn('WS error (onclose will handle reconnect)');
   };
 
   ws.onmessage = (e) => {
@@ -2302,6 +2332,25 @@ function showToast(msg){
 }
 
 // ─── BOOT ─────────────────────────────────────
+
+// Reconnect WS when tab becomes visible again (handles sleep/background tab)
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && (!ws || ws.readyState === WebSocket.CLOSED)) {
+    console.log('Tab visible, reconnecting WS...');
+    wsReconnectAttempts = 0; // reset backoff when user comes back
+    connectWS();
+  }
+});
+
+// Reconnect when browser comes back online
+window.addEventListener('online', () => {
+  if (!ws || ws.readyState === WebSocket.CLOSED) {
+    console.log('Back online, reconnecting WS...');
+    wsReconnectAttempts = 0;
+    connectWS();
+  }
+});
+
 init();
 </script>
 </body>
