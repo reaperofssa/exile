@@ -423,7 +423,7 @@ const server = http.createServer(app);
 
 app.use(express.json());
 app.use(cookieParser());
-
+app.use(express.static(path.join(__dirname, 'public')));
 const upload = multer({
   storage: multer.memoryStorage(),
   limits:  { fileSize: MEDIA_MAX_BYTES },
