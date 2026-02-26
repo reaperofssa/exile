@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EXILE — Create Account</title>
+<style>
+/* ============================================================
+   TOKENS — mirrored from login.html
+   ============================================================ */
+:root {
+  --dusk-deep:     #120812;
+  --dusk-mid:      #1e0e24;
+  --amber:         #c97b3a;
+  --amber-light:   #e8a85c;
+  --purple-accent: #9b59b6;
+  --purple-glow:   rgba(155,89,182,0.3);
+  --text-primary:  rgba(255,255,255,0.93);
+  --text-sec:      rgba(255,255,255,0.55);
+  --text-dim:      rgba(255,255,255,0.3);
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --error:   rgba(239,68,68,0.9);
+  --success: rgba(16,185,129,0.9);
+}
+
+body.dark-mode {
+  --dusk-deep:     #000000;
+  --dusk-mid:      #0a0a0a;
+  --amber:         #8b5a2b;
+  --amber-light:   #a07038;
+  --purple-accent: #7a46a0;
+  --purple-glow:   rgba(122,70,160,0.2);
+  --text-primary:  rgba(255,255,255,0.88);
+  --text-sec:      rgba(255,255,255,0.45);
+  --text-dim:      rgba(255,255,255,0.22);
+}
+body.dark-mode .bg-base { background: #000000; }
+body.dark-mode .bg-glow { opacity: 0.2; }
+body.dark-mode .glass {
+  background: linear-gradient(180deg,rgba(255,255,255,0.055) 0%,rgba(255,255,255,0.018) 18%,rgba(255,255,255,0.012) 80%,rgba(255,255,255,0.03) 100%);
+  border-color: rgba(255,255,255,0.07);
+  border-top-color: rgba(255,255,255,0.11);
+}
+body.dark-mode .site-header {
+  background: linear-gradient(180deg,rgba(0,0,0,0.75) 0%,rgba(0,0,0,0.6) 100%);
+  border-bottom-color: rgba(255,255,255,0.06);
+}
+body.dark-mode .form-input {
+  background: rgba(0,0,0,0.35);
+  border-color: rgba(255,255,255,0.08);
+}
+body.dark-mode .avatar-drop { background: rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.07); }
+body.dark-mode .logo-text {
+  background: linear-gradient(135deg, rgba(255,255,255,0.75) 30%, var(--amber-light) 60%, var(--purple-accent) 100%);
+  -webkit-background-clip: text; background-clip: text;
+}
+
+.theme-toggle {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text-sec);
+  width: 30px; height: 30px;
+  border-radius: var(--r-sm);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+  flex-shrink: 0;
+}
+.theme-toggle:hover { background: rgba(255,255,255,0.14); transform: scale(1.05); }
+.theme-toggle:active { transform: scale(0.95); }
+.theme-toggle svg { width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round; }
+
+body,.bg-base,.bg-glow,.glass,.site-header,.form-input,.logo-text {
+  transition: background 0.35s ease, border-color 0.35s ease, color 0.35s ease, opacity 0.35s ease;
+}
+
+*,*::before,*::after { margin:0;padding:0;box-sizing:border-box; }
+html,body { height:100%;overflow-x:hidden; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--dusk-deep);
+  color: var(--text-primary);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================================
+   BACKGROUNDS — exact from login
+   ============================================================ */
+.bg-base {
+  position:fixed;inset:0;z-index:0;
+  background:
+    radial-gradient(ellipse 130% 55% at 50% 0%,  #2e1640 0%, transparent 65%),
+    radial-gradient(ellipse 70% 45% at 15% 75%,  #1f1028 0%, transparent 55%),
+    radial-gradient(ellipse 85% 35% at 85% 55%,  #3a1e45 0%, transparent 50%),
+    radial-gradient(ellipse 60% 30% at 50% 95%,  #1a0c1e 0%, transparent 60%),
+    linear-gradient(180deg, #1c0e25 0%, #130a18 35%, #0d0610 100%);
+  transform: translateZ(0);
+}
+.bg-glow {
+  position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:
+    radial-gradient(ellipse 65% 22% at 50% 28%, rgba(201,123,58,0.1) 0%, transparent 70%),
+    radial-gradient(ellipse 45% 18% at 25% 60%, rgba(155,89,182,0.07) 0%, transparent 55%);
+  transform: translateZ(0);
+}
+
+/* ============================================================
+   GLASS — exact from login
+   ============================================================ */
+.glass {
+  background:
+    linear-gradient(180deg,
+      rgba(255,255,255,0.11) 0%,
+      rgba(255,255,255,0.045) 18%,
+      rgba(255,255,255,0.035) 80%,
+      rgba(255,255,255,0.06) 100%
+    );
+  backdrop-filter: blur(32px) saturate(1.3);
+  -webkit-backdrop-filter: blur(32px) saturate(1.3);
+  border: 1px solid rgba(255,255,255,0.13);
+  border-top-color: rgba(255,255,255,0.22);
+  box-shadow:
+    0 1px 0 inset rgba(255,255,255,0.12),
+    0 6px 28px rgba(0,0,0,0.3),
+    0 1px 2px rgba(0,0,0,0.2);
+  border-radius: var(--r-lg);
+  transform: translateZ(0);
+}
+
+/* ============================================================
+   PAGE SHELL
+   ============================================================ */
+.page {
+  position: relative;
+  z-index: 10;
+  width: 92%;
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 72px 0 44px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ============================================================
+   STICKY HEADER — exact from login
+   ============================================================ */
+.site-header {
+  position: fixed;
+  top:0;left:0;right:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding: 8px 16px;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,0.1) 0%,rgba(255,255,255,0.04) 100%);
+  backdrop-filter: blur(32px) saturate(1.3);
+  -webkit-backdrop-filter: blur(32px) saturate(1.3);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 2px 16px rgba(0,0,0,0.25);
+}
+.logo { display:flex;align-items:center;gap:8px; }
+.exile-logo-svg { width:28px;height:28px; }
+.logo-text {
+  font-size:15px;font-weight:700;letter-spacing:3px;text-transform:uppercase;
+  background: linear-gradient(135deg, #fff 30%, var(--amber-light) 60%, var(--purple-accent) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.header-right { display:flex;align-items:center; }
+
+/* ============================================================
+   TAGLINE
+   ============================================================ */
+.tagline { text-align:center;padding:4px 16px 0; }
+.tagline p { font-size:11.5px;color:var(--text-dim);letter-spacing:0.3px; }
+
+/* ============================================================
+   LIVE PILL
+   ============================================================ */
+.live-pill {
+  display:flex;align-items:center;gap:5px;
+  background:rgba(155,89,182,0.18);
+  border:1px solid rgba(155,89,182,0.28);
+  padding:3px 10px;border-radius:18px;
+  font-size:9px;font-weight:700;letter-spacing:0.9px;color:#c4b5fd;
+}
+.live-dot {
+  width:5px;height:5px;background:var(--purple-accent);border-radius:50%;
+  animation:livePulse 2s infinite;
+}
+@keyframes livePulse{0%,100%{opacity:1}50%{opacity:0.25}}
+
+/* ============================================================
+   STEPS INDICATOR
+   ============================================================ */
+.steps-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 4px 0;
+}
+.step-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.1);
+  transition: all 0.35s ease;
+  cursor: default;
+}
+.step-dot.active {
+  background: var(--purple-accent);
+  border-color: rgba(155,89,182,0.6);
+  box-shadow: 0 0 6px rgba(155,89,182,0.5);
+  width: 20px; border-radius: 4px;
+}
+.step-dot.done {
+  background: rgba(16,185,129,0.6);
+  border-color: rgba(16,185,129,0.4);
+}
+.step-label {
+  font-size: 10px;
+  color: var(--text-dim);
+  text-align: center;
+  letter-spacing: 0.3px;
+}
+
+/* ============================================================
+   REGISTER CARD
+   ============================================================ */
+.reg-card {
+  padding: 22px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.card-title { font-size:15px;font-weight:600;color:var(--text-primary);text-align:center;letter-spacing:-0.2px; }
+.card-sub   { font-size:11px;color:var(--text-sec);text-align:center;margin-top:-8px;line-height:1.5; }
+
+/* ============================================================
+   STEP PANELS
+   ============================================================ */
+.step-panel { display:none;flex-direction:column;gap:12px; }
+.step-panel.active { display:flex; }
+
+/* ============================================================
+   FORM INPUTS
+   ============================================================ */
+.field { display:flex;flex-direction:column;gap:5px; }
+.field-label {
+  font-size:10.5px;color:var(--text-sec);letter-spacing:0.3px;font-weight:500;
+}
+.field-label .req { color: var(--amber); margin-left:2px; }
+.form-input {
+  width:100%;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.06);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  -webkit-appearance: none;
+}
+.form-input::placeholder { color: var(--text-dim); }
+.form-input:focus {
+  border-color: rgba(155,89,182,0.5);
+  background: rgba(155,89,182,0.06);
+  box-shadow: 0 0 0 3px rgba(155,89,182,0.1);
+}
+.form-input.error { border-color: rgba(239,68,68,0.5); }
+.form-input.success { border-color: rgba(16,185,129,0.4); }
+.field-hint { font-size:10px;color:var(--text-dim);line-height:1.5; }
+.field-error { font-size:10px;color:#fca5a5;line-height:1.5;display:none; }
+.field-error.show { display:block; }
+
+/* ============================================================
+   AVATAR UPLOAD
+   ============================================================ */
+.avatar-section {
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+}
+.avatar-drop {
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  border: 2px dashed rgba(155,89,182,0.35);
+  background: rgba(155,89,182,0.07);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+  transition: border-color 0.2s, background 0.2s, transform 0.15s;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+}
+.avatar-drop:hover {
+  border-color: rgba(155,89,182,0.6);
+  background: rgba(155,89,182,0.12);
+  transform: scale(1.04);
+}
+.avatar-drop img { width:100%;height:100%;object-fit:cover;border-radius:50%; }
+.avatar-placeholder {
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  pointer-events:none;
+}
+.avatar-placeholder svg { width:22px;height:22px;stroke:var(--purple-accent);fill:none;opacity:0.7; }
+.avatar-placeholder span { font-size:9px;color:var(--text-dim);letter-spacing:0.3px; }
+.avatar-info { font-size:10px;color:var(--text-sec);text-align:center;line-height:1.5; }
+
+/* ============================================================
+   EMOJI PICKER
+   ============================================================ */
+.emoji-row {
+  display:flex;flex-wrap:wrap;gap:6px;
+}
+.emoji-btn {
+  width:34px;height:34px;border-radius:var(--r-sm);
+  background:rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.08);
+  display:flex;align-items:center;justify-content:center;
+  font-size:17px;cursor:pointer;
+  transition:background 0.15s,border-color 0.15s,transform 0.1s;
+}
+.emoji-btn:hover { background:rgba(255,255,255,0.12);transform:scale(1.1); }
+.emoji-btn.selected {
+  background:rgba(155,89,182,0.2);
+  border-color:rgba(155,89,182,0.5);
+  box-shadow:0 0 6px rgba(155,89,182,0.3);
+}
+
+/* ============================================================
+   USERNAME CHECK INDICATOR
+   ============================================================ */
+.username-wrap { position:relative; }
+.username-status {
+  position:absolute;right:10px;top:50%;transform:translateY(-50%);
+  font-size:11px;font-weight:600;letter-spacing:0.2px;
+  pointer-events:none;
+  transition:opacity 0.2s;
+}
+.username-status.checking { color:var(--text-dim); }
+.username-status.available { color:#6ee7b7; }
+.username-status.taken { color:#fca5a5; }
+.form-input.with-status { padding-right: 80px; }
+
+/* ============================================================
+   DIVIDER
+   ============================================================ */
+.divider { display:flex;align-items:center;gap:10px; }
+.divider::before,.divider::after { content:'';flex:1;height:1px;background:rgba(255,255,255,0.08); }
+.divider span { font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.6px;white-space:nowrap; }
+
+/* ============================================================
+   AUTZ USER PREVIEW (shown during pending reg)
+   ============================================================ */
+.autz-preview {
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;
+  background:rgba(37,99,235,0.08);
+  border:1px solid rgba(37,99,235,0.2);
+  border-radius:var(--r-md);
+}
+.autz-badge {
+  width:32px;height:32px;border-radius:8px;
+  background:linear-gradient(135deg,#2563eb,#7c3aed);
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:800;color:#fff;flex-shrink:0;
+}
+.autz-info .autz-label { font-size:10px;color:rgba(147,197,253,0.7); }
+.autz-info .autz-name  { font-size:12px;font-weight:600;color:var(--text-primary); }
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+.btn-primary {
+  width:100%;padding:12px 16px;border-radius:var(--r-md);border:none;
+  cursor:pointer;font-size:13px;font-weight:600;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  transition:opacity 0.2s,transform 0.15s;
+  background:linear-gradient(135deg,var(--purple-accent),#7d3f99);
+  color:#fff;
+  box-shadow:0 2px 12px rgba(155,89,182,0.3);
+}
+.btn-primary:hover  { opacity:0.88; }
+.btn-primary:active { transform:scale(0.98);opacity:1; }
+.btn-primary:disabled { opacity:0.4;cursor:not-allowed; }
+.btn-primary svg { width:15px;height:15px;fill:currentColor; }
+
+.btn-ghost {
+  background:none;border:none;color:var(--text-dim);font-size:10.5px;
+  cursor:pointer;text-align:center;width:100%;padding:4px;
+  transition:color 0.2s;display:block;font-family:inherit;
+}
+.btn-ghost:hover { color:var(--text-sec); }
+
+.btn-secondary {
+  width:100%;padding:11px 16px;border-radius:var(--r-md);
+  border:1px solid rgba(255,255,255,0.12);cursor:pointer;
+  font-size:13px;font-weight:600;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  background:rgba(255,255,255,0.06);color:var(--text-primary);
+  transition:background 0.2s,border-color 0.2s,transform 0.15s;
+  font-family:inherit;
+}
+.btn-secondary:hover { background:rgba(255,255,255,0.11);border-color:rgba(255,255,255,0.2); }
+.btn-secondary:active { transform:scale(0.98); }
+
+/* ============================================================
+   LOADING SPINNER
+   ============================================================ */
+.spinner {
+  width:16px;height:16px;
+  border:2px solid rgba(255,255,255,0.2);
+  border-top-color:#fff;
+  border-radius:50%;
+  animation:spin 0.7s linear infinite;
+  flex-shrink:0;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ============================================================
+   SUCCESS STATE
+   ============================================================ */
+.success-panel {
+  display:none;flex-direction:column;align-items:center;gap:14px;
+  padding:10px 0;text-align:center;
+}
+.success-panel.show { display:flex; }
+.success-ring {
+  width:64px;height:64px;border-radius:50%;
+  background:rgba(16,185,129,0.12);
+  border:2px solid rgba(16,185,129,0.35);
+  display:flex;align-items:center;justify-content:center;
+  animation:popIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
+}
+@keyframes popIn{from{transform:scale(0.5);opacity:0}to{transform:scale(1);opacity:1}}
+.success-ring svg { width:28px;height:28px;stroke:#6ee7b7;fill:none;stroke-width:2.5; }
+.success-title { font-size:16px;font-weight:700;color:var(--text-primary); }
+.success-sub   { font-size:11.5px;color:var(--text-sec);line-height:1.6;max-width:280px; }
+
+/* ============================================================
+   FOOTER NOTE
+   ============================================================ */
+.footer-note { text-align:center;padding:0 16px; }
+.footer-note p { font-size:9.5px;color:var(--text-dim);line-height:1.6; }
+.footer-note a { color:var(--purple-accent);text-decoration:none; }
+.footer-note a:hover { text-decoration:underline; }
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+.toast {
+  position:fixed;bottom:24px;left:50%;
+  transform:translateX(-50%) translateY(80px);
+  background:rgba(239,68,68,0.9);color:#fff;
+  padding:9px 18px;border-radius:20px;
+  font-size:12px;font-weight:500;
+  transition:transform 0.3s ease;z-index:999;
+  pointer-events:none;white-space:nowrap;
+}
+.toast.show { transform:translateX(-50%) translateY(0); }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media(max-width:480px){
+  .page{width:96%;}
+  .reg-card{padding:18px 16px;}
+}
+</style>
+</head>
+<body>
+
+<div class="bg-base"></div>
+<div class="bg-glow"></div>
+<div class="toast" id="toast"></div>
+
+<!-- Header — exact from login -->
+<header class="site-header">
+  <div class="logo">
+    <svg class="exile-logo-svg" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="swordGrad" x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#e8a85c"/>
+          <stop offset="55%" stop-color="#c97b3a"/>
+          <stop offset="100%" stop-color="#9b59b6"/>
+        </linearGradient>
+        <linearGradient id="bladeGrad" x1="22" y1="2" x2="22" y2="38" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#fff" stop-opacity="0.95"/>
+          <stop offset="60%" stop-color="#e8a85c"/>
+          <stop offset="100%" stop-color="#c97b3a"/>
+        </linearGradient>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="1.2" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <circle cx="22" cy="22" r="21" fill="url(#swordGrad)" opacity="0.18"/>
+      <circle cx="22" cy="22" r="21" stroke="url(#swordGrad)" stroke-width="1" opacity="0.45"/>
+      <g filter="url(#glow)">
+        <polygon points="22,4 23.5,26 22,27.5 20.5,26" fill="url(#bladeGrad)"/>
+        <polygon points="22,2 23.2,5.5 22,7 20.8,5.5" fill="#fff" opacity="0.95"/>
+        <line x1="22" y1="8" x2="22" y2="25" stroke="rgba(255,255,255,0.25)" stroke-width="0.6"/>
+      </g>
+      <g filter="url(#glow)">
+        <rect x="13" y="26" width="18" height="3" rx="1.5" fill="url(#swordGrad)" transform="rotate(-8, 22, 27.5)"/>
+        <rect x="15" y="27" width="14" height="0.8" rx="0.4" fill="rgba(255,255,255,0.3)" transform="rotate(-8, 22, 27.5)"/>
+        <circle cx="13.5" cy="26.5" r="1.5" fill="#c97b3a" transform="rotate(-8, 22, 27.5)"/>
+        <circle cx="30.5" cy="26.5" r="1.5" fill="#c97b3a" transform="rotate(-8, 22, 27.5)"/>
+      </g>
+      <rect x="21" y="29.5" width="2" height="8" rx="1" fill="url(#swordGrad)" opacity="0.9"/>
+      <line x1="20.8" y1="31" x2="23.2" y2="31" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+      <line x1="20.8" y1="33" x2="23.2" y2="33" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+      <line x1="20.8" y1="35" x2="23.2" y2="35" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+      <ellipse cx="22" cy="38.5" rx="2.5" ry="1.8" fill="#c97b3a" opacity="0.95"/>
+      <ellipse cx="22" cy="38" rx="1.2" ry="0.8" fill="rgba(255,255,255,0.25)"/>
+    </svg>
+    <div class="logo-text">EXILE</div>
+  </div>
+  <div class="header-right" style="display:flex;align-items:center;gap:8px;">
+    <div class="live-pill"><div class="live-dot"></div>NEW USER</div>
+    <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode">
+      <svg id="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <svg id="icon-sun" viewBox="0 0 24 24" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="page">
+
+  <div class="tagline">
+    <p>One last step — set up your exile</p>
+  </div>
+
+  <!-- Steps indicator -->
+  <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+    <div class="steps-row">
+      <div class="step-dot active" id="dot-0"></div>
+      <div class="step-dot" id="dot-1"></div>
+      <div class="step-dot" id="dot-2"></div>
+    </div>
+    <div class="step-label" id="step-label">Identity</div>
+  </div>
+
+  <!-- Register Card -->
+  <div class="reg-card glass" id="reg-card">
+
+    <div class="card-title" id="card-title">Create your account</div>
+    <div class="card-sub" id="card-sub">Signed in with Autz.org · finish setting up your profile</div>
+
+    <!-- Autz preview (populated by JS) -->
+    <div class="autz-preview" id="autz-preview" style="display:none;">
+      <div class="autz-badge">A</div>
+      <div class="autz-info">
+        <div class="autz-label">Autz.org Account</div>
+        <div class="autz-name" id="autz-name">—</div>
+      </div>
+    </div>
+
+    <!-- ═══ STEP 0 — Identity ═══ -->
+    <div class="step-panel active" id="step-0">
+
+      <div class="field">
+        <label class="field-label">Display Name <span class="req">*</span></label>
+        <input class="form-input" id="name" type="text" placeholder="Your name" maxlength="40" autocomplete="name" />
+        <div class="field-error" id="err-name"></div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Username <span class="req">*</span></label>
+        <div class="username-wrap">
+          <input class="form-input with-status" id="username" type="text"
+            placeholder="your_username" maxlength="30"
+            autocomplete="username" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          <span class="username-status" id="username-status"></span>
+        </div>
+        <div class="field-hint">Letters, numbers and underscores only. Cannot end with "bot".</div>
+        <div class="field-error" id="err-username"></div>
+      </div>
+
+      <button class="btn-primary" id="btn-step0" onclick="nextStep(0)">
+        Continue
+        <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+
+    </div>
+
+    <!-- ═══ STEP 1 — Personality ═══ -->
+    <div class="step-panel" id="step-1">
+
+      <div class="field">
+        <label class="field-label">Bio <span style="color:var(--text-dim);font-weight:400;">(optional)</span></label>
+        <textarea class="form-input" id="description" rows="3"
+          placeholder="A little about yourself…" maxlength="160"
+          style="resize:none;line-height:1.5;"></textarea>
+        <div class="field-hint" id="bio-counter">0 / 160</div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Spirit Emoji</label>
+        <div class="emoji-row" id="emoji-row"></div>
+        <div class="field-hint">This appears on your profile when you have no avatar.</div>
+      </div>
+
+      <button class="btn-primary" onclick="nextStep(1)">
+        Continue
+        <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+      <button class="btn-ghost" onclick="prevStep(1)">← Back</button>
+
+    </div>
+
+    <!-- ═══ STEP 2 — Avatar + Finish ═══ -->
+    <div class="step-panel" id="step-2">
+
+      <div class="avatar-section">
+        <div class="avatar-drop" id="avatar-drop" onclick="document.getElementById('avatar-input').click()">
+          <div class="avatar-placeholder" id="avatar-placeholder">
+            <svg viewBox="0 0 24 24" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            <span>Upload</span>
+          </div>
+          <img id="avatar-preview" src="" alt="" style="display:none;" />
+        </div>
+        <div class="avatar-info">Optional · JPG or PNG · max 5 MB<br>Your spirit emoji shows if you skip this.</div>
+        <input type="file" id="avatar-input" accept="image/*" style="display:none;" onchange="handleAvatarChange(event)" />
+      </div>
+
+      <!-- Summary card -->
+      <div style="background:rgba(155,89,182,0.07);border:1px solid rgba(155,89,182,0.18);border-radius:var(--r-md);padding:12px 13px;display:flex;flex-direction:column;gap:4px;">
+        <div style="font-size:10px;color:var(--text-dim);letter-spacing:0.3px;margin-bottom:2px;">ACCOUNT SUMMARY</div>
+        <div style="font-size:13px;font-weight:600;" id="summary-name">—</div>
+        <div style="font-size:11px;color:var(--text-sec);" id="summary-handle">—</div>
+      </div>
+
+      <button class="btn-primary" id="btn-finish" onclick="submitRegistration()">
+        Enter EXILE
+        <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+      <button class="btn-ghost" onclick="prevStep(2)">← Back</button>
+
+    </div>
+
+    <!-- ═══ SUCCESS ═══ -->
+    <div class="success-panel" id="success-panel">
+      <div class="success-ring">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div class="success-title">Welcome to EXILE 🗡️</div>
+      <div class="success-sub" id="success-msg">Your account is ready. Taking you home…</div>
+      <div class="spinner" style="margin:4px auto 0;"></div>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <div class="footer-note">
+    <p>By creating an account you agree to EXILE's
+      <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
+      Already have an account? <a href="/login">Sign in</a>.
+    </p>
+  </div>
+
+</div>
+
+<script>
+// ── Theme (runs immediately to prevent flash) ────────────────────────────────
+(function(){
+  if(localStorage.getItem('theme')==='dark') document.body.classList.add('dark-mode');
+})();
+
+function initThemeToggle(){
+  const btn=document.getElementById('theme-toggle');
+  const moon=document.getElementById('icon-moon');
+  const sun=document.getElementById('icon-sun');
+  function sync(){const d=document.body.classList.contains('dark-mode');moon.style.display=d?'none':'';sun.style.display=d?'':'none';}
+  sync();
+  btn.addEventListener('click',()=>{const d=document.body.classList.toggle('dark-mode');localStorage.setItem('theme',d?'dark':'default');sync();});
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+const toastEl = document.getElementById('toast');
+function showToast(msg,color){
+  toastEl.textContent=msg;
+  toastEl.style.background=color||'rgba(239,68,68,0.9)';
+  toastEl.classList.add('show');
+  setTimeout(()=>toastEl.classList.remove('show'),3400);
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let currentStep = 0;
+let regData     = {};            // accumulated form data
+let pendingInfo = {};            // from /auth/register/status
+let avatarFile  = null;
+let selectedEmoji = '😎';
+
+const STEP_LABELS  = ['Identity','Personality','Profile'];
+const STEP_TITLES  = ['Create your account','Make it yours','Final touch'];
+const STEP_SUBS    = ['Pick a name and unique username.','Add a bio and choose your spirit emoji.','Add a profile picture (optional).'];
+
+const SPIRIT_EMOJIS = ['😎','🔥','👑','💀','⚡','🌙','🎭','🗡️','💜','🌊','🦅','🎯','🌟','🧠','🐉','🏹','🌈','🎪'];
+
+// ── Steps ─────────────────────────────────────────────────────────────────────
+function setStep(n){
+  // Hide all panels
+  for(let i=0;i<3;i++){
+    document.getElementById(`step-${i}`).classList.remove('active');
+    const dot=document.getElementById(`dot-${i}`);
+    dot.classList.remove('active','done');
+    if(i<n) dot.classList.add('done');
+    if(i===n) dot.classList.add('active');
+  }
+  document.getElementById(`step-${n}`).classList.add('active');
+  document.getElementById('step-label').textContent = STEP_LABELS[n];
+  document.getElementById('card-title').textContent = STEP_TITLES[n];
+  document.getElementById('card-sub').textContent   = STEP_SUBS[n];
+  currentStep = n;
+
+  if(n===2) updateSummary();
+}
+
+function nextStep(from){
+  if(from===0){
+    if(!validateStep0()) return;
+    regData.name     = document.getElementById('name').value.trim();
+    regData.username = document.getElementById('username').value.trim();
+    saveProgress();
+  }
+  if(from===1){
+    regData.description = document.getElementById('description').value.trim();
+    regData.spiritEmoji = selectedEmoji;
+    saveProgress();
+  }
+  setStep(from+1);
+}
+
+function prevStep(from){ setStep(from-1); }
+
+// ── Step 0 Validation ─────────────────────────────────────────────────────────
+function validateStep0(){
+  let ok = true;
+  const name = document.getElementById('name').value.trim();
+  const username = document.getElementById('username').value.trim();
+
+  clearErr('name'); clearErr('username');
+
+  if(!name){ showErr('name','Display name is required.'); ok=false; }
+  if(!username){ showErr('username','Username is required.'); ok=false; }
+  else if(username.length<3){ showErr('username','At least 3 characters.'); ok=false; }
+  else if(!/^[a-zA-Z0-9_]+$/.test(username)){ showErr('username','Letters, numbers, and underscores only.'); ok=false; }
+  else if(username.startsWith('_')||username.endsWith('_')){ showErr('username','Cannot start or end with underscore.'); ok=false; }
+  else if(username.toLowerCase().endsWith('bot')){ showErr('username','Username cannot end with "bot".'); ok=false; }
+  else {
+    const status = document.getElementById('username-status');
+    if(status.classList.contains('taken')){ showErr('username','Username is already taken.'); ok=false; }
+    if(status.classList.contains('checking')){ showErr('username','Still checking username…'); ok=false; }
+  }
+
+  return ok;
+}
+
+function showErr(id,msg){
+  const el=document.getElementById(`err-${id}`);
+  if(el){el.textContent=msg;el.classList.add('show');}
+  const inp=document.getElementById(id);
+  if(inp) inp.classList.add('error');
+}
+function clearErr(id){
+  const el=document.getElementById(`err-${id}`);
+  if(el){el.textContent='';el.classList.remove('show');}
+  const inp=document.getElementById(id);
+  if(inp) inp.classList.remove('error');
+}
+
+// ── Username availability check ───────────────────────────────────────────────
+let usernameTimer;
+document.addEventListener('DOMContentLoaded', () => {
+  const input  = document.getElementById('username');
+  const status = document.getElementById('username-status');
+
+  input.addEventListener('input', () => {
+    clearTimeout(usernameTimer);
+    clearErr('username');
+    const val = input.value.trim();
+    status.className = 'username-status';
+    status.textContent = '';
+    input.classList.remove('error','success');
+    if(!val || val.length < 3) return;
+    status.className = 'username-status checking';
+    status.textContent = 'checking…';
+    usernameTimer = setTimeout(async ()=>{
+      try {
+        const r = await fetch(`/api/lookup?username=${encodeURIComponent(val)}`);
+        if(r.status===404){
+          status.className='username-status available';
+          status.textContent='✓ available';
+          input.classList.add('success');
+        } else if(r.ok){
+          status.className='username-status taken';
+          status.textContent='✗ taken';
+          input.classList.add('error');
+        }
+      } catch {
+        status.className='username-status';
+        status.textContent='';
+      }
+    }, 500);
+  });
+
+  // Bio counter
+  const bio     = document.getElementById('description');
+  const counter = document.getElementById('bio-counter');
+  bio.addEventListener('input',()=>{
+    counter.textContent = `${bio.value.length} / 160`;
+  });
+
+  // Build emoji picker
+  buildEmojiPicker();
+
+  // Load pending reg info
+  loadPendingInfo();
+
+  initThemeToggle();
+});
+
+// ── Emoji picker ──────────────────────────────────────────────────────────────
+function buildEmojiPicker(){
+  const row = document.getElementById('emoji-row');
+  SPIRIT_EMOJIS.forEach(em => {
+    const btn = document.createElement('button');
+    btn.className = 'emoji-btn' + (em === selectedEmoji ? ' selected' : '');
+    btn.type = 'button';
+    btn.textContent = em;
+    btn.onclick = () => {
+      selectedEmoji = em;
+      document.querySelectorAll('.emoji-btn').forEach(b=>b.classList.remove('selected'));
+      btn.classList.add('selected');
+    };
+    row.appendChild(btn);
+  });
+}
+
+// ── Avatar ────────────────────────────────────────────────────────────────────
+function handleAvatarChange(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  if(file.size > 5*1024*1024){ showToast('Image too large — max 5 MB'); return; }
+  avatarFile = file;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = document.getElementById('avatar-preview');
+    img.src = ev.target.result;
+    img.style.display = 'block';
+    document.getElementById('avatar-placeholder').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── Summary ───────────────────────────────────────────────────────────────────
+function updateSummary(){
+  document.getElementById('summary-name').textContent   = regData.name || '—';
+  document.getElementById('summary-handle').textContent = `@${regData.username || '—'}`;
+}
+
+// ── Load pending registration info from server ────────────────────────────────
+async function loadPendingInfo(){
+  try {
+    const r = await fetch('/auth/register/status', { credentials:'include' });
+    const d = await r.json();
+    if(!d.pendingRegistration){
+      // No pending reg — redirect to login
+      showToast('No active registration. Redirecting…','rgba(245,158,11,0.9)');
+      setTimeout(()=>window.location.href='/login',1800);
+      return;
+    }
+    pendingInfo = d;
+
+    // Show Autz.org account preview badge
+    if(d.autzName){
+      document.getElementById('autz-name').textContent = d.autzName + (d.email ? ` · ${d.email}` : '');
+      document.getElementById('autz-preview').style.display = 'flex';
+    }
+
+    // ── Check URL for ?step=last or ?step=2 to jump straight to avatar/finish ──
+    const params   = new URLSearchParams(window.location.search);
+    const stepParam = params.get('step');
+    const jumpLast = stepParam === 'last' || stepParam === '2';
+
+    if(jumpLast){
+      // Pull whatever was stored in sessionStorage from a previous partial fill
+      const saved = JSON.parse(sessionStorage.getItem('exileRegData') || '{}');
+      regData.name        = saved.name        || d.autzName || '';
+      regData.username    = saved.username    || '';
+      regData.description = saved.description || '';
+      regData.spiritEmoji = saved.spiritEmoji || '😎';
+      selectedEmoji       = regData.spiritEmoji;
+
+      // Pre-fill the visible fields in step 0 too (so Back works correctly)
+      const nameInput = document.getElementById('name');
+      if(nameInput && regData.name) nameInput.value = regData.name;
+      const userInput = document.getElementById('username');
+      if(userInput && regData.username) userInput.value = regData.username;
+      const descInput = document.getElementById('description');
+      if(descInput && regData.description) descInput.value = regData.description;
+
+      // Mark the saved emoji as selected in the picker
+      document.querySelectorAll('.emoji-btn').forEach(b => {
+        b.classList.toggle('selected', b.textContent === selectedEmoji);
+      });
+
+      setStep(2);  // Jump to last step (avatar + finish)
+      return;
+    }
+
+    // Normal flow — start at step 0, pre-fill name from Autz
+    const nameInput = document.getElementById('name');
+    if(nameInput && !nameInput.value && d.autzName) nameInput.value = d.autzName;
+
+  } catch {
+    showToast('Could not load registration info.','rgba(245,158,11,0.9)');
+  }
+}
+
+// ── Persist regData to sessionStorage as user fills steps (for jump-to-last) ──
+function saveProgress(){
+  sessionStorage.setItem('exileRegData', JSON.stringify(regData));
+}
+
+// ── Submit registration ───────────────────────────────────────────────────────
+async function submitRegistration(){
+  const btn = document.getElementById('btn-finish');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Creating account…';
+
+  try {
+    const formData = new FormData();
+    formData.append('name',        regData.name);
+    formData.append('username',    regData.username);
+    formData.append('description', regData.description || '');
+    formData.append('spiritEmoji', regData.spiritEmoji || '😎');
+    if(avatarFile) formData.append('profilePicture', avatarFile);
+
+    const r = await fetch('/auth/register/complete', {
+      method:      'POST',
+      body:        formData,
+      credentials: 'include',
+    });
+    const d = await r.json();
+
+    if(r.ok){
+      sessionStorage.removeItem('exileRegData');
+      showSuccess(d.user);
+    } else {
+      showToast(d.error || 'Registration failed. Please try again.');
+      btn.disabled = false;
+      btn.innerHTML = 'Enter EXILE <svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:currentColor"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
+    }
+  } catch {
+    showToast('Connection error — please try again.');
+    btn.disabled = false;
+    btn.innerHTML = 'Enter EXILE <svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:currentColor"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
+  }
+}
+
+function showSuccess(user){
+  // Hide step panels
+  for(let i=0;i<3;i++){
+    document.getElementById(`step-${i}`).classList.remove('active');
+  }
+  // Update dots
+  for(let i=0;i<3;i++){
+    const dot=document.getElementById(`dot-${i}`);
+    dot.classList.remove('active');
+    dot.classList.add('done');
+  }
+  document.getElementById('step-label').textContent  = 'Complete';
+  document.getElementById('card-title').textContent  = 'You\'re in';
+  document.getElementById('card-sub').textContent    = '';
+  document.getElementById('autz-preview').style.display = 'none';
+
+  const panel = document.getElementById('success-panel');
+  panel.classList.add('show');
+
+  const name = user?.name || regData.name || 'exile';
+  document.getElementById('success-msg').textContent =
+    `Welcome, ${name}. Your journey begins now.`;
+
+  setTimeout(()=> window.location.href='/home.html', 2200);
+}
+</script>
+</body>
+</html>
