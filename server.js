@@ -431,14 +431,6 @@ const upload = multer({
 
 // ─── Passport ─────────────────────────────────────────────────────────────────
 
-passport.use(new GoogleStrategy(
-  {
-    clientID:     GOOGLE_CLIENT_ID,
-    clientSecret: GOOGLE_CLIENT_SECRET,
-    callbackURL:  "https://exile.nett.to/auth/google/callback",
-  },
-  (_at, _rt, profile, done) => done(null, profile)
-));
 
 // ─── Auth helpers ─────────────────────────────────────────────────────────────
 
