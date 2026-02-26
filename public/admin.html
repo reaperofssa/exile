@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EXILE — Admin Console</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #111118;
+      --surface2: #18181f;
+      --border: #2a2a35;
+      --accent: #ff3c5c;
+      --accent2: #7c4dff;
+      --gold: #f0b429;
+      --green: #00e676;
+      --text: #e8e8f0;
+      --muted: #6b6b80;
+      --danger: #ff1744;
+      --font-head: 'Syne', sans-serif;
+      --font-mono: 'Space Mono', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Scanline overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.07) 2px,
+        rgba(0,0,0,0.07) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* ── Layout ── */
+    .shell {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      grid-template-rows: 56px 1fr;
+      min-height: 100vh;
+    }
+
+    /* ── Topbar ── */
+    .topbar {
+      grid-column: 1 / -1;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .topbar-logo {
+      font-family: var(--font-head);
+      font-weight: 800;
+      font-size: 20px;
+      letter-spacing: -0.5px;
+      color: var(--text);
+    }
+    .topbar-logo span { color: var(--accent); }
+
+    .topbar-badge {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      background: var(--accent);
+      color: #fff;
+      padding: 2px 8px;
+      border-radius: 2px;
+    }
+
+    .topbar-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    #auth-status {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    #auth-status.ok { color: var(--green); }
+    #auth-status.err { color: var(--danger); }
+
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      display: inline-block;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 24px 0;
+      position: sticky;
+      top: 56px;
+      height: calc(100vh - 56px);
+      overflow-y: auto;
+    }
+
+    .nav-label {
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 0 20px;
+      margin: 20px 0 8px;
+    }
+    .nav-label:first-child { margin-top: 0; }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      cursor: pointer;
+      border-left: 2px solid transparent;
+      transition: all 0.15s;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--muted);
+      user-select: none;
+    }
+    .nav-item:hover { color: var(--text); background: var(--surface2); }
+    .nav-item.active {
+      color: var(--accent);
+      border-left-color: var(--accent);
+      background: rgba(255,60,92,0.06);
+    }
+    .nav-item .icon { font-size: 15px; min-width: 18px; }
+
+    /* ── Main ── */
+    .main {
+      padding: 32px;
+      overflow-y: auto;
+    }
+
+    /* ── Panels ── */
+    .panel { display: none; animation: fadein 0.2s ease; }
+    .panel.active { display: block; }
+    @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+    .panel-title {
+      font-family: var(--font-head);
+      font-weight: 800;
+      font-size: 26px;
+      margin-bottom: 6px;
+      letter-spacing: -0.5px;
+    }
+    .panel-sub {
+      color: var(--muted);
+      font-size: 11px;
+      margin-bottom: 28px;
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .card-title {
+      font-family: var(--font-head);
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 18px;
+      color: var(--text);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* ── Form elements ── */
+    .field { margin-bottom: 14px; }
+    label {
+      display: block;
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    input[type=text], input[type=number], textarea, select {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 10px 12px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--accent2);
+    }
+    textarea { resize: vertical; min-height: 70px; }
+
+    /* ── Buttons ── */
+    .btn {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn:active { transform: scale(0.97); }
+
+    .btn-danger  { background: var(--danger);  color: #fff; }
+    .btn-danger:hover  { background: #ff4569; }
+
+    .btn-success { background: #00c853; color: #000; }
+    .btn-success:hover { background: #00e676; }
+
+    .btn-primary { background: var(--accent2); color: #fff; }
+    .btn-primary:hover { background: #9c6dff; }
+
+    .btn-gold    { background: var(--gold); color: #000; }
+    .btn-gold:hover { background: #f7cc57; }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
+
+    .btn-sm { padding: 6px 12px; font-size: 10px; }
+
+    /* ── Response box ── */
+    .response-box {
+      margin-top: 14px;
+      padding: 12px 16px;
+      border-radius: 4px;
+      border-left: 3px solid var(--accent2);
+      background: rgba(124,77,255,0.07);
+      font-size: 11px;
+      line-height: 1.7;
+      display: none;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .response-box.visible { display: block; }
+    .response-box.ok  { border-color: var(--green); background: rgba(0,230,118,0.07); }
+    .response-box.err { border-color: var(--danger); background: rgba(255,23,68,0.07); }
+
+    /* ── Reports table ── */
+    .table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+    th {
+      font-family: var(--font-head);
+      font-weight: 700;
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 8px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(42,42,53,0.6);
+      vertical-align: middle;
+    }
+    tr:hover td { background: rgba(255,255,255,0.015); }
+
+    .badge {
+      display: inline-block;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 2px;
+    }
+    .badge-open     { background: rgba(255,60,92,0.15); color: var(--accent); border: 1px solid rgba(255,60,92,0.3); }
+    .badge-reviewed { background: rgba(124,77,255,0.15); color: #9c6dff; border: 1px solid rgba(124,77,255,0.3); }
+    .badge-dismissed{ background: rgba(107,107,128,0.15); color: var(--muted); border: 1px solid var(--border); }
+    .badge-actioned { background: rgba(0,200,83,0.15); color: var(--green); border: 1px solid rgba(0,200,83,0.3); }
+
+    /* ── Grid helpers ── */
+    .row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .row .field { flex: 1; min-width: 160px; }
+
+    /* ── Stats row ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 16px 20px;
+    }
+    .stat-label {
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .stat-value {
+      font-family: var(--font-head);
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .stat-value.accent  { color: var(--accent); }
+    .stat-value.gold    { color: var(--gold); }
+    .stat-value.green   { color: var(--green); }
+    .stat-value.purple  { color: var(--accent2); }
+
+    /* ── Loading spinner ── */
+    .spin {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      padding: 12px 18px;
+      border-radius: 4px;
+      font-size: 12px;
+      z-index: 10000;
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all 0.25s ease;
+      pointer-events: none;
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+    #toast.ok  { border-left-color: var(--green); }
+    #toast.err { border-left-color: var(--danger); }
+
+    /* ── Report detail rows ── */
+    .report-detail {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<div class="shell">
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="topbar-logo">EX<span>IL</span>E</div>
+    <div class="topbar-badge">ADMIN CONSOLE</div>
+    <div class="topbar-right">
+      <span class="dot"></span>
+      <span id="auth-status">Checking auth…</span>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="nav-label">Overview</div>
+    <div class="nav-item active" data-panel="overview">
+      <span class="icon">📊</span> Dashboard
+    </div>
+
+    <div class="nav-label">Users</div>
+    <div class="nav-item" data-panel="ban">
+      <span class="icon">🚫</span> Ban User
+    </div>
+    <div class="nav-item" data-panel="unban">
+      <span class="icon">✅</span> Unban User
+    </div>
+    <div class="nav-item" data-panel="verify">
+      <span class="icon">✔️</span> Verify User
+    </div>
+    <div class="nav-item" data-panel="exiles">
+      <span class="icon">💰</span> Grant Exiles
+    </div>
+    <div class="nav-item" data-panel="position">
+      <span class="icon">🎖️</span> Set Position
+    </div>
+    <div class="nav-item" data-panel="premium">
+      <span class="icon">💜</span> Grant Premium
+    </div>
+
+    <div class="nav-label">Moderation</div>
+    <div class="nav-item" data-panel="reports">
+      <span class="icon">🚨</span> Reports
+    </div>
+    <div class="nav-item" data-panel="users">
+      <span class="icon">👥</span> User Search
+    </div>
+  </nav>
+
+  <!-- Main content -->
+  <main class="main">
+
+    <!-- ── Overview ── -->
+    <section class="panel active" id="panel-overview">
+      <div class="panel-title">Dashboard</div>
+      <div class="panel-sub">Real-time platform overview</div>
+
+      <div class="stats-row" id="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">Members</div>
+          <div class="stat-value accent" id="stat-members">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Online Now</div>
+          <div class="stat-value green" id="stat-online">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Spaces</div>
+          <div class="stat-value purple" id="stat-spaces">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Open Reports</div>
+          <div class="stat-value gold" id="stat-reports">—</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Quick Actions</div>
+        <div class="row">
+          <button class="btn btn-danger" onclick="nav('ban')">🚫 Ban User</button>
+          <button class="btn btn-success" onclick="nav('unban')">✅ Unban User</button>
+          <button class="btn btn-primary" onclick="nav('verify')">✔️ Verify User</button>
+          <button class="btn btn-gold" onclick="nav('exiles')">💰 Grant Exiles</button>
+          <button class="btn btn-ghost" onclick="nav('reports')">🚨 View Reports</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Ban ── -->
+    <section class="panel" id="panel-ban">
+      <div class="panel-title">Ban User</div>
+      <div class="panel-sub">Permanently disable a user account. They will be disconnected immediately.</div>
+
+      <div class="card">
+        <div class="card-title">Ban by User ID</div>
+        <div class="field">
+          <label>User ID</label>
+          <input type="text" id="ban-userId" placeholder="e.g. 12345678" />
+        </div>
+        <button class="btn btn-danger" onclick="banUser()">🚫 Confirm Ban</button>
+        <div class="response-box" id="ban-res"></div>
+      </div>
+    </section>
+
+    <!-- ── Unban ── -->
+    <section class="panel" id="panel-unban">
+      <div class="panel-title">Unban User</div>
+      <div class="panel-sub">Restore access for a banned account.</div>
+
+      <div class="card">
+        <div class="card-title">Unban by User ID</div>
+        <div class="field">
+          <label>User ID</label>
+          <input type="text" id="unban-userId" placeholder="e.g. 12345678" />
+        </div>
+        <button class="btn btn-success" onclick="unbanUser()">✅ Confirm Unban</button>
+        <div class="response-box" id="unban-res"></div>
+      </div>
+    </section>
+
+    <!-- ── Verify ── -->
+    <section class="panel" id="panel-verify">
+      <div class="panel-title">Verify User</div>
+      <div class="panel-sub">Grant or revoke the verified badge on a user's profile.</div>
+
+      <div class="card">
+        <div class="card-title">Verification Controls</div>
+        <div class="field">
+          <label>User ID</label>
+          <input type="text" id="verify-userId" placeholder="e.g. 12345678" />
+        </div>
+        <div class="row" style="gap:10px;">
+          <button class="btn btn-primary" onclick="verifyUser(true)">✔️ Grant Verified</button>
+          <button class="btn btn-ghost" onclick="verifyUser(false)">✖ Revoke Verified</button>
+        </div>
+        <div class="response-box" id="verify-res"></div>
+      </div>
+    </section>
+
+    <!-- ── Exiles ── -->
+    <section class="panel" id="panel-exiles">
+      <div class="panel-title">Grant Exiles</div>
+      <div class="panel-sub">Credit exile tokens directly to a user's balance.</div>
+
+      <div class="card">
+        <div class="card-title">Exile Grant</div>
+        <div class="row">
+          <div class="field">
+            <label>User ID</label>
+            <input type="text" id="exile-userId" placeholder="e.g. 12345678" />
+          </div>
+          <div class="field" style="max-width:200px;">
+            <label>Amount</label>
+            <input type="number" id="exile-amount" placeholder="100" min="1" />
+          </div>
+        </div>
+        <button class="btn btn-gold" onclick="grantExiles()">💰 Grant Exiles</button>
+        <div class="response-box" id="exile-res"></div>
+      </div>
+    </section>
+
+    <!-- ── Position ── -->
+    <section class="panel" id="panel-position">
+      <div class="panel-title">Set Position</div>
+      <div class="panel-sub">Change a user's platform role.</div>
+
+      <div class="card">
+        <div class="card-title">Role Assignment</div>
+        <div class="row">
+          <div class="field">
+            <label>User ID</label>
+            <input type="text" id="pos-userId" placeholder="e.g. 12345678" />
+          </div>
+          <div class="field" style="max-width:200px;">
+            <label>Position</label>
+            <select id="pos-role">
+              <option value="member">member</option>
+              <option value="vip">vip</option>
+              <option value="moderator">moderator</option>
+              <option value="admin">admin</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="setPosition()">🎖️ Set Position</button>
+        <div class="response-box" id="pos-res"></div>
+      </div>
+    </section>
+
+    <!-- ── Premium ── -->
+    <section class="panel" id="panel-premium">
+      <div class="panel-title">Grant Premium</div>
+      <div class="panel-sub">Activate or revoke premium membership for a user.</div>
+
+      <div class="card">
+        <div class="card-title">Premium Controls</div>
+        <div class="row">
+          <div class="field">
+            <label>User ID</label>
+            <input type="text" id="prem-userId" placeholder="e.g. 12345678" />
+          </div>
+          <div class="field" style="max-width:240px;">
+            <label>Expires At (ISO or blank for no expiry)</label>
+            <input type="text" id="prem-expiry" placeholder="2025-12-31T00:00:00.000Z" />
+          </div>
+        </div>
+        <div class="row" style="gap:10px;">
+          <button class="btn btn-gold" onclick="setPremium(true)">💜 Grant Premium</button>
+          <button class="btn btn-ghost" onclick="setPremium(false)">✖ Revoke Premium</button>
+        </div>
+        <div class="response-box" id="prem-res"></div>
+      </div>
+    </section>
+
+    <!-- ── Reports ── -->
+    <section class="panel" id="panel-reports">
+      <div class="panel-title">Reports</div>
+      <div class="panel-sub">Review and act on user-submitted reports.</div>
+
+      <div class="card">
+        <div class="row" style="align-items:flex-end; margin-bottom:0;">
+          <div class="field" style="max-width:180px; margin-bottom:0;">
+            <label>Filter by status</label>
+            <select id="report-filter" onchange="loadReports()">
+              <option value="open">open</option>
+              <option value="reviewed">reviewed</option>
+              <option value="dismissed">dismissed</option>
+              <option value="actioned">actioned</option>
+              <option value="all">all</option>
+            </select>
+          </div>
+          <button class="btn btn-ghost btn-sm" style="margin-bottom:0;" onclick="loadReports()">↻ Refresh</button>
+        </div>
+      </div>
+
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Reporter</th>
+                <th>Reported</th>
+                <th>Reason</th>
+                <th>Detail</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="reports-body">
+              <tr><td colspan="7" style="text-align:center; color:var(--muted); padding:30px;">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div id="reports-res" class="response-box"></div>
+    </section>
+
+    <!-- ── User Search ── -->
+    <section class="panel" id="panel-users">
+      <div class="panel-title">User Search</div>
+      <div class="panel-sub">Find users by name or username.</div>
+
+      <div class="card">
+        <div class="row" style="align-items:flex-end;">
+          <div class="field" style="margin-bottom:0;">
+            <label>Search query</label>
+            <input type="text" id="user-search" placeholder="username or name" onkeydown="if(event.key==='Enter') searchUsers()" />
+          </div>
+          <button class="btn btn-primary btn-sm" style="margin-bottom:0;" onclick="searchUsers()">Search</button>
+        </div>
+      </div>
+
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>User ID</th>
+                <th>Name</th>
+                <th>Username</th>
+                <th>Level</th>
+                <th>Status</th>
+                <th>Joined</th>
+                <th>Quick Actions</th>
+              </tr>
+            </thead>
+            <tbody id="users-body">
+              <tr><td colspan="7" style="text-align:center; color:var(--muted); padding:30px;">Search to find users</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ══════════════════════════════════════
+   AUTH GUARD — only allow user "saul"
+   ══════════════════════════════════════ */
+const ALLOWED_USERNAME = "saul";
+
+async function checkAuth() {
+  const status = document.getElementById("auth-status");
+  try {
+    const r = await fetch("/api/me", { credentials: "include" });
+    if (!r.ok) throw new Error("Not authenticated");
+    const { user } = await r.json();
+
+    if (user.username.toLowerCase() !== ALLOWED_USERNAME) {
+      status.textContent = "Access Denied";
+      status.className = "err";
+      document.querySelector(".main").innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;gap:16px;">
+          <div style="font-size:48px;">🚫</div>
+          <div style="font-family:var(--font-head);font-size:24px;font-weight:800;">Access Denied</div>
+          <div style="color:var(--muted);font-size:12px;">This console is restricted to authorised administrators only.</div>
+        </div>`;
+      return;
+    }
+
+    if (user.position !== "admin") {
+      status.textContent = "Not Admin";
+      status.className = "err";
+      document.querySelector(".main").innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;gap:16px;">
+          <div style="font-size:48px;">🛡️</div>
+          <div style="font-family:var(--font-head);font-size:24px;font-weight:800;">Insufficient Privileges</div>
+          <div style="color:var(--muted);font-size:12px;">Your account does not have admin rights.</div>
+        </div>`;
+      return;
+    }
+
+    status.textContent = `${user.name} (${user.username})`;
+    status.className = "ok";
+    loadDashboardStats();
+    loadReports();
+  } catch (e) {
+    status.textContent = "Not logged in";
+    status.className = "err";
+    document.querySelector(".main").innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;gap:16px;">
+        <div style="font-size:48px;">🔒</div>
+        <div style="font-family:var(--font-head);font-size:24px;font-weight:800;">Authentication Required</div>
+        <div style="color:var(--muted);font-size:12px;">Please <a href="/login" style="color:var(--accent);">log in</a> to continue.</div>
+      </div>`;
+  }
+}
+
+/* ══════════════════════════════════════
+   NAVIGATION
+   ══════════════════════════════════════ */
+function nav(name) {
+  document.querySelectorAll(".nav-item").forEach(el => {
+    el.classList.toggle("active", el.dataset.panel === name);
+  });
+  document.querySelectorAll(".panel").forEach(el => {
+    el.classList.toggle("active", el.id === `panel-${name}`);
+  });
+}
+
+document.querySelectorAll(".nav-item").forEach(el => {
+  el.addEventListener("click", () => nav(el.dataset.panel));
+});
+
+/* ══════════════════════════════════════
+   TOAST
+   ══════════════════════════════════════ */
+let toastTimer;
+function toast(msg, type = "ok") {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = "", 3200);
+}
+
+/* ══════════════════════════════════════
+   RESPONSE BOX
+   ══════════════════════════════════════ */
+function showRes(id, data, ok) {
+  const el = document.getElementById(id);
+  el.className = `response-box visible ${ok ? "ok" : "err"}`;
+  el.textContent = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+}
+
+/* ══════════════════════════════════════
+   API HELPER
+   ══════════════════════════════════════ */
+async function api(method, url, body) {
+  const opts = {
+    method,
+    credentials: "include",
+    headers: body ? { "Content-Type": "application/json" } : {},
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  };
+  const r = await fetch(url, opts);
+  const data = await r.json();
+  return { ok: r.ok, data, status: r.status };
+}
+
+/* ══════════════════════════════════════
+   DASHBOARD STATS
+   ══════════════════════════════════════ */
+async function loadDashboardStats() {
+  const { data } = await api("GET", "/api/stats");
+  if (data.members !== undefined) {
+    document.getElementById("stat-members").textContent = data.members.toLocaleString();
+    document.getElementById("stat-online").textContent  = data.online.toLocaleString();
+    document.getElementById("stat-spaces").textContent  = data.spaces.toLocaleString();
+  }
+  // Open reports count
+  const r = await api("GET", "/api/admin/reports?status=open&limit=1");
+  if (r.ok) document.getElementById("stat-reports").textContent = r.data.total || 0;
+}
+
+/* ══════════════════════════════════════
+   BAN
+   ══════════════════════════════════════ */
+async function banUser() {
+  const userId = document.getElementById("ban-userId").value.trim();
+  if (!userId) { toast("Enter a User ID", "err"); return; }
+  const { ok, data } = await api("POST", `/api/admin/users/${userId}/ban`);
+  showRes("ban-res", data, ok);
+  toast(ok ? `User ${userId} banned` : data.error, ok ? "ok" : "err");
+}
+
+/* ══════════════════════════════════════
+   UNBAN
+   ══════════════════════════════════════ */
+async function unbanUser() {
+  const userId = document.getElementById("unban-userId").value.trim();
+  if (!userId) { toast("Enter a User ID", "err"); return; }
+  const { ok, data } = await api("POST", `/api/admin/users/${userId}/unban`);
+  showRes("unban-res", data, ok);
+  toast(ok ? `User ${userId} unbanned` : data.error, ok ? "ok" : "err");
+}
+
+/* ══════════════════════════════════════
+   VERIFY
+   ══════════════════════════════════════ */
+async function verifyUser(verified) {
+  const userId = document.getElementById("verify-userId").value.trim();
+  if (!userId) { toast("Enter a User ID", "err"); return; }
+  const { ok, data } = await api("PATCH", `/api/admin/users/${userId}/verify`, { verified });
+  showRes("verify-res", data, ok);
+  toast(ok ? `Verified status → ${verified}` : data.error, ok ? "ok" : "err");
+}
+
+/* ══════════════════════════════════════
+   GRANT EXILES
+   ══════════════════════════════════════ */
+async function grantExiles() {
+  const userId = document.getElementById("exile-userId").value.trim();
+  const amount = parseInt(document.getElementById("exile-amount").value);
+  if (!userId || !amount || amount < 1) { toast("Fill in User ID and amount", "err"); return; }
+  const { ok, data } = await api("POST", `/api/admin/users/${userId}/exiles`, { amount });
+  showRes("exile-res", data, ok);
+  toast(ok ? `+${amount} exiles granted to ${userId}` : data.error, ok ? "ok" : "err");
+}
+
+/* ══════════════════════════════════════
+   POSITION
+   ══════════════════════════════════════ */
+async function setPosition() {
+  const userId = document.getElementById("pos-userId").value.trim();
+  const position = document.getElementById("pos-role").value;
+  if (!userId) { toast("Enter a User ID", "err"); return; }
+  const { ok, data } = await api("PATCH", `/api/admin/users/${userId}/position`, { position });
+  showRes("pos-res", data, ok);
+  toast(ok ? `Position set to ${position}` : data.error, ok ? "ok" : "err");
+}
+
+/* ══════════════════════════════════════
+   PREMIUM
+   ══════════════════════════════════════ */
+async function setPremium(premium) {
+  const userId    = document.getElementById("prem-userId").value.trim();
+  const expiresAt = document.getElementById("prem-expiry").value.trim() || null;
+  if (!userId) { toast("Enter a User ID", "err"); return; }
+  const { ok, data } = await api("PATCH", `/api/admin/users/${userId}/premium`, { premium, expiresAt });
+  showRes("prem-res", data, ok);
+  toast(ok ? `Premium ${premium ? "granted" : "revoked"}` : data.error, ok ? "ok" : "err");
+}
+
+/* ══════════════════════════════════════
+   REPORTS
+   ══════════════════════════════════════ */
+async function loadReports() {
+  const status = document.getElementById("report-filter").value;
+  const tbody  = document.getElementById("reports-body");
+  tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px;"><span class="spin"></span> Loading…</td></tr>`;
+
+  const { ok, data } = await api("GET", `/api/admin/reports?status=${status}&limit=50`);
+  if (!ok) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--danger);padding:20px;">Error: ${data.error}</td></tr>`;
+    return;
+  }
+  if (!data.reports?.length) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px;">No reports found</td></tr>`;
+    return;
+  }
+
+  // Update stat badge
+  if (status === "open") document.getElementById("stat-reports").textContent = data.total;
+
+  tbody.innerHTML = data.reports.map(r => `
+    <tr>
+      <td>
+        <div>${r.reporter?.name || r.reporterId}</div>
+        <div class="report-detail">${r.reporter?.username ? '@' + r.reporter.username : r.reporterId}</div>
+      </td>
+      <td>
+        <div>${r.reported?.name || r.reportedId}</div>
+        <div class="report-detail">${r.reported?.username ? '@' + r.reported.username : r.reportedId}</div>
+      </td>
+      <td><strong>${r.reason}</strong></td>
+      <td style="max-width:200px;word-break:break-word;color:var(--muted);">${r.detail || '—'}</td>
+      <td><span class="badge badge-${r.status}">${r.status}</span></td>
+      <td style="color:var(--muted);">${new Date(r.createdAt).toLocaleDateString()}</td>
+      <td>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${r.status === 'open' ? `
+            <button class="btn btn-ghost btn-sm" onclick="actionReport('${r.reportId}','reviewed','none')">Review</button>
+            <button class="btn btn-danger btn-sm" onclick="actionReport('${r.reportId}','actioned','ban')">Ban</button>
+            <button class="btn btn-ghost btn-sm" onclick="actionReport('${r.reportId}','dismissed','none')">Dismiss</button>
+          ` : `<span style="color:var(--muted);font-size:10px;">${r.action || '—'}</span>`}
+        </div>
+      </td>
+    </tr>
+  `).join("");
+}
+
+async function actionReport(reportId, status, action) {
+  const { ok, data } = await api("PATCH", `/api/admin/reports/${reportId}`, { status, action });
+  if (ok) { toast(`Report ${status}`); loadReports(); }
+  else toast(data.error, "err");
+}
+
+/* ══════════════════════════════════════
+   USER SEARCH
+   ══════════════════════════════════════ */
+async function searchUsers() {
+  const q     = document.getElementById("user-search").value.trim();
+  const tbody = document.getElementById("users-body");
+  if (!q) { toast("Enter a search query", "err"); return; }
+
+  tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px;"><span class="spin"></span></td></tr>`;
+  const { ok, data } = await api("GET", `/api/admin/users?q=${encodeURIComponent(q)}&limit=30`);
+  if (!ok) {
+    tbody.innerHTML = `<tr><td colspan="7" style="color:var(--danger);padding:16px;">${data.error}</td></tr>`;
+    return;
+  }
+  if (!data.users?.length) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px;">No users found</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = data.users.map(u => `
+    <tr>
+      <td style="color:var(--muted);font-size:10px;">${u.userId}</td>
+      <td>${u.name}${u.verified ? ' <span style="color:var(--accent2);font-size:10px;">✔</span>' : ''}${u.premium ? ' <span style="color:var(--gold);font-size:10px;">★</span>' : ''}</td>
+      <td style="color:var(--muted);">@${u.username}</td>
+      <td>${u.levelInfo?.level || u.level || 1}</td>
+      <td><span class="badge ${u.banned ? 'badge-open' : 'badge-actioned'}">${u.banned ? 'banned' : u.status || 'ok'}</span></td>
+      <td style="color:var(--muted);">${new Date(u.dateJoined).toLocaleDateString()}</td>
+      <td>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${u.banned
+            ? `<button class="btn btn-success btn-sm" onclick="quickUnban('${u.userId}')">Unban</button>`
+            : `<button class="btn btn-danger btn-sm" onclick="quickBan('${u.userId}')">Ban</button>`
+          }
+          <button class="btn btn-primary btn-sm" onclick="quickVerify('${u.userId}', ${!u.verified})">${u.verified ? 'Unverify' : 'Verify'}</button>
+          <button class="btn btn-gold btn-sm" onclick="quickExiles('${u.userId}')">+ Exiles</button>
+        </div>
+      </td>
+    </tr>
+  `).join("");
+}
+
+async function quickBan(userId) {
+  const { ok, data } = await api("POST", `/api/admin/users/${userId}/ban`);
+  toast(ok ? `Banned ${userId}` : data.error, ok ? "ok" : "err");
+  if (ok) searchUsers();
+}
+async function quickUnban(userId) {
+  const { ok, data } = await api("POST", `/api/admin/users/${userId}/unban`);
+  toast(ok ? `Unbanned ${userId}` : data.error, ok ? "ok" : "err");
+  if (ok) searchUsers();
+}
+async function quickVerify(userId, verified) {
+  const { ok, data } = await api("PATCH", `/api/admin/users/${userId}/verify`, { verified });
+  toast(ok ? `Verified → ${verified}` : data.error, ok ? "ok" : "err");
+  if (ok) searchUsers();
+}
+async function quickExiles(userId) {
+  const amt = prompt("How many exiles to grant?");
+  if (!amt || isNaN(amt)) return;
+  const { ok, data } = await api("POST", `/api/admin/users/${userId}/exiles`, { amount: parseInt(amt) });
+  toast(ok ? `+${amt} exiles granted` : data.error, ok ? "ok" : "err");
+}
+
+/* Boot */
+checkAuth();
+</script>
+</body>
+</html>
