@@ -4,7 +4,8 @@
 //  EXILE — server.js
 //  Full-featured chat backend: Google OAuth, JWT, MongoDB, WebSocket messaging
 // ═══════════════════════════════════════════════════════════════════════════════
-
+// Require and configure dotenv
+require('dotenv').config();
 const express      = require("express");
 const http         = require("http");
 const path = require("path");
@@ -22,7 +23,7 @@ const { v4: uuidv4 } = require("uuid");
 
 const JWT_SECRET   = process.env.JWT_SECRET  || "change_this_secret_in_production";
 const MONGO_URI    = process.env.MONGO_URI   || "mongodb://127.0.0.1:27017";
-const DB_NAME      = process.env.DB_NAME     || "exile";
+const DB_NAME      = process.env.DB_NAME     || "exileye";
 const PORT         = process.env.PORT        || 3000;
 
 const AUTZ_APP_ID  = process.env.AUTZ_APP_ID  || "chiq1ujiq";
