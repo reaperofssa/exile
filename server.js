@@ -1765,7 +1765,17 @@ app.patch("/api/messages/:messageId", requireAuth, async (req, res) => {
   });
   res.json({ message: "Message edited." });
 });
-
+// Guard: /chat/:userId requires auth
+app.get("/chat/:userId", (req, res) => {
+  const token = req.cookies?.token;
+  if (!token) return res.redirect(`/login?redirect=/chat/${req.params.userId}`);
+  try {
+    jwt.verify(token, JWT_SECRET);
+    res.sendFile(path.join(__dirname, "public", "chat.html"));
+  } catch {
+    res.redirect("/login");
+  }
+});
 // ── React to message ──
 app.post("/api/messages/:messageId/react", requireAuth, async (req, res) => {
   const myId    = req.user.userId;
