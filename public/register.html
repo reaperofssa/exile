@@ -791,15 +791,17 @@ document.addEventListener('DOMContentLoaded', () => {
     status.textContent = 'checking…';
     usernameTimer = setTimeout(async ()=>{
       try {
-        const r = await fetch(`/api/lookup?username=${encodeURIComponent(val)}`);
-        if(r.status===404){
+        const r = await fetch(`/auth/check-username?username=${encodeURIComponent(val)}`);
+        const d = await r.json();
+        if(d.available){
           status.className='username-status available';
           status.textContent='✓ available';
           input.classList.add('success');
-        } else if(r.ok){
+        } else {
           status.className='username-status taken';
           status.textContent='✗ taken';
           input.classList.add('error');
+          if(d.reason) showErr('username', d.reason);
         }
       } catch {
         status.className='username-status';
@@ -869,12 +871,19 @@ async function loadPendingInfo(){
     const r = await fetch('/auth/register/status', { credentials:'include' });
     const d = await r.json();
     if(!d.pendingRegistration){
-      // No pending reg — redirect to login
-      showToast('No active registration. Redirecting…','rgba(245,158,11,0.9)');
-      setTimeout(()=>window.location.href='/login',1800);
+      // User landed on /register directly without going through Autz.org first
+      showToast('Sign in with Autz.org to create an account.','rgba(245,158,11,0.9)');
+      setTimeout(()=>window.location.href='/login?reason=register_direct',1800);
       return;
     }
     pendingInfo = d;
+
+    // Guard: if no email came back from Autz.org, abort to login
+    if(!d.email){
+      showToast('No email found on your Autz.org account. Please add one and try again.', 'rgba(239,68,68,0.9)');
+      setTimeout(()=> window.location.href = '/login?error=no_email', 2200);
+      return;
+    }
 
     // Show Autz.org account preview badge
     if(d.autzName){
@@ -918,7 +927,8 @@ async function loadPendingInfo(){
     if(nameInput && !nameInput.value && d.autzName) nameInput.value = d.autzName;
 
   } catch {
-    showToast('Could not load registration info.','rgba(245,158,11,0.9)');
+    showToast('Could not verify registration. Redirecting…','rgba(245,158,11,0.9)');
+    setTimeout(()=>window.location.href='/login',1800);
   }
 }
 
