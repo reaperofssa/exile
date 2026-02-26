@@ -1131,6 +1131,10 @@ app.get("/login", (_req, res) =>
   res.sendFile(path.join(__dirname, "public", "login.html"))
 );
 
+app.get("/register", (_req, res) =>
+  res.sendFile(path.join(__dirname, "public", "register.html"))
+);
+
 // Auto-redirect unauthenticated root visits to login:
 app.get("/", (req, res) => {
   const token = req.cookies?.token;
