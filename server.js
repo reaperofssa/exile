@@ -7,6 +7,7 @@
 
 const express      = require("express");
 const http         = require("http");
+const path = require("path");
 const { WebSocketServer, WebSocket } = require("ws");
 const jwt          = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
@@ -1131,6 +1132,23 @@ async function sendMessage({ senderId, recipientId, type, content }) {
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
+
+// Add near top of routes section:
+app.get("/login", (_req, res) =>
+  res.sendFile(path.join(__dirname, "public", "login.html"))
+);
+
+// Auto-redirect unauthenticated root visits to login:
+app.get("/", (req, res) => {
+  const token = req.cookies?.token;
+  if (!token) return res.redirect("/login");
+  try {
+    jwt.verify(token, JWT_SECRET);
+    res.sendFile(path.join(__dirname, "public", "home.html"));
+  } catch {
+    res.redirect("/login");
+  }
+});
 // ── Health ──
 app.get("/api/connect", (_req, res) => res.json({ status: "ok", message: "Server is running." }));
 
@@ -1164,10 +1182,14 @@ app.get("/auth/autz/callback", async (req, res) => {
   const users    = db.collection("users");
   const existing = await users.findOne({ autzId: profile.id });
 
-  if (existing) {
-    setAuthCookie(res, existing.userId);
-    return res.redirect("/?loggedIn=true");
+  // After: const existing = await users.findOne({ autzId: profile.id });
+if (existing) {
+  if (existing.banned) {
+    return res.redirect("/login.html?error=banned");
   }
+  setAuthCookie(res, existing.userId);
+  return res.redirect("/home.html?loggedIn=true");
+}
 
   // New user — store profile in temp token and redirect to registration
   const tempToken = createTempToken({
@@ -1182,9 +1204,19 @@ app.get("/auth/autz/callback", async (req, res) => {
   return res.redirect("/register");
 });
 
+// REPLACE the failure route with:
 app.get("/auth/autz/failure", (_req, res) =>
-  res.status(401).json({ error: "Autz.org authentication failed." })
+  res.redirect("/login.html?error=auth_failed")
 );
+
+app.get("/api/stats", async (_req, res) => {
+  const [members, online, spaces] = await Promise.all([
+    db.collection("users").countDocuments({ banned: { $ne: true } }),
+    db.collection("users").countDocuments({ status: "online" }),
+    db.collection("spaces").countDocuments({ banned: { $ne: true } }),
+  ]);
+  res.json({ members, online, spaces });
+});
 
 app.get("/auth/register/status", (req, res) => {
   const pending = verifyTempToken(req.cookies?.reg_token);
