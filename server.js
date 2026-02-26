@@ -8,8 +8,6 @@
 const express      = require("express");
 const http         = require("http");
 const { WebSocketServer, WebSocket } = require("ws");
-const passport     = require("passport");
-const { Strategy: GoogleStrategy } = require("passport-google-oauth20");
 const jwt          = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
 const multer       = require("multer");
@@ -26,8 +24,8 @@ const MONGO_URI    = process.env.MONGO_URI   || "mongodb://127.0.0.1:27017";
 const DB_NAME      = process.env.DB_NAME     || "exile";
 const PORT         = process.env.PORT        || 3000;
 
-const GOOGLE_CLIENT_ID     = process.env.GOOGLE_CLIENT_ID     || "";
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
+const AUTZ_APP_ID  = process.env.AUTZ_APP_ID  || "chiq1ujiq";
+const AUTZ_CALLBACK_URL = process.env.AUTZ_CALLBACK_URL || "http://exile.nett.to/auth/autz/callback";
 
 const MSG_TEXT_MAX    = 1020;   // chars for plain text
 const MSG_CAPTION_MAX = 500;    // chars for media caption
@@ -49,7 +47,7 @@ async function connectDB() {
 
   // ── users ──
   const users = db.collection("users");
-  await users.createIndex({ googleId: 1 },      { unique: true, sparse: true });
+  await users.createIndex({ autzId: 1 }, { unique: true, sparse: true });
   await users.createIndex({ userId: 1 },        { unique: true });
   await users.createIndex({ usernameLower: 1 }, { unique: true });
   await users.createIndex({ contactNumber: 1 }, { unique: true });
@@ -323,7 +321,7 @@ function getHighlightBadge(badges) {
 
 function sanitizeUser(user, viewerUserId = null) {
   if (!user) return null;
-  const { _id, googleId, usernameLower, creationIp, blockedUsers, ...safe } = user;
+  const { _id, autzId, usernameLower, creationIp, blockedUsers, ...safe } = user;
   // hide contact number if user opted to hide it (unless it's the user themselves)
   if (safe.hideContact && viewerUserId !== user.userId) safe.contactNumber = null;
   // Attach live level info (always computed from current XP so it's never stale)
@@ -423,7 +421,6 @@ const server = http.createServer(app);
 
 app.use(express.json());
 app.use(cookieParser());
-app.use(passport.initialize());
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -1141,35 +1138,52 @@ app.get("/api/connect", (_req, res) => res.json({ status: "ok", message: "Server
 //  AUTH
 // ────────────────────────────────────────────────────────────────────────────
 
-app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"], session: false }));
+// ── Autz.org Login redirect ──
+app.get("/auth/autz", (req, res) => {
+  const callbackUrl = encodeURIComponent(AUTZ_CALLBACK_URL);
+  res.redirect(`https://autz.org/onboarding/${AUTZ_APP_ID}?callback_url=${callbackUrl}`);
+});
 
-app.get("/auth/google/callback",
-  passport.authenticate("google", { session: false, failureRedirect: "/auth/google/failure" }),
-  async (req, res) => {
-    const profile  = req.user;
-    const users    = db.collection("users");
-    const existing = await users.findOne({ googleId: profile.id });
+// ── Autz.org Callback (receives auth_code from query string) ──
+app.get("/auth/autz/callback", async (req, res) => {
+  const { auth_code } = req.query;
+  if (!auth_code) return res.status(400).json({ error: "Missing auth_code." });
 
-    if (existing) {
-      setAuthCookie(res, existing.userId);
-      return res.redirect("/?loggedIn=true");
-    }
-
-    const tempToken = createTempToken({
-      type:        "pending_registration",
-      googleId:    profile.id,
-      email:       profile.emails?.[0]?.value || "",
-      googleName:  profile.displayName || "",
-      googleAvatar: profile.photos?.[0]?.value || "",
-    });
-
-    res.cookie("reg_token", tempToken, { ...COOKIE_OPTS, maxAge: 30 * 60 * 1000 });
-    return res.redirect("/register");
+  let profile;
+  try {
+    const response = await axios.get(
+      `https://autz.org/api/client/${AUTZ_APP_ID}/userinfo?code=${auth_code}`
+    );
+    profile = response.data?.user;
+    if (!profile?.id) throw new Error("Invalid user data from Autz.org");
+  } catch (e) {
+    console.error("Autz.org userinfo error:", e.message);
+    return res.status(401).redirect("/auth/autz/failure");
   }
-);
 
-app.get("/auth/google/failure", (_req, res) =>
-  res.status(401).json({ error: "Google authentication failed." })
+  const users    = db.collection("users");
+  const existing = await users.findOne({ autzId: profile.id });
+
+  if (existing) {
+    setAuthCookie(res, existing.userId);
+    return res.redirect("/?loggedIn=true");
+  }
+
+  // New user — store profile in temp token and redirect to registration
+  const tempToken = createTempToken({
+    type:       "pending_registration",
+    autzId:     profile.id,
+    email:      profile.email || "",
+    autzName:   profile.name  || "",
+    autzPhone:  profile.phone || "",
+  });
+
+  res.cookie("reg_token", tempToken, { ...COOKIE_OPTS, maxAge: 30 * 60 * 1000 });
+  return res.redirect("/register");
+});
+
+app.get("/auth/autz/failure", (_req, res) =>
+  res.status(401).json({ error: "Autz.org authentication failed." })
 );
 
 app.get("/auth/register/status", (req, res) => {
@@ -1177,18 +1191,19 @@ app.get("/auth/register/status", (req, res) => {
   if (!pending || pending.type !== "pending_registration") return res.json({ pendingRegistration: false });
   return res.json({
     pendingRegistration: true,
-    googleName:   pending.googleName,
-    googleAvatar: pending.googleAvatar,
-    email:        pending.email,
+    autzName:  pending.autzName,
+    autzPhone: pending.autzPhone,
+    email:     pending.email,
   });
 });
 
 app.post("/auth/register/complete", upload.single("profilePicture"), async (req, res) => {
   const pending = verifyTempToken(req.cookies?.reg_token);
   if (!pending || pending.type !== "pending_registration")
-    return res.status(400).json({ error: "No valid pending registration. Please sign in with Google first." });
+    return res.status(400).json({ error: "No valid pending registration. Please sign in with Autz.org first." });
 
-  const { googleId, email, googleAvatar } = pending;
+  // Changed: use autzId instead of googleId
+  const { autzId, email } = pending;
   const { name, username, description, spiritEmoji } = req.body;
 
   if (!name?.trim()) return res.status(400).json({ error: "Name is required." });
@@ -1201,10 +1216,12 @@ app.post("/auth/register/complete", upload.single("profilePicture"), async (req,
 
   if (await users.findOne({ usernameLower: cleanUsername.toLowerCase() }))
     return res.status(409).json({ error: "Username is already taken." });
-  if (await users.findOne({ googleId }))
-    return res.status(409).json({ error: "This Google account is already registered." });
 
-  let profilePictureUrl = googleAvatar || null;
+  // Changed: check autzId uniqueness instead of googleId
+  if (await users.findOne({ autzId }))
+    return res.status(409).json({ error: "This Autz.org account is already registered." });
+
+  let profilePictureUrl = null; // No avatar from Autz.org, file upload only
   if (req.file) {
     try { profilePictureUrl = await uploadToCatbox(req.file.buffer, req.file.originalname || "avatar.jpg"); }
     catch (e) { console.error("Catbox avatar upload failed:", e.message); }
@@ -1217,7 +1234,9 @@ app.post("/auth/register/complete", upload.single("profilePicture"), async (req,
   const now           = new Date().toISOString();
 
   const newUser = {
-    userId, googleId, email,
+    userId,
+    autzId,       // Changed: autzId instead of googleId
+    email,
     name:         name.trim(),
     username:     cleanUsername,
     usernameLower: cleanUsername.toLowerCase(),
@@ -1227,7 +1246,7 @@ app.post("/auth/register/complete", upload.single("profilePicture"), async (req,
     spiritEmoji:  spiritEmoji?.trim() || "😂",
     contactNumber,
     contacts:     1,
-    contactsList: [],       // array of userIds
+    contactsList: [],
     premium:      false,
     premiumExpiry: null,
     verified:     false,
@@ -1246,14 +1265,14 @@ app.post("/auth/register/complete", upload.single("profilePicture"), async (req,
     creationIp,
     dateJoined:   now,
     hideContact:  false,
-    onlineVisibility: "everybody",  // everybody | nobody | contacts
+    onlineVisibility: "everybody",
     messagingSettings: {
       acceptMessages:  true,
       blockNonPremium: false,
       blockedCountries: [],
     },
-    profileColor:  null,   // premium: hex color
-    profileBanner: null,   // premium: catbox URL
+    profileColor:  null,
+    profileBanner: null,
   };
 
   await users.insertOne(newUser);
