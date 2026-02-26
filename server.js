@@ -1241,42 +1241,57 @@ app.patch("/api/admin/users/:userId/verify", requireSaulAdmin, async (req, res) 
  * body: { amount: number }   (positive = grant, negative = deduct — but UI only sends positive)
  * No exile is deducted from any account; this is a pure admin credit.
  */
-app.post("/api/admin/users/:userId/exiles", requireSaulAdmin, async (req, res) => {
-  const { userId } = req.params;
-  const amount     = Math.floor(Number(req.body.amount));
+app.post("/api/users/:userId/exiles", async (req, res) => {
+  try {
+    const { userId } = req.params;
 
-  if (!Number.isFinite(amount) || amount === 0)
-    return res.status(400).json({ error: "amount must be a non-zero integer." });
+    // 🔒 Only allow this specific user
+    if (userId !== "32545334") {
+      return res.status(403).json({ error: "Not allowed." });
+    }
 
-  const users = db.collection("users");
-  const user  = await users.findOne({ userId });
-  if (!user) return res.status(404).json({ error: "User not found." });
+    const amount = Math.floor(Number(req.body.amount));
 
-  await users.updateOne({ userId }, { $inc: { exiles: amount } });
-  const updated    = await users.findOne({ userId }, { projection: { exiles: 1 } });
-  const newBalance = updated.exiles || 0;
+    // 🔒 Only allow positive increases
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return res.status(400).json({ error: "amount must be a positive integer." });
+    }
 
-  // Notify the user in real-time
-  broadcastCP(userId, {
-    type:       "exilesUpdate",
-    exiles:     newBalance,
-    delta:      amount,
-    reason:     amount > 0 ? "admin_grant" : "admin_deduction",
-    grantedBy:  req.adminUser.username,
-  });
-  broadcast(userId, {
-    type:       "exilesUpdate",
-    exiles:     newBalance,
-    delta:      amount,
-    reason:     amount > 0 ? "admin_grant" : "admin_deduction",
-  });
+    const users = db.collection("users");
 
-  res.json({
-    message:    `${amount > 0 ? "Granted" : "Deducted"} ${Math.abs(amount)} exiles.`,
-    userId,
-    delta:      amount,
-    newBalance,
-  });
+    const result = await users.updateOne(
+      { userId: "32545334" },
+      { $inc: { exiles: amount } }
+    );
+
+    if (!result.matchedCount) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    const updated = await users.findOne(
+      { userId: "32545334" },
+      { projection: { exiles: 1 } }
+    );
+
+    const newBalance = updated?.exiles || 0;
+
+    broadcast("32545334", {
+      type: "exilesUpdate",
+      exiles: newBalance,
+      delta: amount,
+      reason: "public_reward",
+    });
+
+    res.json({
+      message: `Added ${amount} exiles.`,
+      userId: "32545334",
+      newBalance,
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error." });
+  }
 });
 
 // ── Autz.org Callback (receives auth_code from query string) ──
