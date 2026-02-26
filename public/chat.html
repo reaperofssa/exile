@@ -1283,14 +1283,34 @@ async function checkCanMessage() {
     const d = await r.json();
     CAN_MSG = d.canMessage;
     CANT_MSG_REASON = d.reason || '';
-    if (!CAN_MSG) {
-      document.getElementById('cantMsgBar').style.display = 'flex';
-      document.getElementById('cantMsgText').textContent = CANT_MSG_REASON;
-      document.getElementById('inputArea').style.display = 'none';
-    }
-    // Detect if blocked — reason contains 'blocked'
+
+    // Detect block state — covers both "they blocked us" and "we blocked them"
     if (CANT_MSG_REASON && CANT_MSG_REASON.toLowerCase().includes('block')) {
       BLOCKED = true;
+    }
+
+    // Even if CAN_MSG is false due to a block WE placed, we still want to show
+    // the input area (so they can unblock). Only hide input for other reasons.
+    if (!CAN_MSG) {
+      // If WE are the blocker, we can still send (server would reject but UX should allow unblock)
+      // We detect "we blocked them" by trying to place the block — if it says "Already blocked" we know
+      const probeRes = await fetch(`/api/blocks/${RECIPIENT_ID}`, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const probeData = await probeRes.json();
+      if (probeRes.status === 409 && probeData.error?.includes('Already blocked')) {
+        // We blocked them — show input disabled but keep unblock visible
+        BLOCKED = true;
+        document.getElementById('cantMsgBar').style.display = 'flex';
+        document.getElementById('cantMsgText').textContent = 'You have blocked this user.';
+        document.getElementById('inputArea').style.display = 'none';
+      } else {
+        // They blocked us or other reason — also hide input
+        document.getElementById('cantMsgBar').style.display = 'flex';
+        document.getElementById('cantMsgText').textContent = CANT_MSG_REASON;
+        document.getElementById('inputArea').style.display = 'none';
+      }
     }
   } catch {}
 }
@@ -1449,14 +1469,35 @@ function buildBubble(msg, isMe) {
 
   // Reply preview
   if (msg.replyTo && !msg.replyTo.deleted) {
+    const rt = msg.replyTo;
+    // Build preview text from preview string OR content object
+    let previewText = rt.preview || '';
+    if (!previewText && rt.content) {
+      if (rt.type === 'text') previewText = (rt.content.text || '').slice(0, 60);
+      else if (rt.type === 'image' || rt.type === 'image_caption') previewText = '📷 Photo';
+      else if (rt.type === 'sticker') previewText = '🎭 Sticker';
+      else if (rt.type === 'audio' || rt.type === 'voice') previewText = '🎵 Audio';
+      else previewText = `[${rt.type}]`;
+    }
+    if (!previewText) previewText = `[${rt.type || 'message'}]`;
+
     const rp = document.createElement('div');
     rp.className = 'reply-preview';
+
+    // Show thumbnail if image reply
+    let thumbHtml = '';
+    if ((rt.type === 'image' || rt.type === 'image_caption') && (rt.content?.mediaUrl || rt.mediaUrl)) {
+      const imgUrl = rt.content?.mediaUrl || rt.mediaUrl;
+      thumbHtml = `<img src="${esc(imgUrl)}" style="width:36px;height:36px;object-fit:cover;border-radius:5px;flex-shrink:0;" alt="">`;
+    }
+
     rp.innerHTML = `
-      <div>
-        <div class="reply-sender">${esc(msg.replyTo.senderName)}</div>
-        <div class="reply-text">${esc(msg.replyTo.preview || '[media]')}</div>
+      ${thumbHtml}
+      <div style="min-width:0;flex:1;">
+        <div class="reply-sender">${esc(rt.senderName || rt.senderUsername || 'User')}</div>
+        <div class="reply-text">${esc(previewText)}</div>
       </div>`;
-    rp.onclick = (e) => { e.stopPropagation(); scrollToMessage(msg.replyTo.messageId, true); };
+    rp.onclick = (e) => { e.stopPropagation(); scrollToMessage(rt.messageId, true); };
     bubble.appendChild(rp);
   }
 
@@ -2183,8 +2224,11 @@ function addContextMenuListeners(row, msg) {
     menu.style.left = x + 'px';
     menu.style.top  = y + 'px';
     menu.style.display = 'block';
-    document.addEventListener('mousedown', closeCtxMenu, { once: true });
-    document.addEventListener('touchstart', closeCtxMenu, { once: true });
+    // Delay so the current mousedown/touchstart doesn't immediately close the menu
+    setTimeout(() => {
+      document.addEventListener('mousedown', outsideCloseCtx);
+      document.addEventListener('touchstart', outsideCloseCtx);
+    }, 0);
   };
 
   // Right click
@@ -2221,10 +2265,20 @@ function showQuickReact(e, msgId) {
   bar.style.display = 'flex';
 }
 
+function outsideCloseCtx(e) {
+  const menu = document.getElementById('ctxMenu');
+  const qr   = document.getElementById('quickReact');
+  // If click is inside either menu, do nothing
+  if (menu.contains(e.target) || qr.contains(e.target)) return;
+  closeCtxMenu();
+}
+
 function closeCtxMenu() {
   document.getElementById('ctxMenu').style.display = 'none';
   document.getElementById('quickReact').style.display = 'none';
   ctxMsgId = null;
+  document.removeEventListener('mousedown', outsideCloseCtx);
+  document.removeEventListener('touchstart', outsideCloseCtx);
 }
 
 function ctxAction(action) {
@@ -2394,6 +2448,17 @@ async function fetchSearch(q) {
   }
 }
 
+function updateBlockBtn() {
+  const blockBtn = document.getElementById('blockBtn');
+  if (BLOCKED) {
+    blockBtn.className = 'sheet-btn unblock';
+    blockBtn.innerHTML = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg> Unblock`;
+  } else {
+    blockBtn.className = 'sheet-btn block';
+    blockBtn.innerHTML = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg> Block`;
+  }
+}
+
 // ── Profile sheet ──
 function openProfile() {
   const r = RECIPIENT;
@@ -2438,15 +2503,8 @@ function openProfile() {
   if (IS_BOT) tags.innerHTML += `<span class="sheet-tag bot">🤖 Bot</span>`;
   if (r.contactNumber) tags.innerHTML += `<span class="sheet-tag">${esc(r.contactNumber)}</span>`;
 
-  // Block btn
-  const blockBtn = document.getElementById('blockBtn');
-  if (BLOCKED) {
-    blockBtn.className = 'sheet-btn unblock';
-    blockBtn.innerHTML = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg> Unblock`;
-  } else {
-    blockBtn.className = 'sheet-btn block';
-    blockBtn.innerHTML = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg> Block`;
-  }
+  // Block btn — always re-read BLOCKED at open time
+  updateBlockBtn();
 
   document.getElementById('profileSheet').classList.add('show');
 }
