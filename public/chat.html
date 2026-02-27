@@ -746,6 +746,7 @@ body{
 
 #file-input{display:none;}
 </style>
+<script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 
@@ -996,8 +997,8 @@ const messageOrder = [];
 let oldestId = null, newestId = null;
 let loadingOlder = false, allLoaded = false;
 
-// websocket
-let ws = null, wsReady = false, wsHeartbeat = null, wsReconnectTimer = null, wsReconnectAttempts = 0;
+// socket.io
+let ws = null, wsReady = false;
 let typingTimer = null, isTyping = false;
 let recipientTyping = false, typingTimeout = null;
 
@@ -1470,69 +1471,45 @@ function convId() {
 }
 
 function connectWS() {
-  // Don't stack connections
-  if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+  if (ws && ws.connected) return;
 
-  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  // Pass token as query param to work around server-side cookie parsing of JWTs with '=' chars
+  // Socket.IO reads the cookie automatically; auth.token is a fallback for environments
+  // where cookies aren't forwarded (e.g. cross-origin dev setups)
   const token = document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('token='))?.slice(6) || '';
-  ws = new WebSocket(`${proto}//${location.host}${token ? '?token='+encodeURIComponent(token) : ''}`);
 
-  ws.onopen = () => {
+  ws = io('/', {
+    auth:                  { token },
+    transports:            ['websocket'],
+    reconnection:          true,
+    reconnectionAttempts:  Infinity,
+    reconnectionDelay:     2000,
+    reconnectionDelayMax:  30000,
+    randomizationFactor:   0.5,
+  });
+
+  ws.on('connect', () => {
     wsReady = true;
-    wsReconnectAttempts = 0;
-    console.log('WS connected');
-
-    // Immediate ping so reverse proxies don't drop the idle connection
-    ws.send(JSON.stringify({ type: 'ping' }));
-
-    // Mark messages as read on connect
+    console.log('Socket.IO connected', ws.id);
     if (newestId) {
-      sendWS({ type: 'read', conversationId: convId(), upToMessageId: newestId });
+      ws.emit('read', { conversationId: convId(), upToMessageId: newestId });
     }
+  });
 
-    // Heartbeat — always clear previous interval to avoid leaks on reconnect
-    if (wsHeartbeat) clearInterval(wsHeartbeat);
-    wsHeartbeat = setInterval(() => {
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'ping' }));
-      }
-    }, 20000);
-  };
-
-  ws.onclose = (e) => {
-  console.log('WS CLOSE — code:', e.code, 'wasClean:', e.wasClean, 'reason:', e.reason);
+  ws.on('disconnect', (reason) => {
     wsReady = false;
-    if (wsHeartbeat) { clearInterval(wsHeartbeat); wsHeartbeat = null; }
-    if (wsReconnectTimer) { clearTimeout(wsReconnectTimer); wsReconnectTimer = null; }
+    console.log('Socket.IO disconnected:', reason);
+  });
 
-    // Don't reconnect on intentional close codes
-    if (e.code === 4001 || e.code === 4003) {
-      console.warn('WS auth/ban close:', e.code, e.reason);
-      return;
-    }
+  ws.on('connect_error', (err) => {
+    console.warn('Socket.IO connect error:', err.message);
+  });
 
-    // Exponential backoff: 2s, 3s, 4.5s... max 30s
-    wsReconnectAttempts++;
-    const delay = Math.min(2000 * Math.pow(1.5, wsReconnectAttempts - 1), 30000);
-    console.log(`WS closed (${e.code}), reconnecting in ${Math.round(delay/1000)}s...`);
-    wsReconnectTimer = setTimeout(connectWS, delay);
-  };
-
-  ws.onerror = () => {
-    // onerror always fires before onclose — just log, don't reconnect here
-    console.warn('WS error (onclose will handle reconnect)');
-  };
-
-  ws.onmessage = (e) => {
-    let msg;
-    try { msg = JSON.parse(e.data); } catch { return; }
-    handleWsMessage(msg);
-  };
+  // All real-time events arrive on the "message" channel
+  ws.on('message', handleWsMessage);
 }
 
 function handleWsMessage(msg) {
-  if (msg.type === 'pong') return;
+  if (msg.type === 'pong' || msg.type === 'ping') return; // Socket.IO manages keep-alive natively
 
   if (msg.type === 'newMessage') {
     const m = msg.message;
@@ -1633,8 +1610,11 @@ function handleWsMessage(msg) {
 }
 
 function sendWS(payload) {
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(payload));
+  // Socket.IO: emit the event type as the event name, pass the rest as data.
+  // The server listens on socket.on('typing', ...) / socket.on('read', ...) etc.
+  if (ws && ws.connected) {
+    const { type, ...data } = payload;
+    ws.emit(type, data);
   }
 }
 
@@ -2334,21 +2314,19 @@ function showToast(msg){
 
 // ─── BOOT ─────────────────────────────────────
 
-// Reconnect WS when tab becomes visible again (handles sleep/background tab)
+// Socket.IO handles reconnection automatically.
+// On visibility change, manually nudge it if disconnected (mobile background tab).
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && (!ws || ws.readyState === WebSocket.CLOSED)) {
-    console.log('Tab visible, reconnecting WS...');
-    wsReconnectAttempts = 0; // reset backoff when user comes back
-    connectWS();
+  if (!document.hidden && ws && !ws.connected) {
+    console.log('Tab visible, reconnecting Socket.IO...');
+    ws.connect();
   }
 });
 
-// Reconnect when browser comes back online
 window.addEventListener('online', () => {
-  if (!ws || ws.readyState === WebSocket.CLOSED) {
-    console.log('Back online, reconnecting WS...');
-    wsReconnectAttempts = 0;
-    connectWS();
+  if (ws && !ws.connected) {
+    console.log('Back online, reconnecting Socket.IO...');
+    ws.connect();
   }
 });
 
