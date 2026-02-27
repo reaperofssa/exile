@@ -523,8 +523,6 @@ function broadcastGroupTyping(groupId) {
   }, null);
 }
 
-const wss = new WebSocketServer({ server });
-
 // Map userId → Set<WebSocket>  (regular users)
 const onlineClients = new Map();
 
@@ -2879,8 +2877,11 @@ app.delete("/api/bots/:botId", requireAuth, async (req, res) => {
   if (bot.ownerId !== req.user.userId) return res.status(403).json({ error: "Not your bot." });
 
   await bots.deleteOne({ botId: bot.botId });
-  const ws = botClients.get(bot.botId);
-  if (ws) { ws.close(4010, "Bot deleted"); botClients.delete(bot.botId); }
+  const existingSocketId = botClients.get(bot.botId);
+if (existingSocketId) {
+  botNsp.sockets.get(existingSocketId)?.disconnect(true);
+  botClients.delete(bot.botId);
+}
 
   res.json({ message: "Bot deleted." });
 });
@@ -3053,15 +3054,15 @@ async function sendBotMessage({ bot, recipientId, type, content, bypassFirstMess
   });
 
   // Echo to bot's own WS with fromMe:true
-  const botWs_ = botClients.get(bot.botId);
-  if (botWs_ && botWs_.readyState === WebSocket.OPEN) {
-    botWs_.send(JSON.stringify({
-      type:    "messageSent",
-      fromMe:  true,
-      chat:    { chatId: conversationId, chatType: "dm" },
-      message,
-    }));
-  }
+const botSocketId = botClients.get(bot.botId);
+if (botSocketId) {
+  botNsp.to(botSocketId).emit("message", {
+    type: "messageSent",
+    fromMe: true,
+    chat: { chatId: conversationId, chatType: "dm" }, // retain chatId here
+    message
+  });
+}
 
   // chatListUpdate for reordering
   const botDmChatUpdate = {
@@ -3179,10 +3180,10 @@ async function sendBotGroupMessage({ bot, groupId, groupType, type, content }) {
   // Members get fromMe: false; bot's own WS gets fromMe: true
   broadcastToGroup(groupId, { ...botGroupUpdate, fromMe: false }, null);
   // Echo to the bot itself with fromMe: true
-  const botWs_ = botClients.get(bot.botId);
-  if (botWs_ && botWs_.readyState === WebSocket.OPEN) {
-    botWs_.send(JSON.stringify({ ...botGroupUpdate, fromMe: true, type: "groupMessageSent" }));
-  }
+  const botSocketId = botClients.get(bot.botId);
+if (botSocketId) {
+  botNsp.to(botSocketId).emit("message", { ...botGroupUpdate, fromMe: true, type: "groupMessageSent" });
+}
 
   return { message };
 }
@@ -3772,8 +3773,11 @@ app.patch("/api/admin/bots/:botId/disable", requireAdmin, async (req, res) => {
   const { disabled } = req.body;
   await db.collection("bots").updateOne({ botId: req.params.botId }, { $set: { disabled: !!disabled } });
   if (disabled) {
-    const ws = botClients.get(req.params.botId);
-    if (ws) { ws.close(4003, "Bot disabled by admin"); botClients.delete(req.params.botId); }
+    const existingSocketId = botClients.get(req.params.botId);
+if (existingSocketId) {
+  botNsp.sockets.get(existingSocketId)?.disconnect(true);
+  botClients.delete(req.params.botId);
+}
   }
   res.json({ message: `Bot ${disabled ? "disabled" : "enabled"}.` });
 });
@@ -4767,10 +4771,9 @@ app.post("/api/:groupType/:groupId/messages",
     broadcastToGroup(groupId, { ...groupUpdate, fromMe: false }, senderId);
     // Sender gets fromMe: true
     const senderSockets = onlineClients.get(senderId) || new Set();
-    const senderGroupPayload = JSON.stringify({ ...groupUpdate, fromMe: true });
-    for (const ws of senderSockets) {
-      if (ws.readyState === WebSocket.OPEN) ws.send(senderGroupPayload);
-    }
+for (const socketId of senderSockets) {
+  mainNsp.to(socketId).emit("message", { ...groupUpdate, fromMe: true });
+}
 
     // Push groupUnreadCount update to CP for all members (except sender)
     {
