@@ -755,217 +755,102 @@ function broadcastCP(userId, payload) {
 }
 
 wss.on("connection", async (ws, req) => {
-  console.log("RAW COOKIES:", req.headers.cookie);
-  console.log("TOKEN FOUND:", req.headers.cookie?.includes('token='));
+  await new Promise(resolve => cookieParser()(req, {}, resolve));
+  
   let userId;
+  requireAuth(req, { status: () => ({ json: () => {} }) }, () => {
+    userId = req.user.userId;
+  });
+  
+  if (!userId) { ws.close(4001, "Unauthorized"); return; }
 
-  // ─────────────────────────
-  // AUTH + INITIAL SETUP
-  // ─────────────────────────
-  try {
-    await new Promise(resolve =>
-      cookieParser()(req, {}, resolve)
-    );
+  // Check if banned
+  const userDoc = await db.collection("users").findOne({ userId });
+  if (!userDoc || userDoc.banned) { ws.close(4003, "Banned"); return; }
+  // Register socket
+  if (!onlineClients.has(userId)) onlineClients.set(userId, new Set());
+  onlineClients.get(userId).add(ws);
+  // Mark online in DB
+  await db.collection("users").updateOne({ userId }, { $set: { status: "online" } });
+  // Notify contacts
+  notifyPresence(userId, "online").catch(console.error);
+  // Daily streak + XP
+  processDailyStreak(userId).catch(console.error);
 
-    requireAuth(
-      req,
-      { status: () => ({ json: () => {} }) },
-      () => {
-        userId = req.user?.userId;
-      }
-    );
-
-    console.log("USER ID:", userId);
-
-if (!userId) {
-  ws.close(4001, "Unauthorized");
-  return;
-}
-
-let userDoc;
-try {
-  console.log("FETCHING USER DOC...");
-  userDoc = await db.collection("users").findOne({ userId });
-  console.log("USER DOC FOUND:", !!userDoc, "BANNED:", userDoc?.banned);
-} catch (err) {
-  console.error("DB ERROR:", err);
-  ws.close(1011, "DB error");
-  return;
-}
-
-if (!userDoc) {
-  console.log("NO USER DOC — CLOSING 4004");
-  ws.close(4004, "User not found");
-  return;
-}
-
-if (userDoc.banned) {
-  console.log("BANNED — CLOSING 4003");
-  ws.close(4003, "Banned");
-  return;
-}
-
-console.log("PAST ALL CHECKS — ADDING TO ONLINE CLIENTS");
-
-if (!onlineClients.has(userId)) {
-  onlineClients.set(userId, new Set());
-}
-
-onlineClients.get(userId).add(ws);
-console.log("ADDED TO ONLINE CLIENTS, socket count:", onlineClients.get(userId).size);
-
-await db.collection("users").updateOne(
-  { userId },
-  { $set: { status: "online" } }
-);
-console.log("STATUS SET TO ONLINE");
-
-notifyPresence(userId, "online").catch(console.error);
-processDailyStreak(userId).catch(console.error);
-console.log("SETUP COMPLETE — WS SHOULD BE STABLE NOW");
-
-  } catch (err) {
-    console.error("🔥 WS connection crash:", err);
-    ws.close(1011, "Internal server error");
-    return;
-  }
-
-  // ─────────────────────────
-  // MESSAGE HANDLER
-  // ─────────────────────────
   ws.on("message", async (raw) => {
-    try {
-      let msg;
-      try {
-        msg = JSON.parse(raw);
-      } catch {
-        return;
-      }
+    let msg;
+    try { msg = JSON.parse(raw); } catch { return; }
 
-      const { type } = msg;
+    const { type } = msg;
 
-      // ── typing (DM) ──
-      if (type === "typing") {
-        const { conversationId, isTyping } = msg;
-        if (!conversationId) return;
-
-        broadcastToConversation(
-          conversationId,
-          {
-            type: "typing",
-            conversationId,
-            userId,
-            isTyping: !!isTyping,
-          },
-          userId
-        );
-        return;
-      }
-
-      // ── groupTyping ──
-      if (type === "groupTyping") {
-        const { groupId, isTyping } = msg;
-        if (!groupId) return;
-
-        const user_ = await db.collection("users").findOne(
-          { userId },
-          { projection: { name: 1, username: 1 } }
-        );
-
-        const typers = getGroupTypers(groupId);
-
-        if (isTyping) {
-          if (typers.has(userId)) {
-            clearTimeout(typers.get(userId).timer);
-          }
-
-          const timer = setTimeout(() => {
-            typers.delete(userId);
-            broadcastGroupTyping(groupId);
-          }, 6000);
-
-          typers.set(userId, {
-            userId,
-            name: user_?.name || "Someone",
-            username: user_?.username,
-            timer,
-          });
-        } else {
-          if (typers.has(userId)) {
-            clearTimeout(typers.get(userId).timer);
-            typers.delete(userId);
-          }
-        }
-
-        broadcastGroupTyping(groupId);
-        return;
-      }
-
-      // ── mark DM messages as read ──
-      if (type === "read") {
-        const { conversationId, upToMessageId } = msg;
-        if (!conversationId || !upToMessageId) return;
-
-        await markMessagesRead(
-          userId,
-          conversationId,
-          upToMessageId
-        );
-        return;
-      }
-
-      // ── mark group messages as read ──
-      if (type === "groupRead") {
-        const { groupId, upToMessageId } = msg;
-        if (!groupId) return;
-
-        await markGroupMessagesRead(
-          userId,
-          groupId,
-          upToMessageId
-        );
-        return;
-      }
-
-      // ── ping / heartbeat ──
-      if (type === "ping") {
-        ws.send(JSON.stringify({ type: "pong" }));
-        return;
-      }
-
-    } catch (err) {
-      console.error("🔥 WS message crash:", err);
+    // ── typing (DM) ──
+    if (type === "typing") {
+      const { conversationId, isTyping } = msg;
+      if (!conversationId) return;
+      broadcastToConversation(conversationId, {
+        type: "typing",
+        conversationId,
+        userId,
+        isTyping: !!isTyping,
+      }, userId);
+      return;
     }
+
+    // ── groupTyping — "UserA, UserB and 2 others typing" ──
+    if (type === "groupTyping") {
+      const { groupId, isTyping } = msg;
+      if (!groupId) return;
+
+      const user_ = await db.collection("users").findOne({ userId }, { projection: { name: 1, username: 1 } });
+      const typers = getGroupTypers(groupId);
+
+      if (isTyping) {
+        // Clear any existing timeout for this user
+        if (typers.has(userId)) clearTimeout(typers.get(userId).timer);
+        // Auto-remove after 6 seconds if no follow-up
+        const timer = setTimeout(() => {
+          typers.delete(userId);
+          broadcastGroupTyping(groupId);
+        }, 6000);
+        typers.set(userId, { userId, name: user_?.name || "Someone", username: user_?.username, timer });
+      } else {
+        if (typers.has(userId)) {
+          clearTimeout(typers.get(userId).timer);
+          typers.delete(userId);
+        }
+      }
+      broadcastGroupTyping(groupId);
+      return;
+    }
+
+    // ── mark DM messages as read ──
+    if (type === "read") {
+      const { conversationId, upToMessageId } = msg;
+      if (!conversationId || !upToMessageId) return;
+      await markMessagesRead(userId, conversationId, upToMessageId);
+      return;
+    }
+
+    // ── mark group messages as read ──
+    // { type: "groupRead", groupId, upToMessageId? }
+    if (type === "groupRead") {
+      const { groupId, upToMessageId } = msg;
+      if (!groupId) return;
+      await markGroupMessagesRead(userId, groupId, upToMessageId);
+      return;
+    }
+
+    // ── ping / heartbeat ──
+    if (type === "ping") { ws.send(JSON.stringify({ type: "pong" })); return; }
   });
 
-  // ─────────────────────────
-  // CLOSE HANDLER
-  // ─────────────────────────
   ws.on("close", async () => {
-   console.log("WS CLOSE — userId:", userId, "socket count:", onlineClients.get(userId)?.size);
-    try {
-      const sockets = getSocketsForUser(userId);
-      if (!sockets) return;
-
-      sockets.delete(ws);
-
-      if (sockets.size === 0) {
-        onlineClients.delete(userId);
-
-        await db.collection("users").updateOne(
-          { userId },
-          {
-            $set: {
-              status: "offline",
-              lastSeen: new Date().toISOString(),
-            },
-          }
-        );
-
-        notifyPresence(userId, "offline").catch(console.error);
-      }
-    } catch (err) {
-      console.error("🔥 WS close crash:", err);
+    const sockets = getSocketsForUser(userId);
+    sockets.delete(ws);
+    if (sockets.size === 0) {
+      onlineClients.delete(userId);
+      await db.collection("users").updateOne({ userId }, { $set: { status: "offline", lastSeen: new Date().toISOString() } });
+      notifyPresence(userId, "offline").catch(console.error);
     }
   });
 });
