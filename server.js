@@ -755,10 +755,15 @@ function broadcastCP(userId, payload) {
 }
 
 wss.on("connection", async (ws, req) => {
-  try {
-    await new Promise(resolve => cookieParser()(req, {}, resolve));
+  let userId;
 
-    let userId;
+  // ─────────────────────────
+  // AUTH + INITIAL SETUP
+  // ─────────────────────────
+  try {
+    await new Promise(resolve =>
+      cookieParser()(req, {}, resolve)
+    );
 
     requireAuth(
       req,
@@ -773,10 +778,6 @@ wss.on("connection", async (ws, req) => {
       return;
     }
 
-    // 🔎 If your DB stores userId as number, normalize it:
-    // userId = Number(userId);
-
-    // Check if banned
     const userDoc = await db.collection("users").findOne({ userId });
 
     if (!userDoc || userDoc.banned) {
@@ -784,108 +785,161 @@ wss.on("connection", async (ws, req) => {
       return;
     }
 
-    // Register socket
     if (!onlineClients.has(userId)) {
       onlineClients.set(userId, new Set());
     }
 
     onlineClients.get(userId).add(ws);
 
-    // Mark online in DB
     await db.collection("users").updateOne(
       { userId },
       { $set: { status: "online" } }
     );
 
-    // Notify contacts
     notifyPresence(userId, "online").catch(console.error);
-
-    // Daily streak + XP
     processDailyStreak(userId).catch(console.error);
 
   } catch (err) {
     console.error("🔥 WS connection crash:", err);
-
-    if (ws.readyState === ws.OPEN) {
-      ws.close(1011, "Internal server error"); // 1011 = server error
-    }
+    ws.close(1011, "Internal server error");
+    return;
   }
-});
 
+  // ─────────────────────────
+  // MESSAGE HANDLER
+  // ─────────────────────────
   ws.on("message", async (raw) => {
-    let msg;
-    try { msg = JSON.parse(raw); } catch { return; }
-
-    const { type } = msg;
-
-    // ── typing (DM) ──
-    if (type === "typing") {
-      const { conversationId, isTyping } = msg;
-      if (!conversationId) return;
-      broadcastToConversation(conversationId, {
-        type: "typing",
-        conversationId,
-        userId,
-        isTyping: !!isTyping,
-      }, userId);
-      return;
-    }
-
-    // ── groupTyping — "UserA, UserB and 2 others typing" ──
-    if (type === "groupTyping") {
-      const { groupId, isTyping } = msg;
-      if (!groupId) return;
-
-      const user_ = await db.collection("users").findOne({ userId }, { projection: { name: 1, username: 1 } });
-      const typers = getGroupTypers(groupId);
-
-      if (isTyping) {
-        // Clear any existing timeout for this user
-        if (typers.has(userId)) clearTimeout(typers.get(userId).timer);
-        // Auto-remove after 6 seconds if no follow-up
-        const timer = setTimeout(() => {
-          typers.delete(userId);
-          broadcastGroupTyping(groupId);
-        }, 6000);
-        typers.set(userId, { userId, name: user_?.name || "Someone", username: user_?.username, timer });
-      } else {
-        if (typers.has(userId)) {
-          clearTimeout(typers.get(userId).timer);
-          typers.delete(userId);
-        }
+    try {
+      let msg;
+      try {
+        msg = JSON.parse(raw);
+      } catch {
+        return;
       }
-      broadcastGroupTyping(groupId);
-      return;
-    }
 
-    // ── mark DM messages as read ──
-    if (type === "read") {
-      const { conversationId, upToMessageId } = msg;
-      if (!conversationId || !upToMessageId) return;
-      await markMessagesRead(userId, conversationId, upToMessageId);
-      return;
-    }
+      const { type } = msg;
 
-    // ── mark group messages as read ──
-    // { type: "groupRead", groupId, upToMessageId? }
-    if (type === "groupRead") {
-      const { groupId, upToMessageId } = msg;
-      if (!groupId) return;
-      await markGroupMessagesRead(userId, groupId, upToMessageId);
-      return;
-    }
+      // ── typing (DM) ──
+      if (type === "typing") {
+        const { conversationId, isTyping } = msg;
+        if (!conversationId) return;
 
-    // ── ping / heartbeat ──
-    if (type === "ping") { ws.send(JSON.stringify({ type: "pong" })); return; }
+        broadcastToConversation(
+          conversationId,
+          {
+            type: "typing",
+            conversationId,
+            userId,
+            isTyping: !!isTyping,
+          },
+          userId
+        );
+        return;
+      }
+
+      // ── groupTyping ──
+      if (type === "groupTyping") {
+        const { groupId, isTyping } = msg;
+        if (!groupId) return;
+
+        const user_ = await db.collection("users").findOne(
+          { userId },
+          { projection: { name: 1, username: 1 } }
+        );
+
+        const typers = getGroupTypers(groupId);
+
+        if (isTyping) {
+          if (typers.has(userId)) {
+            clearTimeout(typers.get(userId).timer);
+          }
+
+          const timer = setTimeout(() => {
+            typers.delete(userId);
+            broadcastGroupTyping(groupId);
+          }, 6000);
+
+          typers.set(userId, {
+            userId,
+            name: user_?.name || "Someone",
+            username: user_?.username,
+            timer,
+          });
+        } else {
+          if (typers.has(userId)) {
+            clearTimeout(typers.get(userId).timer);
+            typers.delete(userId);
+          }
+        }
+
+        broadcastGroupTyping(groupId);
+        return;
+      }
+
+      // ── mark DM messages as read ──
+      if (type === "read") {
+        const { conversationId, upToMessageId } = msg;
+        if (!conversationId || !upToMessageId) return;
+
+        await markMessagesRead(
+          userId,
+          conversationId,
+          upToMessageId
+        );
+        return;
+      }
+
+      // ── mark group messages as read ──
+      if (type === "groupRead") {
+        const { groupId, upToMessageId } = msg;
+        if (!groupId) return;
+
+        await markGroupMessagesRead(
+          userId,
+          groupId,
+          upToMessageId
+        );
+        return;
+      }
+
+      // ── ping / heartbeat ──
+      if (type === "ping") {
+        ws.send(JSON.stringify({ type: "pong" }));
+        return;
+      }
+
+    } catch (err) {
+      console.error("🔥 WS message crash:", err);
+    }
   });
 
+  // ─────────────────────────
+  // CLOSE HANDLER
+  // ─────────────────────────
   ws.on("close", async () => {
-    const sockets = getSocketsForUser(userId);
-    sockets.delete(ws);
-    if (sockets.size === 0) {
-      onlineClients.delete(userId);
-      await db.collection("users").updateOne({ userId }, { $set: { status: "offline", lastSeen: new Date().toISOString() } });
-      notifyPresence(userId, "offline").catch(console.error);
+    try {
+      const sockets = getSocketsForUser(userId);
+      if (!sockets) return;
+
+      sockets.delete(ws);
+
+      if (sockets.size === 0) {
+        onlineClients.delete(userId);
+
+        await db.collection("users").updateOne(
+          { userId },
+          {
+            $set: {
+              status: "offline",
+              lastSeen: new Date().toISOString(),
+            },
+          }
+        );
+
+        notifyPresence(userId, "offline").catch(console.error);
+      }
+    } catch (err) {
+      console.error("🔥 WS close crash:", err);
     }
   });
 });
