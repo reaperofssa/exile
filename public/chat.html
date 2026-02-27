@@ -1501,6 +1501,7 @@ function connectWS() {
   };
 
   ws.onclose = (e) => {
+  console.log('WS CLOSE — code:', e.code, 'wasClean:', e.wasClean, 'reason:', e.reason);
     wsReady = false;
     if (wsHeartbeat) { clearInterval(wsHeartbeat); wsHeartbeat = null; }
     if (wsReconnectTimer) { clearTimeout(wsReconnectTimer); wsReconnectTimer = null; }
