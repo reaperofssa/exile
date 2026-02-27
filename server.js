@@ -755,21 +755,15 @@ function broadcastCP(userId, payload) {
 }
 
 wss.on("connection", async (ws, req) => {
-  // Authenticate via cookie or query token
-  const cookieHeader = req.headers.cookie || "";
-  const parsedCookies = Object.fromEntries(
-    cookieHeader.split(";").map(c => c.trim().split("=").map(decodeURIComponent))
-  );
-  const rawToken = parsedCookies["token"] || new URL(req.url, "http://x").searchParams.get("token");
-
+  await new Promise(resolve => cookieParser()(req, {}, resolve));
+  
   let userId;
-  try {
-    const decoded = jwt.verify(rawToken, JWT_SECRET);
-    userId = decoded.userId;
-  } catch {
-    ws.close(4001, "Unauthorized");
-    return;
-  }
+  requireAuth(req, { status: () => ({ json: () => {} }) }, () => {
+    userId = req.user.userId;  // set by requireAuth
+  });
+  
+  if (!userId) { ws.close(4001, "Unauthorized"); return; }
+});
 
   // Check if banned
   const userDoc = await db.collection("users").findOne({ userId });
