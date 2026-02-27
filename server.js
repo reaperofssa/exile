@@ -755,27 +755,62 @@ function broadcastCP(userId, payload) {
 }
 
 wss.on("connection", async (ws, req) => {
-  await new Promise(resolve => cookieParser()(req, {}, resolve));
-  
-  let userId;
-  requireAuth(req, { status: () => ({ json: () => {} }) }, () => {
-    userId = req.user.userId;
-  });
-  
-  if (!userId) { ws.close(4001, "Unauthorized"); return; }
+  try {
+    await new Promise(resolve => cookieParser()(req, {}, resolve));
 
-  // Check if banned
-  const userDoc = await db.collection("users").findOne({ userId });
-  if (!userDoc || userDoc.banned) { ws.close(4003, "Banned"); return; }
-  // Register socket
-  if (!onlineClients.has(userId)) onlineClients.set(userId, new Set());
-  onlineClients.get(userId).add(ws);
-  // Mark online in DB
-  await db.collection("users").updateOne({ userId }, { $set: { status: "online" } });
-  // Notify contacts
-  notifyPresence(userId, "online").catch(console.error);
-  // Daily streak + XP
-  processDailyStreak(userId).catch(console.error);
+    let userId;
+
+    requireAuth(
+      req,
+      { status: () => ({ json: () => {} }) },
+      () => {
+        userId = req.user?.userId;
+      }
+    );
+
+    if (!userId) {
+      ws.close(4001, "Unauthorized");
+      return;
+    }
+
+    // 🔎 If your DB stores userId as number, normalize it:
+    // userId = Number(userId);
+
+    // Check if banned
+    const userDoc = await db.collection("users").findOne({ userId });
+
+    if (!userDoc || userDoc.banned) {
+      ws.close(4003, "Banned");
+      return;
+    }
+
+    // Register socket
+    if (!onlineClients.has(userId)) {
+      onlineClients.set(userId, new Set());
+    }
+
+    onlineClients.get(userId).add(ws);
+
+    // Mark online in DB
+    await db.collection("users").updateOne(
+      { userId },
+      { $set: { status: "online" } }
+    );
+
+    // Notify contacts
+    notifyPresence(userId, "online").catch(console.error);
+
+    // Daily streak + XP
+    processDailyStreak(userId).catch(console.error);
+
+  } catch (err) {
+    console.error("🔥 WS connection crash:", err);
+
+    if (ws.readyState === ws.OPEN) {
+      ws.close(1011, "Internal server error"); // 1011 = server error
+    }
+  }
+});
 
   ws.on("message", async (raw) => {
     let msg;
