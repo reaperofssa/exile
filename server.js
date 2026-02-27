@@ -9,7 +9,7 @@ require('dotenv').config();
 const express      = require("express");
 const http         = require("http");
 const path = require("path");
-const { WebSocketServer, WebSocket } = require("ws");
+const { Server: SocketIOServer } = require("socket.io");
 const jwt          = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
 const multer       = require("multer");
@@ -387,22 +387,35 @@ function requireSaulAdmin(req, res, next) {
 
 /** Broadcast a payload to all online members of a space or feed (users + bots) */
 async function broadcastToGroup(groupId, payload, excludeUserId = null) {
+
   const spaceDoc = await db.collection("spaces").findOne({ spaceId: groupId }).catch(() => null);
+
   const feedDoc  = spaceDoc ? null : await db.collection("feeds").findOne({ feedId: groupId }).catch(() => null);
+
   const members  = (spaceDoc || feedDoc)?.members || [];
-  const data     = JSON.stringify(payload);
 
   for (const m of members) {
+
     if (m.userId === excludeUserId) continue;
-    // Regular user sockets
+
     const socks = onlineClients.get(m.userId) || new Set();
-    for (const ws of socks) {
-      if (ws.readyState === WebSocket.OPEN) ws.send(data);
+
+    for (const socketId of socks) {
+
+      mainNsp.to(socketId).emit("message", payload);
+
     }
-    // Bot sockets — bot member ids are stored as botId in members
-    const botWs = botClients.get(m.userId);
-    if (botWs && botWs.readyState === WebSocket.OPEN) botWs.send(data);
+
+    const botSocketId = botClients.get(m.userId);
+
+    if (botSocketId) {
+
+      botNsp.to(botSocketId).emit("message", payload);
+
+    }
+
   }
+
 }
 
 // ─── Rate-limit / spam detector (no auto-ban — use reports instead) ──────────
@@ -438,6 +451,16 @@ async function checkSpam(userId) {
 
 const app    = express();
 const server = http.createServer(app);
+
+const io = new SocketIOServer(server, {
+  cors: { origin: "*", credentials: true },
+  cookie: true,
+});
+
+// Three namespaces replacing three WebSocketServer instances
+const mainNsp  = io.of("/");          // replaces wss
+const botNsp   = io.of("/bot");       // replaces botWss
+const cpNsp    = io.of("/controlpanel"); // replaces cpWss
 
 app.use(express.json());
 app.use(cookieParser());
@@ -724,133 +747,156 @@ function getSocketsForUser(userId) {
   return onlineClients.get(userId) || new Set();
 }
 
+// Broadcast to all sockets belonging to a user (regular users)
+
 function broadcast(userId, payload) {
-  const data = JSON.stringify(payload);
-  // Regular user sockets
-  const sockets = getSocketsForUser(userId);
-  for (const ws of sockets) {
-    if (ws.readyState === WebSocket.OPEN) ws.send(data);
+
+  const socks = onlineClients.get(userId);
+
+  if (socks) {
+
+    for (const socketId of socks) {
+
+      mainNsp.to(socketId).emit("message", payload);
+
+    }
+
   }
-  // Bot connection (if this userId is a bot)
-  const botWs = botClients.get(userId);
-  if (botWs && botWs.readyState === WebSocket.OPEN) botWs.send(data);
+
+  // Bot socket
+
+  const botSocketId = botClients.get(userId);
+
+  if (botSocketId) {
+
+    botNsp.to(botSocketId).emit("message", payload);
+
+  }
+
 }
 
 function broadcastToConversation(convId, payload, excludeUserId = null) {
-  // We keep a conversationId → Set<userId> mapping in memory for live connections only
-  // Parse from convId (format: "uid1_uid2")
+
   const parts = convId.split("_");
+
   for (const uid of parts) {
+
     if (uid !== excludeUserId) broadcast(uid, payload);
+
   }
+
 }
 
-/** Broadcast to all control-panel connections for a user */
 function broadcastCP(userId, payload) {
-  const data    = JSON.stringify(payload);
-  const sockets = cpClients.get(userId) || new Set();
-  for (const ws of sockets) {
-    if (ws.readyState === WebSocket.OPEN) ws.send(data);
+
+  const socks = cpClients.get(userId);
+
+  if (socks) {
+
+    for (const socketId of socks) {
+
+      cpNsp.to(socketId).emit("message", payload);
+
+    }
+
   }
+
 }
 
-wss.on("connection", async (ws, req) => {
-  await new Promise(resolve => cookieParser()(req, {}, resolve));
-  
-  let userId;
-  requireAuth(req, { status: () => ({ json: () => {} }) }, () => {
-    userId = req.user.userId;
-  });
-  
-  if (!userId) { ws.close(4001, "Unauthorized"); return; }
+mainNsp.use(async (socket, next) => {
+  // Parse cookie from handshake headers
+  const rawCookie = socket.handshake.headers.cookie || "";
+  const cookies   = Object.fromEntries(
+    rawCookie.split(";").filter(Boolean).map(c => {
+      const [k, ...v] = c.trim().split("=");
+      return [decodeURIComponent(k), decodeURIComponent(v.join("="))];
+    })
+  );
+  const token = cookies["token"] || socket.handshake.auth?.token;
+  if (!token) return next(new Error("Unauthorized"));
 
-  // Check if banned
+  try {
+    socket.user = jwt.verify(token, JWT_SECRET);
+    next();
+  } catch {
+    next(new Error("Invalid token"));
+  }
+});
+
+mainNsp.on("connection", async (socket) => {
+  const userId = socket.user.userId;
+
   const userDoc = await db.collection("users").findOne({ userId });
-  if (!userDoc || userDoc.banned) { ws.close(4003, "Banned"); return; }
+  if (!userDoc || userDoc.banned) {
+    socket.disconnect(true);
+    return;
+  }
+
   // Register socket
   if (!onlineClients.has(userId)) onlineClients.set(userId, new Set());
-  onlineClients.get(userId).add(ws);
-  // Mark online in DB
+  onlineClients.get(userId).add(socket.id);
+
   await db.collection("users").updateOne({ userId }, { $set: { status: "online" } });
-  // Notify contacts
   notifyPresence(userId, "online").catch(console.error);
-  // Daily streak + XP
   processDailyStreak(userId).catch(console.error);
 
-  ws.on("message", async (raw) => {
-    let msg;
-    try { msg = JSON.parse(raw); } catch { return; }
-
-    const { type } = msg;
-
-    // ── typing (DM) ──
-    if (type === "typing") {
-      const { conversationId, isTyping } = msg;
-      if (!conversationId) return;
-      broadcastToConversation(conversationId, {
-        type: "typing",
-        conversationId,
-        userId,
-        isTyping: !!isTyping,
-      }, userId);
-      return;
-    }
-
-    // ── groupTyping — "UserA, UserB and 2 others typing" ──
-    if (type === "groupTyping") {
-      const { groupId, isTyping } = msg;
-      if (!groupId) return;
-
-      const user_ = await db.collection("users").findOne({ userId }, { projection: { name: 1, username: 1 } });
-      const typers = getGroupTypers(groupId);
-
-      if (isTyping) {
-        // Clear any existing timeout for this user
-        if (typers.has(userId)) clearTimeout(typers.get(userId).timer);
-        // Auto-remove after 6 seconds if no follow-up
-        const timer = setTimeout(() => {
-          typers.delete(userId);
-          broadcastGroupTyping(groupId);
-        }, 6000);
-        typers.set(userId, { userId, name: user_?.name || "Someone", username: user_?.username, timer });
-      } else {
-        if (typers.has(userId)) {
-          clearTimeout(typers.get(userId).timer);
-          typers.delete(userId);
-        }
-      }
-      broadcastGroupTyping(groupId);
-      return;
-    }
-
-    // ── mark DM messages as read ──
-    if (type === "read") {
-      const { conversationId, upToMessageId } = msg;
-      if (!conversationId || !upToMessageId) return;
-      await markMessagesRead(userId, conversationId, upToMessageId);
-      return;
-    }
-
-    // ── mark group messages as read ──
-    // { type: "groupRead", groupId, upToMessageId? }
-    if (type === "groupRead") {
-      const { groupId, upToMessageId } = msg;
-      if (!groupId) return;
-      await markGroupMessagesRead(userId, groupId, upToMessageId);
-      return;
-    }
-
-    // ── ping / heartbeat ──
-    if (type === "ping") { ws.send(JSON.stringify({ type: "pong" })); return; }
+  // ── typing (DM) ──
+  socket.on("typing", ({ conversationId, isTyping }) => {
+    if (!conversationId) return;
+    broadcastToConversation(conversationId, {
+      type: "typing", conversationId, userId, isTyping: !!isTyping,
+    }, userId);
   });
 
-  ws.on("close", async () => {
-    const sockets = getSocketsForUser(userId);
-    sockets.delete(ws);
-    if (sockets.size === 0) {
-      onlineClients.delete(userId);
-      await db.collection("users").updateOne({ userId }, { $set: { status: "offline", lastSeen: new Date().toISOString() } });
-      notifyPresence(userId, "offline").catch(console.error);
+  // ── groupTyping ──
+  socket.on("groupTyping", async ({ groupId, isTyping }) => {
+    if (!groupId) return;
+    const user_ = await db.collection("users").findOne({ userId }, { projection: { name: 1, username: 1 } });
+    const typers = getGroupTypers(groupId);
+
+    if (isTyping) {
+      if (typers.has(userId)) clearTimeout(typers.get(userId).timer);
+      const timer = setTimeout(() => {
+        typers.delete(userId);
+        broadcastGroupTyping(groupId);
+      }, 6000);
+      typers.set(userId, { userId, name: user_?.name || "Someone", username: user_?.username, timer });
+    } else {
+      if (typers.has(userId)) {
+        clearTimeout(typers.get(userId).timer);
+        typers.delete(userId);
+      }
+    }
+    broadcastGroupTyping(groupId);
+  });
+
+  // ── read (DM) ──
+  socket.on("read", async ({ conversationId, upToMessageId }) => {
+    if (!conversationId || !upToMessageId) return;
+    await markMessagesRead(userId, conversationId, upToMessageId);
+  });
+
+  // ── groupRead ──
+  socket.on("groupRead", async ({ groupId, upToMessageId }) => {
+    if (!groupId) return;
+    await markGroupMessagesRead(userId, groupId, upToMessageId);
+  });
+
+  // ── ping ──
+  socket.on("ping", () => socket.emit("message", { type: "pong" }));
+
+  socket.on("disconnect", async () => {
+    const socks = onlineClients.get(userId);
+    if (socks) {
+      socks.delete(socket.id);
+      if (socks.size === 0) {
+        onlineClients.delete(userId);
+        await db.collection("users").updateOne(
+          { userId },
+          { $set: { status: "offline", lastSeen: new Date().toISOString() } }
+        );
+        notifyPresence(userId, "offline").catch(console.error);
+      }
     }
   });
 });
@@ -2799,8 +2845,11 @@ app.post("/api/bots/:botId/regenerate-token", requireAuth, async (req, res) => {
   await bots.updateOne({ botId: bot.botId }, { $set: { botToken: newToken } });
 
   // Disconnect existing bot WebSocket if connected
-  const existing = botClients.get(bot.botId);
-  if (existing) { existing.close(4009, "Token regenerated"); botClients.delete(bot.botId); }
+  const existingSocketId = botClients.get(bot.botId);
+if (existingSocketId) {
+  botNsp.sockets.get(existingSocketId)?.disconnect(true);
+  botClients.delete(bot.botId);
+}
 
   res.json({ botToken: newToken });
 });
@@ -3205,321 +3254,243 @@ app.delete("/api/bots/:botId/block", requireAuth, async (req, res) => {
 //
 //   { type:"ping" }
 
-const botWss = new WebSocketServer({ server, path: "/bot" });
-
-botWss.on("connection", async (ws, req) => {
-  const urlParams = new URL(req.url, "http://x").searchParams;
-  const token     = urlParams.get("token") ||
-    (req.headers["authorization"] || "").replace(/^Bot /, "").trim();
-
-  if (!token) { ws.close(4001, "Missing bot token"); return; }
+botNsp.use(async (socket, next) => {
+  const token = socket.handshake.auth?.token ||
+    socket.handshake.query?.token ||
+    (socket.handshake.headers["authorization"] || "").replace(/^Bot /, "").trim();
+  if (!token) return next(new Error("Missing bot token"));
 
   const bot = await db.collection("bots").findOne({ botToken: token });
-  if (!bot)           { ws.close(4001, "Invalid bot token"); return; }
-  if (bot.disabled)   { ws.close(4003, "Bot is disabled");   return; }
+  if (!bot)         return next(new Error("Invalid bot token"));
+  if (bot.disabled) return next(new Error("Bot is disabled"));
 
-  // One WS per bot — disconnect previous
-  const prev = botClients.get(bot.botId);
-  if (prev && prev.readyState === WebSocket.OPEN) prev.close(4008, "Replaced by new connection");
+  socket.bot = bot;
+  next();
+});
 
-  botClients.set(bot.botId, ws);
+botNsp.on("connection", async (socket) => {
+  const bot = socket.bot;
+
+  // Disconnect previous connection
+  const prevSocketId = botClients.get(bot.botId);
+  if (prevSocketId) {
+    botNsp.sockets.get(prevSocketId)?.disconnect(true);
+  }
+
+  botClients.set(bot.botId, socket.id);
   await db.collection("bots").updateOne({ botId: bot.botId }, { $set: { status: "online" } });
 
-  ws.send(JSON.stringify({
-    type:     "connected",
-    botId:    bot.botId,
-    name:     bot.name,
-    username: bot.username,
-    tag:      bot.tag,
-  }));
-
-  ws.on("message", async (raw) => {
-    let msg;
-    try { msg = JSON.parse(raw); } catch { return; }
-
-    const { type } = msg;
-
-    // Convenience: send error with optional correlation ref
-    const botErr = (error, ref) =>
-      ws.send(JSON.stringify({ type: "error", error, ...(ref && { ref }) }));
-
-    // ── heartbeat ──
-    if (type === "ping") { ws.send(JSON.stringify({ type: "pong" })); return; }
-
-    // ── bot sends a message to a user ──
-    if (type === "sendMessage") {
-      const { to, msgType = "text", text, caption, replyToMessageId,
-               mediaUrl, mediaSize, mediaMimeType, thumbnailUrl } = msg;
-      if (!to) { ws.send(JSON.stringify({ type: "error", error: "to is required." })); return; }
-
-      const content = {
-        replyToMessageId: replyToMessageId || null,
-        ...(text        && { text }),
-        ...(caption     && { caption }),
-        ...(mediaUrl    && { mediaUrl, mediaSize, mediaMimeType }),
-        ...(thumbnailUrl && { thumbnailUrl }),
-        ...(msgType === "sticker" && { isSticker: true }),
-        ...(msgType === "voice"   && { isVoice:   true }),
-      };
-
-      if (msgType === "text" && !text?.trim()) {
-        ws.send(JSON.stringify({ type: "error", error: "text is required for type text." }));
-        return;
-      }
-
-      const result = await sendBotMessage({ bot, recipientId: to, type: msgType, content });
-      if (result.error) ws.send(JSON.stringify({ type: "error", error: result.error }));
-      return;
-    }
-
-    // ── bot triggers typing indicator (DM) ──
-    if (type === "typing") {
-      const { to, isTyping } = msg;
-      if (!to) return;
-      const conversationId = makeConversationId(bot.botId, to);
-      broadcast(to, {
-        type: "typing", conversationId,
-        userId: bot.botId, isBot: true, botName: bot.name, isTyping: !!isTyping,
-      });
-      return;
-    }
-
-    // ── bot sends a group message (space or feed) — delegates to sendBotGroupMessage ──
-    if (type === "sendGroupMessage") {
-      const { groupId, groupType = "space", msgType = "text", text, caption,
-               replyToMessageId, mediaUrl, mediaSize, mediaMimeType } = msg;
-      if (!groupId) { ws.send(JSON.stringify({ type: "error", error: "groupId is required." })); return; }
-      if (msgType === "text" && !text?.trim()) { ws.send(JSON.stringify({ type: "error", error: "text is required." })); return; }
-      if (!SPACE_ALLOWED_TYPES.includes(msgType)) {
-        ws.send(JSON.stringify({ type: "error", error: `msgType must be one of: ${SPACE_ALLOWED_TYPES.join(", ")}` }));
-        return;
-      }
-
-      const content = {
-        replyToMessageId: replyToMessageId || null,
-        ...(text      && { text:    text.slice(0, GROUP_TEXT_MAX) }),
-        ...(caption   && { caption: caption.slice(0, GROUP_CAPTION_MAX) }),
-        ...(mediaUrl  && { mediaUrl, mediaSize, mediaMimeType }),
-        ...(msgType === "sticker" && { isSticker: true }),
-        ...(msgType === "voice"   && { isVoice:   true }),
-      };
-
-      const result = await sendBotGroupMessage({ bot, groupId, groupType, type: msgType, content });
-      if (result.error) { ws.send(JSON.stringify({ type: "error", error: result.error })); return; }
-      ws.send(JSON.stringify({ type: "groupMessageSent", chat: { chatId: groupId, chatType: groupType }, message: result.message }));
-      return;
-    }
-
-    // ── bot group typing indicator ──
-    if (type === "groupTyping") {
-      const { groupId, isTyping } = msg;
-      if (!groupId) return;
-      broadcastToGroup(groupId, {
-        type: "typing", groupId,
-        userId: bot.botId, isBot: true, botName: bot.name, isTyping: !!isTyping,
-      }, bot.botId);
-      return;
-    }
-
-    // ── bot promote member in group ──
-    if (type === "promoteMember") {
-      const { groupId, groupType = "space", targetId } = msg;
-      const col     = groupType === "space" ? "spaces" : "feeds";
-      const idField = groupType === "space" ? "spaceId" : "feedId";
-      const group   = await db.collection(col).findOne({ [idField]: groupId });
-      if (!group) { ws.send(JSON.stringify({ type: "error", error: "Group not found." })); return; }
-
-      const botMember = getMember(group, bot.botId);
-      if (!botMember?.isAdmin) { ws.send(JSON.stringify({ type: "error", error: "Bot must be admin." })); return; }
-
-      const target = getMember(group, targetId);
-      if (!target) { ws.send(JSON.stringify({ type: "error", error: "Target not a member." })); return; }
-      if (target.isAdmin) { ws.send(JSON.stringify({ type: "error", error: "Already admin." })); return; }
-
-      await db.collection(col).updateOne(
-        { [idField]: groupId, "members.userId": targetId },
-        { $set: { "members.$.isAdmin": true, "members.$.promotedBy": bot.botId } }
-      );
-      broadcastToGroup(groupId, { type: "memberPromoted", groupId, targetId, promotedBy: bot.botId });
-      ws.send(JSON.stringify({ type: "promoteMemberOk", groupId, targetId }));
-      return;
-    }
-
-    // ── bot demote member ──
-    if (type === "demoteMember") {
-      const { groupId, groupType = "space", targetId } = msg;
-      const col     = groupType === "space" ? "spaces" : "feeds";
-      const idField = groupType === "space" ? "spaceId" : "feedId";
-      const group   = await db.collection(col).findOne({ [idField]: groupId });
-      if (!group) { ws.send(JSON.stringify({ type: "error", error: "Group not found." })); return; }
-
-      const target = getMember(group, targetId);
-      if (!target) { ws.send(JSON.stringify({ type: "error", error: "Target not found." })); return; }
-      if (target.isOwner) { ws.send(JSON.stringify({ type: "error", error: "Cannot demote owner." })); return; }
-
-      // Bot can only demote members it promoted
-      if (target.promotedBy !== bot.botId && !isOwner(group, bot.botId)) {
-        ws.send(JSON.stringify({ type: "error", error: "Bot can only demote members it promoted." }));
-        return;
-      }
-
-      await db.collection(col).updateOne(
-        { [idField]: groupId, "members.userId": targetId },
-        { $set: { "members.$.isAdmin": false, "members.$.promotedBy": null } }
-      );
-      broadcastToGroup(groupId, { type: "memberDemoted", groupId, targetId });
-      ws.send(JSON.stringify({ type: "demoteMemberOk", groupId, targetId }));
-      return;
-    }
-
-    // ── bot ban member ──
-    if (type === "banMember") {
-      const { groupId, groupType = "space", targetId } = msg;
-      const col     = groupType === "space" ? "spaces" : "feeds";
-      const idField = groupType === "space" ? "spaceId" : "feedId";
-      const group   = await db.collection(col).findOne({ [idField]: groupId });
-      if (!group) { ws.send(JSON.stringify({ type: "error", error: "Group not found." })); return; }
-
-      const botMember = getMember(group, bot.botId);
-      if (!botMember?.isAdmin) { ws.send(JSON.stringify({ type: "error", error: "Bot must be admin." })); return; }
-
-      const target = getMember(group, targetId);
-      if (!target) { ws.send(JSON.stringify({ type: "error", error: "Target not found." })); return; }
-      if (target.isAdmin && !isOwner(group, bot.botId))
-        { ws.send(JSON.stringify({ type: "error", error: "Only owner can ban admins." })); return; }
-
-      await db.collection(col).updateOne(
-        { [idField]: groupId, "members.userId": targetId },
-        {
-          $set: { "members.$.isBanned": true },
-          $inc: { memberCount: -1 },
-        }
-      );
-      broadcastToGroup(groupId, { type: "memberBanned", groupId, targetId, bannedBy: bot.botId });
-      ws.send(JSON.stringify({ type: "banMemberOk", groupId, targetId }));
-      return;
-    }
-
-    // ── bot delete a group message ──
-    if (type === "deleteGroupMessage") {
-      const { groupId, groupType = "space", messageId } = msg;
-      const col     = groupType === "space" ? "spaces" : "feeds";
-      const idField = groupType === "space" ? "spaceId" : "feedId";
-      const group   = await db.collection(col).findOne({ [idField]: groupId });
-      if (!group) { ws.send(JSON.stringify({ type: "error", error: "Group not found." })); return; }
-
-      const botMember = getMember(group, bot.botId);
-      if (!botMember?.isAdmin) { ws.send(JSON.stringify({ type: "error", error: "Bot must be admin." })); return; }
-
-      const gmsg = await db.collection("groupMessages").findOne({ messageId, groupId });
-      if (!gmsg || gmsg.deleted) { ws.send(JSON.stringify({ type: "error", error: "Message not found." })); return; }
-
-      await db.collection("groupMessages").updateOne(
-        { messageId }, { $set: { deleted: true, content: {}, deletedAt: new Date().toISOString() } }
-      );
-      broadcastToGroup(groupId, { type: "groupMessageDeleted", groupId, messageId });
-      ws.send(JSON.stringify({ type: "deleteGroupMessageOk", groupId, messageId }));
-      return;
-    }
-
-    // ── bot pin/unpin message ──
-    if (type === "pinGroupMessage") {
-      const { groupId, groupType = "space", messageId, unpin = false } = msg;
-      const col     = groupType === "space" ? "spaces" : "feeds";
-      const idField = groupType === "space" ? "spaceId" : "feedId";
-      const group   = await db.collection(col).findOne({ [idField]: groupId });
-      if (!group) { ws.send(JSON.stringify({ type: "error", error: "Group not found." })); return; }
-
-      const botMember = getMember(group, bot.botId);
-      if (!botMember?.isAdmin) { ws.send(JSON.stringify({ type: "error", error: "Bot must be admin." })); return; }
-
-      const newPin = unpin ? null : messageId;
-      await db.collection(col).updateOne({ [idField]: groupId }, { $set: { pinnedMessageId: newPin } });
-      broadcastToGroup(groupId, { type: "messagePinned", groupId, messageId: newPin, pinnedBy: bot.botId });
-      ws.send(JSON.stringify({ type: "pinGroupMessageOk", groupId, messageId: newPin }));
-      return;
-    }
-
-    // ── bot unban member ──
-    if (type === "unbanMember") {
-      const { groupId, groupType = "space", targetId } = msg;
-      const col     = groupType === "space" ? "spaces" : "feeds";
-      const idField = groupType === "space" ? "spaceId" : "feedId";
-      const group   = await db.collection(col).findOne({ [idField]: groupId });
-      if (!group) { ws.send(JSON.stringify({ type: "error", error: "Group not found." })); return; }
-      if (!isAdmin(group, bot.botId)) { ws.send(JSON.stringify({ type: "error", error: "Bot must be admin." })); return; }
-      await db.collection(col).updateOne(
-        { [idField]: groupId, "members.userId": targetId },
-        {
-          $set: { "members.$.isBanned": false },
-          $inc: { memberCount: 1 },
-        }
-      );
-      broadcastToGroup(groupId, { type: "memberUnbanned", groupId, targetId });
-      ws.send(JSON.stringify({ type: "unbanMemberOk", groupId, targetId }));
-      return;
-    }
-
-    // ── bot mute/unmute member ──
-    if (type === "muteMember") {
-      const { groupId, groupType = "space", targetId, muted = true } = msg;
-      const col     = groupType === "space" ? "spaces" : "feeds";
-      const idField = groupType === "space" ? "spaceId" : "feedId";
-      const group   = await db.collection(col).findOne({ [idField]: groupId });
-      if (!group) { ws.send(JSON.stringify({ type: "error", error: "Group not found." })); return; }
-      if (!isAdmin(group, bot.botId)) { ws.send(JSON.stringify({ type: "error", error: "Bot must be admin." })); return; }
-      await db.collection(col).updateOne(
-        { [idField]: groupId, "members.userId": targetId },
-        { $set: { "members.$.isMuted": !!muted } }
-      );
-      broadcastToGroup(groupId, { type: "memberMuted", groupId, targetId, muted: !!muted });
-      ws.send(JSON.stringify({ type: "muteMemberOk", groupId, targetId, muted }));
-      return;
-    }
-
-    // ── bot sends exiles (deducted from owner's balance) ──
-    // { type: "sendExiles", to, amount, note?, ref? }
-    if (type === "sendExiles") {
-      const { to, amount, note, ref } = msg;
-      if (!to)     { botErr("to (userId) is required.", ref); return; }
-      if (!amount) { botErr("amount is required.", ref);      return; }
-
-      const owner = await db.collection("users").findOne({ userId: bot.ownerId });
-      if (!owner)  { botErr("Bot owner not found.", ref); return; }
-
-      const result = await transferExiles({
-        fromUserId:  bot.ownerId,
-        toUserId:    to,
-        amount:      parseInt(amount),
-        note,
-        senderHint:  owner,
-        bypassBlock: true,
-        senderIsBot: true,
-        botName:     bot.name,
-      });
-
-      if (!result.ok) { botErr(result.error, ref); return; }
-      ws.send(JSON.stringify({
-        type:            "sendExilesOk",
-        ref,
-        to,
-        amount:          parseInt(amount),
-        ownerNewBalance: result.newBalance,
-        sentAt:          result.sentAt,
-        messageId:       result.messageId,
-      }));
-      return;
-    }
+  socket.emit("message", {
+    type: "connected",
+    botId: bot.botId, name: bot.name, username: bot.username, tag: bot.tag,
   });
 
-  ws.on("close", async () => {
-    if (botClients.get(bot.botId) === ws) {
+  const botErr = (error, ref) =>
+    socket.emit("message", { type: "error", error, ...(ref && { ref }) });
+
+  socket.on("ping", () => socket.emit("message", { type: "pong" }));
+
+  socket.on("sendMessage", async (msg) => {
+    const { to, msgType = "text", text, caption, replyToMessageId,
+            mediaUrl, mediaSize, mediaMimeType, thumbnailUrl } = msg;
+    if (!to) { botErr("to is required."); return; }
+
+    const content = {
+      replyToMessageId: replyToMessageId || null,
+      ...(text         && { text }),
+      ...(caption      && { caption }),
+      ...(mediaUrl     && { mediaUrl, mediaSize, mediaMimeType }),
+      ...(thumbnailUrl && { thumbnailUrl }),
+      ...(msgType === "sticker" && { isSticker: true }),
+      ...(msgType === "voice"   && { isVoice: true }),
+    };
+    if (msgType === "text" && !text?.trim()) { botErr("text is required."); return; }
+
+    const result = await sendBotMessage({ bot, recipientId: to, type: msgType, content });
+    if (result.error) botErr(result.error);
+  });
+
+  socket.on("typing", ({ to, isTyping }) => {
+    if (!to) return;
+    const conversationId = makeConversationId(bot.botId, to);
+    broadcast(to, {
+      type: "typing", conversationId,
+      userId: bot.botId, isBot: true, botName: bot.name, isTyping: !!isTyping,
+    });
+  });
+
+  socket.on("sendGroupMessage", async (msg) => {
+    const { groupId, groupType = "space", msgType = "text", text, caption,
+            replyToMessageId, mediaUrl, mediaSize, mediaMimeType } = msg;
+    if (!groupId) { botErr("groupId is required."); return; }
+    if (msgType === "text" && !text?.trim()) { botErr("text is required."); return; }
+    if (!SPACE_ALLOWED_TYPES.includes(msgType)) {
+      botErr(`msgType must be one of: ${SPACE_ALLOWED_TYPES.join(", ")}`);
+      return;
+    }
+
+    const content = {
+      replyToMessageId: replyToMessageId || null,
+      ...(text     && { text:    text.slice(0, GROUP_TEXT_MAX) }),
+      ...(caption  && { caption: caption.slice(0, GROUP_CAPTION_MAX) }),
+      ...(mediaUrl && { mediaUrl, mediaSize, mediaMimeType }),
+      ...(msgType === "sticker" && { isSticker: true }),
+      ...(msgType === "voice"   && { isVoice: true }),
+    };
+
+    const result = await sendBotGroupMessage({ bot, groupId, groupType, type: msgType, content });
+    if (result.error) { botErr(result.error); return; }
+    socket.emit("message", {
+      type: "groupMessageSent",
+      chat: { chatId: groupId, chatType: groupType },
+      message: result.message,
+    });
+  });
+
+  socket.on("groupTyping", ({ groupId, isTyping }) => {
+    if (!groupId) return;
+    broadcastToGroup(groupId, {
+      type: "typing", groupId,
+      userId: bot.botId, isBot: true, botName: bot.name, isTyping: !!isTyping,
+    }, bot.botId);
+  });
+
+  socket.on("promoteMember", async ({ groupId, groupType = "space", targetId }) => {
+    const col = groupType === "space" ? "spaces" : "feeds";
+    const idField = groupType === "space" ? "spaceId" : "feedId";
+    const group = await db.collection(col).findOne({ [idField]: groupId });
+    if (!group) { botErr("Group not found."); return; }
+    const botMember = getMember(group, bot.botId);
+    if (!botMember?.isAdmin) { botErr("Bot must be admin."); return; }
+    const target = getMember(group, targetId);
+    if (!target) { botErr("Target not a member."); return; }
+    if (target.isAdmin) { botErr("Already admin."); return; }
+    await db.collection(col).updateOne(
+      { [idField]: groupId, "members.userId": targetId },
+      { $set: { "members.$.isAdmin": true, "members.$.promotedBy": bot.botId } }
+    );
+    broadcastToGroup(groupId, { type: "memberPromoted", groupId, targetId, promotedBy: bot.botId });
+    socket.emit("message", { type: "promoteMemberOk", groupId, targetId });
+  });
+
+  socket.on("demoteMember", async ({ groupId, groupType = "space", targetId }) => {
+    const col = groupType === "space" ? "spaces" : "feeds";
+    const idField = groupType === "space" ? "spaceId" : "feedId";
+    const group = await db.collection(col).findOne({ [idField]: groupId });
+    if (!group) { botErr("Group not found."); return; }
+    const target = getMember(group, targetId);
+    if (!target) { botErr("Target not found."); return; }
+    if (target.isOwner) { botErr("Cannot demote owner."); return; }
+    if (target.promotedBy !== bot.botId && !isOwner(group, bot.botId)) {
+      botErr("Bot can only demote members it promoted."); return;
+    }
+    await db.collection(col).updateOne(
+      { [idField]: groupId, "members.userId": targetId },
+      { $set: { "members.$.isAdmin": false, "members.$.promotedBy": null } }
+    );
+    broadcastToGroup(groupId, { type: "memberDemoted", groupId, targetId });
+    socket.emit("message", { type: "demoteMemberOk", groupId, targetId });
+  });
+
+  socket.on("banMember", async ({ groupId, groupType = "space", targetId }) => {
+    const col = groupType === "space" ? "spaces" : "feeds";
+    const idField = groupType === "space" ? "spaceId" : "feedId";
+    const group = await db.collection(col).findOne({ [idField]: groupId });
+    if (!group) { botErr("Group not found."); return; }
+    const botMember = getMember(group, bot.botId);
+    if (!botMember?.isAdmin) { botErr("Bot must be admin."); return; }
+    const target = getMember(group, targetId);
+    if (!target) { botErr("Target not found."); return; }
+    if (target.isAdmin && !isOwner(group, bot.botId)) { botErr("Only owner can ban admins."); return; }
+    await db.collection(col).updateOne(
+      { [idField]: groupId, "members.userId": targetId },
+      { $set: { "members.$.isBanned": true }, $inc: { memberCount: -1 } }
+    );
+    broadcastToGroup(groupId, { type: "memberBanned", groupId, targetId, bannedBy: bot.botId });
+    socket.emit("message", { type: "banMemberOk", groupId, targetId });
+  });
+
+  socket.on("deleteGroupMessage", async ({ groupId, groupType = "space", messageId }) => {
+    const col = groupType === "space" ? "spaces" : "feeds";
+    const idField = groupType === "space" ? "spaceId" : "feedId";
+    const group = await db.collection(col).findOne({ [idField]: groupId });
+    if (!group) { botErr("Group not found."); return; }
+    const botMember = getMember(group, bot.botId);
+    if (!botMember?.isAdmin) { botErr("Bot must be admin."); return; }
+    const gmsg = await db.collection("groupMessages").findOne({ messageId, groupId });
+    if (!gmsg || gmsg.deleted) { botErr("Message not found."); return; }
+    await db.collection("groupMessages").updateOne(
+      { messageId },
+      { $set: { deleted: true, content: {}, deletedAt: new Date().toISOString() } }
+    );
+    broadcastToGroup(groupId, { type: "groupMessageDeleted", groupId, messageId });
+    socket.emit("message", { type: "deleteGroupMessageOk", groupId, messageId });
+  });
+
+  socket.on("pinGroupMessage", async ({ groupId, groupType = "space", messageId, unpin = false }) => {
+    const col = groupType === "space" ? "spaces" : "feeds";
+    const idField = groupType === "space" ? "spaceId" : "feedId";
+    const group = await db.collection(col).findOne({ [idField]: groupId });
+    if (!group) { botErr("Group not found."); return; }
+    const botMember = getMember(group, bot.botId);
+    if (!botMember?.isAdmin) { botErr("Bot must be admin."); return; }
+    const newPin = unpin ? null : messageId;
+    await db.collection(col).updateOne({ [idField]: groupId }, { $set: { pinnedMessageId: newPin } });
+    broadcastToGroup(groupId, { type: "messagePinned", groupId, messageId: newPin, pinnedBy: bot.botId });
+    socket.emit("message", { type: "pinGroupMessageOk", groupId, messageId: newPin });
+  });
+
+  socket.on("unbanMember", async ({ groupId, groupType = "space", targetId }) => {
+    const col = groupType === "space" ? "spaces" : "feeds";
+    const idField = groupType === "space" ? "spaceId" : "feedId";
+    const group = await db.collection(col).findOne({ [idField]: groupId });
+    if (!group) { botErr("Group not found."); return; }
+    if (!isAdmin(group, bot.botId)) { botErr("Bot must be admin."); return; }
+    await db.collection(col).updateOne(
+      { [idField]: groupId, "members.userId": targetId },
+      { $set: { "members.$.isBanned": false }, $inc: { memberCount: 1 } }
+    );
+    broadcastToGroup(groupId, { type: "memberUnbanned", groupId, targetId });
+    socket.emit("message", { type: "unbanMemberOk", groupId, targetId });
+  });
+
+  socket.on("muteMember", async ({ groupId, groupType = "space", targetId, muted = true }) => {
+    const col = groupType === "space" ? "spaces" : "feeds";
+    const idField = groupType === "space" ? "spaceId" : "feedId";
+    const group = await db.collection(col).findOne({ [idField]: groupId });
+    if (!group) { botErr("Group not found."); return; }
+    if (!isAdmin(group, bot.botId)) { botErr("Bot must be admin."); return; }
+    await db.collection(col).updateOne(
+      { [idField]: groupId, "members.userId": targetId },
+      { $set: { "members.$.isMuted": !!muted } }
+    );
+    broadcastToGroup(groupId, { type: "memberMuted", groupId, targetId, muted: !!muted });
+    socket.emit("message", { type: "muteMemberOk", groupId, targetId, muted });
+  });
+
+  socket.on("sendExiles", async ({ to, amount, note, ref }) => {
+    if (!to)     { botErr("to (userId) is required.", ref); return; }
+    if (!amount) { botErr("amount is required.", ref);      return; }
+    const owner = await db.collection("users").findOne({ userId: bot.ownerId });
+    if (!owner)  { botErr("Bot owner not found.", ref); return; }
+    const result = await transferExiles({
+      fromUserId: bot.ownerId, toUserId: to, amount: parseInt(amount),
+      note, senderHint: owner, bypassBlock: true, senderIsBot: true, botName: bot.name,
+    });
+    if (!result.ok) { botErr(result.error, ref); return; }
+    socket.emit("message", {
+      type: "sendExilesOk", ref, to, amount: parseInt(amount),
+      ownerNewBalance: result.newBalance, sentAt: result.sentAt, messageId: result.messageId,
+    });
+  });
+
+  socket.on("disconnect", async () => {
+    if (botClients.get(bot.botId) === socket.id) {
       botClients.delete(bot.botId);
       await db.collection("bots").updateOne({ botId: bot.botId }, { $set: { status: "offline" } });
     }
   });
 });
-
 // ════════════════════════════════════════════════════════════════════════════
 //  SPACE XP ENGINE
 // ════════════════════════════════════════════════════════════════════════════
@@ -3551,8 +3522,10 @@ async function grantGroupXP(groupType, idField, groupId, action) {
 // ── Forward message events to listening bot ───────────────────────────────────
 // Called from delete/edit/react routes when the other party is a bot
 function notifyBotOfEvent(botId, payload) {
-  const ws = botClients.get(botId);
-  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(payload));
+  const socketId = botClients.get(botId);
+  if (socketId) {
+    botNsp.to(socketId).emit("message", payload);
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -3939,137 +3912,107 @@ app.get("/api/controlpanel", requireAuth, async (req, res) => {
 // ── Client → server ──
 //   { type: "ping" | "pong" }
 
-const cpWss = new WebSocketServer({ server, path: "/controlpanel" });
-
-cpWss.on("connection", async (ws, req) => {
-  const cookieHeader  = req.headers.cookie || "";
-  const parsedCookies = Object.fromEntries(
-    cookieHeader.split(";").filter(Boolean).map(c => {
+cpNsp.use(async (socket, next) => {
+  const rawCookie = socket.handshake.headers.cookie || "";
+  const cookies   = Object.fromEntries(
+    rawCookie.split(";").filter(Boolean).map(c => {
       const [k, ...v] = c.trim().split("=");
       return [decodeURIComponent(k), decodeURIComponent(v.join("="))];
     })
   );
-  const rawToken = parsedCookies["token"] || new URL(req.url, "http://x").searchParams.get("token");
-
-  let userId;
+  const token = cookies["token"] || socket.handshake.auth?.token || socket.handshake.query?.token;
   try {
-    const decoded = jwt.verify(rawToken, JWT_SECRET);
-    userId = decoded.userId;
+    socket.userId = jwt.verify(token, JWT_SECRET).userId;
+    next();
   } catch {
-    ws.close(4001, "Unauthorized");
-    return;
+    next(new Error("Unauthorized"));
   }
+});
+
+cpNsp.on("connection", async (socket) => {
+  const userId = socket.userId;
 
   const user = await db.collection("users").findOne({ userId });
-  if (!user || user.banned) { ws.close(4003, "Banned or not found"); return; }
+  if (!user || user.banned) { socket.disconnect(true); return; }
 
-  // Register CP socket
   if (!cpClients.has(userId)) cpClients.set(userId, new Set());
-  cpClients.get(userId).add(ws);
+  cpClients.get(userId).add(socket.id);
 
-  // ── Send initial snapshot ──
-  const messages = db.collection("messages");
-  const users    = db.collection("users");
+  // ── Build and send init snapshot (copy the full init block from old cpWss) ──
+  const messages_   = db.collection("messages");
+  const users_      = db.collection("users");
 
-  const unreadMsgs   = await messages.find({ recipientId: userId, readAt: null, deleted: { $ne: true } })
+  const unreadMsgs  = await messages_.find({ recipientId: userId, readAt: null, deleted: { $ne: true } })
     .sort({ sentAt: -1 }).limit(20).toArray();
-  const totalUnread  = await messages.countDocuments({ recipientId: userId, readAt: null, deleted: { $ne: true } });
+  const totalUnread = await messages_.countDocuments({ recipientId: userId, readAt: null, deleted: { $ne: true } });
 
-  const senderIds  = [...new Set(unreadMsgs.map(m => m.senderId))];
-  const senderDocs = await users.find({ userId: { $in: senderIds } }).toArray();
-  const senderMap  = Object.fromEntries(senderDocs.map(u => [u.userId, u]));
+  const senderIds_  = [...new Set(unreadMsgs.map(m => m.senderId))];
+  const senderDocs_ = await users_.find({ userId: { $in: senderIds_ } }).toArray();
+  const senderMap_  = Object.fromEntries(senderDocs_.map(u => [u.userId, u]));
 
-  const bots = await db.collection("bots").find({ ownerId: userId })
+  const bots_ = await db.collection("bots").find({ ownerId: userId })
     .project({ botId: 1, name: 1, username: 1, status: 1, profilePicture: 1 }).toArray();
 
-  // Compute group unread totals for init snapshot
-  const myGroupIds   = [];
-  const mySpaces     = await db.collection("spaces").find({ "members.userId": userId }, { projection: { spaceId: 1, name: 1, profileImage: 1 } }).toArray();
-  const myFeeds      = await db.collection("feeds").find({ "members.userId": userId }, { projection: { feedId: 1, name: 1, profileImage: 1 } }).toArray();
-  for (const s of mySpaces) myGroupIds.push(s.spaceId);
-  for (const f of myFeeds)  myGroupIds.push(f.feedId);
+  const mySpaces_ = await db.collection("spaces").find({ "members.userId": userId }, { projection: { spaceId: 1, name: 1, profileImage: 1 } }).toArray();
+  const myFeeds_  = await db.collection("feeds").find({ "members.userId": userId }, { projection: { feedId: 1, name: 1, profileImage: 1 } }).toArray();
+  const groupIds_ = [...mySpaces_.map(s => s.spaceId), ...myFeeds_.map(f => f.feedId)];
 
-  const grpUnreadAgg = myGroupIds.length > 0
+  const grpUnreadAgg_ = groupIds_.length > 0
     ? await db.collection("groupMessages").aggregate([
-        { $match: { groupId: { $in: myGroupIds }, deleted: { $ne: true }, readBy: { $nin: [userId] } } },
+        { $match: { groupId: { $in: groupIds_ }, deleted: { $ne: true }, readBy: { $nin: [userId] } } },
         { $group: { _id: "$groupId", count: { $sum: 1 } } },
       ]).toArray()
     : [];
-  const grpUnreadMap = Object.fromEntries(grpUnreadAgg.map(r => [r._id, r.count]));
-  const totalGroupUnread = grpUnreadAgg.reduce((acc, r) => acc + r.count, 0);
+  const grpUnreadMap_ = Object.fromEntries(grpUnreadAgg_.map(r => [r._id, r.count]));
+  const totalGroupUnread_ = grpUnreadAgg_.reduce((acc, r) => acc + r.count, 0);
 
-  // Compute level, rank, badges for init
   const levelInfo_ = buildLevelInfo(user.xp || 0);
-  const rank_      = getRank(levelInfo_.level);
   const badges_    = computeBadges({ ...user, level: levelInfo_.level });
 
-  ws.send(JSON.stringify({
-    type:         "init",
-    userId:       user.userId,
-    name:         user.name,
-    username:     user.username,
-    tag:          user.tag,
-    position:     user.position,
-    premium:      user.premium,
-    premiumExpiry: user.premiumExpiry || null,
-    verified:     user.verified,
-    profilePicture: user.profilePicture,
-    status:       user.status || "offline",
-    exiles:       user.exiles || 0,
-    xp:           user.xp    || 0,
-    streaks:      user.streaks    || 0,
-    daysOnline:   user.daysOnline || 0,
-    reputation:   user.reputation || 0,
-    warningCount: user.warningCount || 0,
-    contacts:     user.contacts || [],
-    levelInfo:    levelInfo_,
-    rank:         rank_,
-    badges:       badges_,
-    topBadge:     getHighlightBadge(badges_),
-    // DM unreads
+  socket.emit("message", {
+    type: "init",
+    userId: user.userId, name: user.name, username: user.username, tag: user.tag,
+    position: user.position, premium: user.premium, premiumExpiry: user.premiumExpiry || null,
+    verified: user.verified, profilePicture: user.profilePicture,
+    status: user.status || "offline", exiles: user.exiles || 0,
+    xp: user.xp || 0, streaks: user.streaks || 0, daysOnline: user.daysOnline || 0,
+    reputation: user.reputation || 0, warningCount: user.warningCount || 0,
+    contacts: user.contacts || [],
+    levelInfo: levelInfo_, rank: getRank(levelInfo_.level),
+    badges: badges_, topBadge: getHighlightBadge(badges_),
     totalUnread,
     unreadPreviews: unreadMsgs.map(m => ({
-      messageId:      m.messageId,
-      conversationId: m.conversationId,
-      sentAt:         m.sentAt,
+      messageId: m.messageId, conversationId: m.conversationId, sentAt: m.sentAt,
       preview: m.type === "text"
         ? (m.content?.text || "").slice(0, 80) + ((m.content?.text || "").length > 80 ? "…" : "")
         : `[${m.type}]`,
-      sender: senderMap[m.senderId] ? userStub(senderMap[m.senderId]) : { userId: m.senderId },
+      sender: senderMap_[m.senderId] ? userStub(senderMap_[m.senderId]) : { userId: m.senderId },
     })),
-    // Group unreads summary
-    totalGroupUnread,
+    totalGroupUnread: totalGroupUnread_,
     groupUnreads: [
-      ...mySpaces.map(s => ({ chatType: "space", chatId: s.spaceId, name: s.name, avatar: s.profileImage, unread: grpUnreadMap[s.spaceId] || 0 })),
-      ...myFeeds.map(f =>  ({ chatType: "feed",  chatId: f.feedId,  name: f.name, avatar: f.profileImage, unread: grpUnreadMap[f.feedId]  || 0 })),
+      ...mySpaces_.map(s => ({ chatType: "space", chatId: s.spaceId, name: s.name, avatar: s.profileImage, unread: grpUnreadMap_[s.spaceId] || 0 })),
+      ...myFeeds_.map(f =>  ({ chatType: "feed",  chatId: f.feedId,  name: f.name, avatar: f.profileImage, unread: grpUnreadMap_[f.feedId]  || 0 })),
     ].filter(g => g.unread > 0),
-    bots,
-  }));
-
-  // ── Heartbeat: server pings every 30s ──
-  const pingInterval = setInterval(() => {
-    if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "ping" }));
-  }, 30_000);
-
-  ws.on("message", (raw) => {
-    try {
-      const msg = JSON.parse(raw);
-      if (msg.type === "ping" || msg.type === "pong") {
-        ws.send(JSON.stringify({ type: "pong" }));
-      }
-    } catch { /* ignore malformed */ }
+    bots: bots_,
   });
 
-  ws.on("close", () => {
+  // Heartbeat
+  const pingInterval = setInterval(() => {
+    if (socket.connected) socket.emit("message", { type: "ping" });
+  }, 30_000);
+
+  socket.on("ping", () => socket.emit("message", { type: "pong" }));
+  socket.on("pong", () => {}); // no-op acknowledgement
+
+  socket.on("disconnect", () => {
     clearInterval(pingInterval);
-    const sockets = cpClients.get(userId);
-    if (sockets) {
-      sockets.delete(ws);
-      if (sockets.size === 0) cpClients.delete(userId);
+    const socks = cpClients.get(userId);
+    if (socks) {
+      socks.delete(socket.id);
+      if (socks.size === 0) cpClients.delete(userId);
     }
   });
 });
-
 // ── XP leaderboard (bonus feature) ───────────────────────────────────────────
 /**
  * GET /api/xp/leaderboard?limit=20
