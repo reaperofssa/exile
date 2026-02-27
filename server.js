@@ -806,20 +806,23 @@ if (userDoc.banned) {
 }
 
 console.log("PAST ALL CHECKS — ADDING TO ONLINE CLIENTS");
-    
-    if (!onlineClients.has(userId)) {
-      onlineClients.set(userId, new Set());
-    }
 
-    onlineClients.get(userId).add(ws);
+if (!onlineClients.has(userId)) {
+  onlineClients.set(userId, new Set());
+}
 
-    await db.collection("users").updateOne(
-      { userId },
-      { $set: { status: "online" } }
-    );
+onlineClients.get(userId).add(ws);
+console.log("ADDED TO ONLINE CLIENTS, socket count:", onlineClients.get(userId).size);
 
-    notifyPresence(userId, "online").catch(console.error);
-    processDailyStreak(userId).catch(console.error);
+await db.collection("users").updateOne(
+  { userId },
+  { $set: { status: "online" } }
+);
+console.log("STATUS SET TO ONLINE");
+
+notifyPresence(userId, "online").catch(console.error);
+processDailyStreak(userId).catch(console.error);
+console.log("SETUP COMPLETE — WS SHOULD BE STABLE NOW");
 
   } catch (err) {
     console.error("🔥 WS connection crash:", err);
