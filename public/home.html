@@ -2,352 +2,592 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EXILE — Chats</title>
 <style>
 /* ============================================================
    TOKENS
    ============================================================ */
 :root {
-  --dusk-deep:     #120812;
-  --dusk-mid:      #1e0e24;
+  --deep:          #0d0610;
+  --mid:           #160d1e;
+  --surface:       #1c1128;
   --amber:         #c97b3a;
   --amber-light:   #e8a85c;
-  --purple-accent: #9b59b6;
-  --purple-glow:   rgba(155,89,182,0.3);
-  --text-primary:  rgba(255,255,255,0.93);
+  --violet:        #9b59b6;
+  --violet-glow:   rgba(155,89,182,0.25);
+  --violet-dim:    rgba(155,89,182,0.12);
+  --green:         #22c55e;
+  --red:           #ef4444;
+  --text-pri:      rgba(255,255,255,0.93);
   --text-sec:      rgba(255,255,255,0.55);
-  --text-dim:      rgba(255,255,255,0.3);
-  --r-sm: 8px;
-  --r-md: 12px;
-  --r-lg: 16px;
-  --tab-h: 68px;
-  --header-h: 48px;
+  --text-dim:      rgba(255,255,255,0.28);
+  --glass-bg:      rgba(255,255,255,0.06);
+  --glass-border:  rgba(255,255,255,0.10);
+  --glass-top:     rgba(255,255,255,0.18);
+  --r-sm: 8px; --r-md: 14px; --r-lg: 20px;
+  --tab-h: 66px; --header-h: 52px;
 }
-body.dark-mode {
-  --dusk-deep:#000;--dusk-mid:#0a0a0a;--amber:#8b5a2b;--amber-light:#a07038;
-  --purple-accent:#7a46a0;--purple-glow:rgba(122,70,160,0.2);
-  --text-primary:rgba(255,255,255,0.88);--text-sec:rgba(255,255,255,0.45);--text-dim:rgba(255,255,255,0.22);
+
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow-x:hidden;}
+body{
+  font-family:'SF Pro Display',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--deep); color:var(--text-pri);
+  min-height:100vh; -webkit-font-smoothing:antialiased;
+  overscroll-behavior:none;
 }
-body.dark-mode .bg-base{background:#000!important}
-body.dark-mode .bg-glow{opacity:.15}
-body.dark-mode .glass{background:linear-gradient(180deg,rgba(255,255,255,.055) 0%,rgba(255,255,255,.018) 18%,rgba(255,255,255,.012) 80%,rgba(255,255,255,.03) 100%)!important;border-color:rgba(255,255,255,.07)!important;border-top-color:rgba(255,255,255,.11)!important}
-body.dark-mode .site-header{background:linear-gradient(180deg,rgba(0,0,0,.8) 0%,rgba(0,0,0,.65) 100%)!important;border-bottom-color:rgba(255,255,255,.06)!important}
-body.dark-mode .tab-bar{background:rgba(0,0,0,.75)!important;border-top-color:rgba(255,255,255,.06)!important}
-body.dark-mode .chat-card{border-color:rgba(255,255,255,.035)!important}
-body.dark-mode .chat-card:hover{background:rgba(255,255,255,.04)!important}
-body.dark-mode .search-wrap input{background:rgba(0,0,0,.35)!important}
-body.dark-mode .island-cp{background:rgba(0,0,0,.55)!important}
 
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-html,body{height:100%;overflow-x:hidden}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--dusk-deep);color:var(--text-primary);min-height:100vh;-webkit-font-smoothing:antialiased;overscroll-behavior:none}
+/* ── Backgrounds ── */
+.bg-base{
+  position:fixed;inset:0;z-index:0;
+  background:
+    radial-gradient(ellipse 140% 60% at 50% -5%,  #2d1245 0%,transparent 60%),
+    radial-gradient(ellipse 80% 50%  at 10% 80%,  #1a0c28 0%,transparent 55%),
+    radial-gradient(ellipse 90% 40%  at 90% 50%,  #38184a 0%,transparent 50%),
+    linear-gradient(175deg,#180f22 0%,#0d0610 60%);
+}
+.bg-glow{
+  position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:
+    radial-gradient(ellipse 60% 20% at 50% 20%,rgba(201,123,58,0.07) 0%,transparent 70%),
+    radial-gradient(ellipse 40% 15% at 20% 65%,rgba(155,89,182,0.04) 0%,transparent 55%);
+}
 
-/* BG */
-.bg-base{position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse 130% 55% at 50% 0%,#2e1640 0%,transparent 65%),radial-gradient(ellipse 70% 45% at 15% 75%,#1f1028 0%,transparent 55%),radial-gradient(ellipse 85% 35% at 85% 55%,#3a1e45 0%,transparent 50%),radial-gradient(ellipse 60% 30% at 50% 95%,#1a0c1e 0%,transparent 60%),linear-gradient(180deg,#1c0e25 0%,#130a18 35%,#0d0610 100%)}
-.bg-glow{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse 65% 22% at 50% 28%,rgba(201,123,58,.08) 0%,transparent 70%),radial-gradient(ellipse 45% 18% at 25% 60%,rgba(155,89,182,.05) 0%,transparent 55%)}
-
-/* GLASS */
-.glass{background:linear-gradient(180deg,rgba(255,255,255,.11) 0%,rgba(255,255,255,.045) 18%,rgba(255,255,255,.035) 80%,rgba(255,255,255,.06) 100%);backdrop-filter:blur(32px) saturate(1.3);-webkit-backdrop-filter:blur(32px) saturate(1.3);border:1px solid rgba(255,255,255,.13);border-top-color:rgba(255,255,255,.22);box-shadow:0 1px 0 inset rgba(255,255,255,.12),0 6px 28px rgba(0,0,0,.3);border-radius:var(--r-lg)}
-
-/* HEADER */
-.site-header{position:fixed;top:0;left:0;right:0;z-index:100;height:var(--header-h);display:flex;align-items:center;justify-content:space-between;padding:0 14px;background:linear-gradient(180deg,rgba(255,255,255,.1) 0%,rgba(255,255,255,.04) 100%);backdrop-filter:blur(32px) saturate(1.3);-webkit-backdrop-filter:blur(32px) saturate(1.3);border-bottom:1px solid rgba(255,255,255,.1);box-shadow:0 2px 16px rgba(0,0,0,.25)}
-.header-left,.header-right{display:flex;align-items:center;gap:8px;flex:1}
-.header-right{justify-content:flex-end}
-.header-center{flex:0 0 auto;display:flex;align-items:center;justify-content:center}
-.logo{display:flex;align-items:center;gap:8px}
-.exile-logo-svg{width:26px;height:26px}
-.logo-text{font-size:14px;font-weight:700;letter-spacing:3px;text-transform:uppercase;background:linear-gradient(135deg,#fff 30%,var(--amber-light) 60%,var(--purple-accent) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-
-/* Theme toggle */
-.theme-toggle{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:var(--text-sec);width:30px;height:30px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .2s,transform .15s}
-.theme-toggle:hover{background:rgba(255,255,255,.14)}
-.theme-toggle:active{transform:scale(.95)}
-.theme-toggle svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+/* ── Glass utility ── */
+.glass{
+  background:linear-gradient(160deg,rgba(255,255,255,0.09) 0%,rgba(255,255,255,0.04) 40%,rgba(255,255,255,0.035) 100%);
+  backdrop-filter:blur(28px) saturate(1.4);
+  -webkit-backdrop-filter:blur(28px) saturate(1.4);
+  border:1px solid var(--glass-border);
+  border-top-color:var(--glass-top);
+  box-shadow:0 1px 0 inset rgba(255,255,255,0.10),0 8px 32px rgba(0,0,0,0.35);
+}
 
 /* ============================================================
-   EXILE ISLAND — centered in header, pill with green dot
+   HEADER
    ============================================================ */
-.exile-island-btn{
-  position:relative;
-  background:rgba(255,255,255,.08);
-  backdrop-filter:blur(20px);
-  -webkit-backdrop-filter:blur(20px);
-  border:1px solid rgba(255,255,255,.15);
-  border-top-color:rgba(255,255,255,.25);
-  border-radius:20px;
-  width:44px;height:28px;
-  display:flex;align-items:center;justify-content:center;
+.site-header{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  height:var(--header-h);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 16px;
+  background:linear-gradient(180deg,rgba(255,255,255,0.08) 0%,rgba(255,255,255,0.03) 100%);
+  backdrop-filter:blur(32px) saturate(1.3);
+  -webkit-backdrop-filter:blur(32px) saturate(1.3);
+  border-bottom:1px solid rgba(255,255,255,0.08);
+}
+.logo{display:flex;align-items:center;gap:8px;text-decoration:none;}
+.logo-text{
+  font-size:13px;font-weight:800;letter-spacing:3.5px;text-transform:uppercase;
+  background:linear-gradient(120deg,#fff 20%,var(--amber-light) 55%,var(--violet) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+
+/* ── EXILE ISLAND — centered pill in header ── */
+.exile-island-wrap{
+  position:absolute;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;
+  z-index:210;
+}
+.exile-island{
+  display:flex;align-items:center;gap:0;
+  background:rgba(8,4,14,0.75);
+  backdrop-filter:blur(40px) saturate(1.8);
+  -webkit-backdrop-filter:blur(40px) saturate(1.8);
+  border:1px solid rgba(255,255,255,0.13);
+  border-top-color:rgba(255,255,255,0.22);
+  border-radius:24px;
+  padding:7px 14px 7px 10px;
   cursor:pointer;
-  transition:background .2s,transform .15s,box-shadow .2s;
-  box-shadow:0 2px 12px rgba(155,89,182,.15);
+  box-shadow:0 4px 24px rgba(0,0,0,0.4),0 0 0 1px rgba(155,89,182,0.18);
+  transition:box-shadow 0.25s,transform 0.2s;
+  user-select:none;
+  position:relative;
 }
-.exile-island-btn:hover{background:rgba(255,255,255,.13);box-shadow:0 4px 20px rgba(155,89,182,.25)}
-.exile-island-btn:active{transform:scale(.94)}
-.exile-island-btn .island-sword{
-  width:16px;height:16px;
-  background:linear-gradient(135deg,var(--amber-light),var(--purple-accent));
-  border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  font-size:8px;
+.exile-island:hover{
+  box-shadow:0 6px 32px rgba(155,89,182,0.28),0 0 0 1px rgba(255,255,255,0.12);
+  transform:scale(1.02);
 }
-.exile-island-btn .island-presence-dot{
-  position:absolute;
-  top:2px;right:2px;
-  width:8px;height:8px;
-  background:#22c55e;
-  border-radius:50%;
-  border:1.5px solid var(--dusk-deep);
-  box-shadow:0 0 4px rgba(34,197,94,.6);
+.exile-island:active{transform:scale(0.97);}
+.island-sword-icon{width:22px;height:22px;flex-shrink:0;}
+.island-online-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--green);
+  box-shadow:0 0 6px rgba(34,197,94,0.7);
+  flex-shrink:0;margin-left:5px;
 }
-.exile-island-btn .island-unread-dot{
-  position:absolute;
-  top:2px;right:2px;
-  width:8px;height:8px;
-  background:#ef4444;
-  border-radius:50%;
-  border:1.5px solid var(--dusk-deep);
-  display:none;
+.island-unread-pip{
+  position:absolute;top:-4px;right:-4px;
+  width:16px;height:16px;border-radius:50%;
+  background:var(--red);color:#fff;
+  font-size:9px;font-weight:700;
+  display:none;align-items:center;justify-content:center;
+  border:2px solid var(--deep);
 }
+.island-unread-pip.show{display:flex;}
 
-/* ============================================================
-   ISLAND DROPDOWN PANEL — drops down from center header
-   ============================================================ */
-.island-drop{
-  position:fixed;
-  top:calc(var(--header-h) + 6px);
-  left:50%;
-  transform:translateX(-50%) translateY(-8px) scale(0.95);
+/* ── Island Drop Panel ── */
+.island-panel{
+  position:absolute;top:calc(100% + 10px);left:50%;transform:translateX(-50%) translateY(-8px) scale(0.94);
+  z-index:209;
+  width:300px;
+  background:linear-gradient(160deg,rgba(255,255,255,0.08) 0%,rgba(255,255,255,0.03) 100%);
+  backdrop-filter:blur(48px) saturate(1.5);
+  -webkit-backdrop-filter:blur(48px) saturate(1.5);
+  border:1px solid rgba(255,255,255,0.11);
+  border-top-color:rgba(255,255,255,0.20);
+  border-radius:20px;
+  padding:0;
+  box-shadow:0 16px 56px rgba(0,0,0,0.55),0 0 0 1px rgba(155,89,182,0.10);
+  opacity:0;pointer-events:none;
+  transition:transform 0.32s cubic-bezier(0.34,1.56,0.64,1),opacity 0.22s ease;
   transform-origin:top center;
-  z-index:500;
-  width:280px;
-  background:rgba(18,8,28,.55);
-  backdrop-filter:blur(48px) saturate(1.8);
-  -webkit-backdrop-filter:blur(48px) saturate(1.8);
-  border:1px solid rgba(255,255,255,.16);
-  border-top-color:rgba(255,255,255,.28);
-  border-radius:18px;
-  box-shadow:0 12px 48px rgba(0,0,0,.55),0 0 0 1px rgba(155,89,182,.1);
-  opacity:0;
-  pointer-events:none;
-  transition:transform .3s cubic-bezier(0.34,1.56,0.64,1),opacity .2s ease;
   overflow:hidden;
 }
-.island-drop.open{
+.island-panel.open{
   transform:translateX(-50%) translateY(0) scale(1);
-  opacity:1;
-  pointer-events:all;
-}
-
-/* Panel header */
-.island-drop-head{
-  display:flex;align-items:center;gap:10px;
-  padding:14px 14px 10px;
-  border-bottom:1px solid rgba(255,255,255,.08);
-}
-.island-drop-av{
-  width:38px;height:38px;border-radius:50%;
-  background:linear-gradient(135deg,var(--amber),var(--purple-accent));
-  flex-shrink:0;overflow:hidden;
-  display:flex;align-items:center;justify-content:center;font-size:16px;
-}
-.island-drop-av img{width:100%;height:100%;object-fit:cover}
-.island-drop-name{font-size:13px;font-weight:700;color:var(--text-primary)}
-.island-drop-handle{font-size:10.5px;color:var(--text-dim)}
-.island-drop-exiles{
-  margin-left:auto;
-  background:rgba(201,123,58,.15);
-  border:1px solid rgba(201,123,58,.25);
-  border-radius:10px;
-  padding:3px 8px;
-  font-size:10px;font-weight:700;color:var(--amber-light);
-  white-space:nowrap;
+  opacity:1;pointer-events:all;
 }
 
 /* Panel pages */
-.island-page{display:none;flex-direction:column}
-.island-page.active{display:flex}
+.cp-page{display:none;flex-direction:column;}
+.cp-page.active{display:flex;}
 
-/* Nav pagination inside panel */
-.island-page-nav{
+/* Panel header */
+.cp-header{
   display:flex;align-items:center;justify-content:space-between;
-  padding:6px 14px 4px;
-  border-bottom:1px solid rgba(255,255,255,.06);
+  padding:14px 16px 10px;
+  border-bottom:1px solid rgba(255,255,255,0.07);
 }
-.island-page-dots{display:flex;gap:4px;align-items:center}
-.island-page-dot{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.2);transition:background .2s}
-.island-page-dot.active{background:var(--purple-accent);width:14px;border-radius:3px}
-.island-nav-btn{
-  background:none;border:none;cursor:pointer;
-  color:var(--text-dim);padding:4px;border-radius:6px;
-  transition:background .15s,color .15s;display:flex;align-items:center;justify-content:center;
+.cp-title{font-size:11px;font-weight:700;letter-spacing:0.7px;color:var(--text-dim);text-transform:uppercase;}
+.cp-nav-btns{display:flex;gap:4px;}
+.cp-nav-btn{
+  background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.08);
+  color:var(--text-sec);font-size:10px;border-radius:6px;
+  padding:3px 8px;cursor:pointer;transition:background 0.15s;
 }
-.island-nav-btn:hover{background:rgba(255,255,255,.08);color:var(--text-primary)}
-.island-nav-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.cp-nav-btn:hover{background:rgba(255,255,255,0.13);}
+.cp-nav-btn.active{background:var(--violet-dim);border-color:rgba(155,89,182,0.3);color:var(--violet);}
 
-/* Island items */
-.island-item{display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;transition:background .15s;border-radius:8px;margin:0 4px}
-.island-item:hover{background:rgba(255,255,255,.07)}
-.island-item svg{width:15px;height:15px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;opacity:.7}
-.island-item-label{font-size:12px;color:var(--text-primary);flex:1}
-.island-item-sub{font-size:10px;color:var(--text-dim)}
-.island-section-label{padding:6px 14px 2px;font-size:9px;font-weight:700;letter-spacing:.8px;color:var(--text-dim);text-transform:uppercase}
-.island-divider{height:1px;background:rgba(255,255,255,.07);margin:5px 14px}
+/* Page 1 — Profile */
+.cp-profile-row{
+  display:flex;align-items:center;gap:12px;padding:14px 16px;
+}
+.cp-avatar{
+  width:44px;height:44px;border-radius:50%;
+  background:linear-gradient(135deg,var(--amber),var(--violet));
+  flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;
+  font-size:16px;font-weight:700;
+}
+.cp-avatar img{width:100%;height:100%;object-fit:cover;}
+.cp-user-info{min-width:0;flex:1;}
+.cp-name{font-size:14px;font-weight:700;color:var(--text-pri);display:flex;align-items:center;gap:5px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.cp-sub{font-size:11px;color:var(--text-sec);margin-top:1px;display:flex;align-items:center;gap:5px;}
+.cp-badge-img{width:13px;height:13px;flex-shrink:0;}
+.cp-badge-img.err{display:none;}
 
-/* XP bar in panel */
-.island-xp-row{padding:8px 14px 10px;display:flex;flex-direction:column;gap:4px}
-.island-xp-label{display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim)}
-.island-xp-bar{height:4px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden}
-.island-xp-fill{height:100%;background:linear-gradient(90deg,var(--purple-accent),var(--amber));border-radius:2px;transition:width .6s ease}
+.cp-stats-row{
+  display:grid;grid-template-columns:1fr 1fr 1fr;
+  padding:4px 12px 10px;gap:6px;
+}
+.cp-stat{
+  background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);
+  border-radius:10px;padding:8px;text-align:center;
+}
+.cp-stat-val{font-size:15px;font-weight:800;color:var(--text-pri);}
+.cp-stat-lbl{font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;}
 
-/* Toggle */
-.island-notif-row{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;cursor:pointer}
-.island-notif-row .label{font-size:12px;color:var(--text-primary)}
-.toggle-sw{width:34px;height:20px;background:rgba(255,255,255,.12);border-radius:10px;position:relative;transition:background .2s;flex-shrink:0;cursor:pointer;border:none}
-.toggle-sw.on{background:var(--purple-accent)}
-.toggle-sw::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s}
-.toggle-sw.on::after{transform:translateX(14px)}
+.cp-xp-bar-wrap{padding:0 14px 12px;}
+.cp-xp-label{display:flex;justify-content:space-between;font-size:10px;color:var(--text-sec);margin-bottom:5px;}
+.cp-xp-bar{height:4px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;}
+.cp-xp-fill{height:100%;background:linear-gradient(90deg,var(--violet),var(--amber));border-radius:2px;transition:width 0.6s ease;}
 
-.island-signout{color:#ef4444!important;opacity:1!important}
-.island-signout svg{color:#ef4444;opacity:.8!important}
+.cp-actions{padding:4px 10px 12px;display:flex;flex-direction:column;gap:2px;}
+.cp-action{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 10px;border-radius:10px;cursor:pointer;
+  transition:background 0.15s;
+}
+.cp-action:hover{background:rgba(255,255,255,0.07);}
+.cp-action svg{width:16px;height:16px;flex-shrink:0;opacity:0.6;}
+.cp-action-label{font-size:12.5px;color:var(--text-pri);flex:1;}
+.cp-action.danger .cp-action-label{color:var(--red);}
+.cp-action.danger svg{opacity:0.7;}
+
+.cp-divider{height:1px;background:rgba(255,255,255,0.06);margin:0 14px;}
+
+/* Page 2 — Notifications */
+.cp-notif-list{max-height:260px;overflow-y:auto;padding:6px 10px;}
+.cp-notif-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 8px;border-radius:10px;cursor:pointer;
+  transition:background 0.15s;
+  border-bottom:1px solid rgba(255,255,255,0.04);
+}
+.cp-notif-item:last-child{border-bottom:none;}
+.cp-notif-item:hover{background:rgba(255,255,255,0.06);}
+.cp-notif-av{
+  width:34px;height:34px;border-radius:50%;
+  background:linear-gradient(135deg,var(--amber),var(--violet));
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:700;overflow:hidden;
+}
+.cp-notif-av img{width:100%;height:100%;object-fit:cover;}
+.cp-notif-body{min-width:0;flex:1;}
+.cp-notif-sender{font-size:12px;font-weight:600;color:var(--text-pri);}
+.cp-notif-prev{font-size:11px;color:var(--text-sec);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cp-notif-time{font-size:10px;color:var(--text-dim);flex-shrink:0;}
+.cp-notif-empty{text-align:center;padding:28px 14px;font-size:12px;color:var(--text-dim);}
+
+/* Page 3 — Settings */
+.cp-setting-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:11px 16px;
+}
+.cp-setting-row .label{font-size:12.5px;color:var(--text-pri);}
+.toggle-sw{
+  width:36px;height:20px;background:rgba(255,255,255,0.12);
+  border-radius:10px;position:relative;cursor:pointer;border:none;transition:background 0.2s;flex-shrink:0;
+}
+.toggle-sw.on{background:var(--violet);}
+.toggle-sw::after{
+  content:'';position:absolute;top:2px;left:2px;
+  width:16px;height:16px;background:#fff;border-radius:50%;transition:transform 0.2s;
+}
+.toggle-sw.on::after{transform:translateX(16px);}
 
 /* ============================================================
-   DYNAMIC ISLAND NOTIFICATION — Telegram-style rectangle
+   DYNAMIC ISLAND NOTIFICATION
    ============================================================ */
 .notif-island{
-  position:fixed;
-  top:10px;left:50%;
-  transform:translateX(-50%) scaleX(.15) scaleY(.7);
-  z-index:600;
-  background:rgba(14,6,22,.75);
+  position:fixed;top:10px;left:50%;
+  transform:translateX(-50%) scaleX(0.12) scaleY(0.6);
+  z-index:400;
+  background:rgba(6,3,12,0.92);
   backdrop-filter:blur(48px) saturate(1.8);
   -webkit-backdrop-filter:blur(48px) saturate(1.8);
-  border:1px solid rgba(255,255,255,.16);
-  border-top-color:rgba(255,255,255,.28);
-  border-radius:20px;
-  padding:12px 16px;
-  display:flex;align-items:center;gap:12px;
-  min-width:54px;
-  max-width:calc(100vw - 32px);
-  box-shadow:0 8px 40px rgba(0,0,0,.7),0 0 0 1px rgba(155,89,182,.2);
-  cursor:pointer;
-  opacity:0;pointer-events:none;
-  transition:transform .5s cubic-bezier(0.34,1.56,0.64,1),opacity .3s ease,border-radius .4s ease;
+  border:1px solid rgba(255,255,255,0.13);
+  border-top-color:rgba(255,255,255,0.22);
+  border-radius:28px;
+  padding:10px 14px;
+  display:flex;align-items:center;gap:10px;
+  max-width:calc(100vw - 80px);
+  box-shadow:0 6px 40px rgba(0,0,0,0.65),0 0 0 1px rgba(155,89,182,0.14);
+  cursor:pointer;opacity:0;pointer-events:none;
+  transition:transform 0.5s cubic-bezier(0.34,1.56,0.64,1),opacity 0.28s ease,border-radius 0.4s;
   will-change:transform,opacity;overflow:hidden;white-space:nowrap;
 }
-.notif-island.show{transform:translateX(-50%) scaleX(1) scaleY(1);opacity:1;pointer-events:all;border-radius:20px}
-.notif-island.collapsing{transform:translateX(-50%) scaleX(.12) scaleY(.6);opacity:0;pointer-events:none}
-.notif-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--amber),var(--purple-accent));flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 0 10px rgba(155,89,182,.3)}
-.notif-avatar img{width:100%;height:100%;object-fit:cover}
-.notif-body{min-width:0;flex:1}
-.notif-app{font-size:9.5px;color:var(--amber-light);font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:1px}
-.notif-sender{font-size:12px;font-weight:700;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis}
-.notif-preview{font-size:11px;color:var(--text-sec);overflow:hidden;text-overflow:ellipsis;max-width:200px}
-.notif-close{width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.1);border:none;cursor:pointer;color:var(--text-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:10px;transition:background .15s}
-.notif-close:hover{background:rgba(255,255,255,.18)}
-
-/* PAGE SHELL */
-.page{position:relative;z-index:10;padding-top:calc(var(--header-h)+10px);padding-bottom:calc(var(--tab-h)+12px);min-height:100vh}
-
-/* SEARCH */
-.search-wrap{padding:8px 14px 6px;position:relative}
-.search-wrap input{width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:9px 36px 9px 36px;color:var(--text-primary);font-size:13px;outline:none;transition:border-color .2s,background .2s}
-.search-wrap input::placeholder{color:var(--text-dim)}
-.search-wrap input:focus{border-color:rgba(155,89,182,.4);background:rgba(255,255,255,.1)}
-.search-icon{position:absolute;left:25px;top:50%;transform:translateY(-50%);opacity:.4;pointer-events:none}
-.search-icon svg{width:15px;height:15px;stroke:var(--text-primary);fill:none;stroke-width:2;stroke-linecap:round}
-.search-clear{position:absolute;right:24px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.12);border:none;border-radius:50%;width:18px;height:18px;cursor:pointer;display:none;align-items:center;justify-content:center;color:var(--text-sec);font-size:10px}
-.search-clear.visible{display:flex}
-.search-results{position:absolute;top:calc(100% + 4px);left:14px;right:14px;background:rgba(12,5,18,.94);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border:1px solid rgba(255,255,255,.12);border-radius:var(--r-md);z-index:50;max-height:320px;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.5);display:none}
-.search-results.open{display:block}
-.search-result-item{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;transition:background .15s;border-bottom:1px solid rgba(255,255,255,.05)}
-.search-result-item:last-child{border-bottom:none}
-.search-result-item:hover{background:rgba(255,255,255,.07)}
-.sr-avatar{width:34px;height:34px;border-radius:50%;background:var(--dusk-mid);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px}
-.sr-avatar img{width:100%;height:100%;object-fit:cover}
-.sr-info{min-width:0;flex:1}
-.sr-name{font-size:12.5px;font-weight:600;color:var(--text-primary);display:flex;align-items:center;gap:4px}
-.sr-sub{font-size:10.5px;color:var(--text-dim)}
-.sr-type{font-size:9px;color:var(--purple-accent);background:rgba(155,89,182,.12);padding:1px 6px;border-radius:4px;margin-left:auto;flex-shrink:0}
-.search-empty{padding:18px 14px;text-align:center;font-size:12px;color:var(--text-dim)}
-
-/* SECTION LABEL */
-.section-label{padding:10px 16px 4px;font-size:9px;font-weight:700;letter-spacing:.7px;color:var(--text-dim);text-transform:uppercase}
-
-/* CHAT LIST */
-.chat-list{padding:0 10px}
-.chat-card{display:flex;align-items:center;gap:12px;padding:10px 8px;border-radius:var(--r-md);cursor:pointer;transition:background .15s;border:1px solid transparent;position:relative}
-.chat-card:hover{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.07)}
-.chat-card:active{background:rgba(255,255,255,.04)}
-
-/* Long press context menu */
-.chat-ctx-menu{
-  position:fixed;z-index:800;
-  background:rgba(18,8,28,.88);
-  backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);
-  border:1px solid rgba(255,255,255,.14);
-  border-radius:14px;
-  padding:6px 0;min-width:170px;
-  box-shadow:0 12px 40px rgba(0,0,0,.6);
-  display:none;
+.notif-island.show{transform:translateX(-50%) scaleX(1) scaleY(1);opacity:1;pointer-events:all;}
+.notif-island.collapsing{transform:translateX(-50%) scaleX(0.10) scaleY(0.55);opacity:0;pointer-events:none;}
+.ni-avatar{
+  width:32px;height:32px;border-radius:50%;
+  background:linear-gradient(135deg,var(--amber),var(--violet));
+  flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:700;
 }
-.chat-ctx-menu.open{display:block}
-.ctx-item{display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;transition:background .15s;font-size:13px;color:var(--text-primary)}
-.ctx-item:hover{background:rgba(255,255,255,.07)}
-.ctx-item svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
-.ctx-item.danger{color:#ef4444}
-.ctx-item.danger svg{stroke:#ef4444}
+.ni-avatar img{width:100%;height:100%;object-fit:cover;}
+.ni-body{min-width:0;flex:1;}
+.ni-sender{font-size:12px;font-weight:700;color:var(--text-pri);}
+.ni-preview{font-size:11px;color:var(--text-sec);overflow:hidden;text-overflow:ellipsis;max-width:200px;}
+.ni-close{
+  width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.10);
+  border:none;cursor:pointer;color:var(--text-dim);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:10px;
+  transition:background 0.15s;
+}
+.ni-close:hover{background:rgba(255,255,255,0.18);}
 
-/* Avatar */
-.chat-avatar{width:46px;height:46px;border-radius:50%;background:var(--dusk-mid);flex-shrink:0;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:18px}
-.chat-avatar img{width:100%;height:100%;object-fit:cover}
-.chat-avatar.space-av{border-radius:12px}
-.chat-avatar.feed-av{border-radius:8px}
-.avatar-online-dot{position:absolute;bottom:1px;right:1px;width:10px;height:10px;background:#22c55e;border-radius:50%;border:2px solid var(--dusk-deep);display:none}
-.avatar-online-dot.visible{display:block}
+/* ============================================================
+   PAGE
+   ============================================================ */
+.page{
+  position:relative;z-index:10;
+  padding-top:calc(var(--header-h) + 8px);
+  padding-bottom:calc(var(--tab-h) + 12px);
+  min-height:100vh;
+}
 
-/* Chat info */
-.chat-info{min-width:0;flex:1}
-.chat-row1{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:3px}
-.chat-name{font-size:13.5px;font-weight:600;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:4px;min-width:0;flex:1}
-.badge-premium{width:14px;height:14px;flex-shrink:0}
-.badge-verified{width:14px;height:14px;flex-shrink:0}
-.chat-time{font-size:10px;color:var(--text-dim);flex-shrink:0;white-space:nowrap}
-.chat-row2{display:flex;align-items:center;justify-content:space-between;gap:6px}
-.chat-preview{font-size:12px;color:var(--text-sec);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
-.chat-preview.typing{color:var(--purple-accent);font-style:italic}
-.chat-preview.fromme{color:var(--text-dim)}
-.unread-badge{background:var(--purple-accent);color:#fff;font-size:9px;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 5px;flex-shrink:0}
+/* Contacts page hidden by default */
+.contacts-page{display:none;}
+.contacts-page.visible{display:block;}
+.chat-page.hidden{display:none;}
 
-.empty-state{text-align:center;padding:48px 24px 24px}
-.empty-state p{font-size:13px;color:var(--text-dim);margin-top:10px}
-.load-more-trigger{height:40px}
+/* ============================================================
+   SEARCH
+   ============================================================ */
+.search-wrap{padding:8px 14px 6px;position:relative;}
+.search-wrap input{
+  width:100%;background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.09);border-radius:13px;
+  padding:9px 36px 9px 36px;color:var(--text-pri);font-size:13px;outline:none;
+  transition:border-color 0.2s,background 0.2s;
+}
+.search-wrap input::placeholder{color:var(--text-dim);}
+.search-wrap input:focus{border-color:rgba(155,89,182,0.4);background:rgba(255,255,255,0.09);}
+.search-icon{position:absolute;left:25px;top:50%;transform:translateY(-50%);opacity:0.35;pointer-events:none;}
+.search-icon svg{width:15px;height:15px;stroke:var(--text-pri);fill:none;stroke-width:2;stroke-linecap:round;}
+.search-clear{
+  position:absolute;right:24px;top:50%;transform:translateY(-50%);
+  background:rgba(255,255,255,0.11);border:none;border-radius:50%;
+  width:18px;height:18px;cursor:pointer;display:none;
+  align-items:center;justify-content:center;color:var(--text-sec);font-size:10px;
+}
+.search-clear.visible{display:flex;}
+.search-results{
+  position:absolute;top:calc(100% + 4px);left:14px;right:14px;
+  background:rgba(10,5,18,0.94);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);
+  border:1px solid rgba(255,255,255,0.11);border-radius:var(--r-md);z-index:50;
+  max-height:320px;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,0.55);display:none;
+}
+.search-results.open{display:block;}
+.search-result-item{
+  display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;
+  transition:background 0.15s;border-bottom:1px solid rgba(255,255,255,0.04);
+}
+.search-result-item:last-child{border-bottom:none;}
+.search-result-item:hover{background:rgba(255,255,255,0.07);}
+.sr-avatar{width:34px;height:34px;border-radius:50%;background:var(--mid);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;}
+.sr-avatar img{width:100%;height:100%;object-fit:cover;}
+.sr-info{min-width:0;flex:1;}
+.sr-name{font-size:12.5px;font-weight:600;color:var(--text-pri);display:flex;align-items:center;gap:4px;}
+.sr-sub{font-size:10.5px;color:var(--text-dim);}
+.sr-type{font-size:9px;color:var(--violet);background:var(--violet-dim);padding:1px 7px;border-radius:5px;margin-left:auto;flex-shrink:0;}
+.search-empty{padding:18px 14px;text-align:center;font-size:12px;color:var(--text-dim);}
+
+/* ============================================================
+   SECTION LABEL
+   ============================================================ */
+.section-label{
+  padding:10px 16px 4px;
+  font-size:9px;font-weight:700;letter-spacing:0.8px;
+  color:var(--text-dim);text-transform:uppercase;
+}
+
+/* ============================================================
+   CHAT LIST
+   ============================================================ */
+.chat-list{padding:0 10px;}
+.chat-card{
+  display:flex;align-items:center;gap:12px;padding:10px 8px;
+  border-radius:var(--r-md);cursor:pointer;transition:background 0.15s;
+  border:1px solid transparent;position:relative;
+}
+.chat-card:hover{background:rgba(255,255,255,0.055);border-color:rgba(255,255,255,0.06);}
+.chat-avatar{
+  width:48px;height:48px;border-radius:50%;background:var(--mid);flex-shrink:0;
+  position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;
+  font-size:18px;font-weight:700;
+}
+.chat-avatar img{width:100%;height:100%;object-fit:cover;}
+.avatar-online-dot{
+  position:absolute;bottom:1px;right:1px;width:11px;height:11px;
+  background:var(--green);border-radius:50%;border:2px solid var(--deep);display:none;
+}
+.avatar-online-dot.visible{display:block;}
+.chat-info{min-width:0;flex:1;}
+.chat-row1{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:3px;}
+.chat-name{
+  font-size:13.5px;font-weight:600;color:var(--text-pri);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  display:flex;align-items:center;gap:4px;min-width:0;flex:1;
+}
+.badge-img{width:13px;height:13px;flex-shrink:0;}
+.badge-img.err{display:none;}
+.chat-time{font-size:10px;color:var(--text-dim);flex-shrink:0;white-space:nowrap;}
+.chat-row2{display:flex;align-items:center;justify-content:space-between;gap:6px;}
+.chat-preview{font-size:12px;color:var(--text-sec);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;}
+.chat-preview.typing{color:var(--violet);font-style:italic;}
+.chat-preview.fromme{color:var(--text-dim);}
+.unread-badge{
+  background:var(--violet);color:#fff;font-size:9px;font-weight:700;
+  min-width:18px;height:18px;border-radius:9px;
+  display:flex;align-items:center;justify-content:center;padding:0 5px;flex-shrink:0;
+}
 
 /* Skeleton */
-.skeleton-card{display:flex;align-items:center;gap:12px;padding:10px 8px;margin-bottom:2px}
-.skel{background:rgba(255,255,255,.07);border-radius:6px;animation:skelShim 1.4s ease-in-out infinite}
-@keyframes skelShim{0%,100%{opacity:.7}50%{opacity:.35}}
-.skel-av{width:46px;height:46px;border-radius:50%;flex-shrink:0}
-.skel-lines{flex:1}
-.skel-l1{height:12px;width:55%;margin-bottom:7px}
-.skel-l2{height:10px;width:80%}
+.skeleton-card{display:flex;align-items:center;gap:12px;padding:10px 8px;margin-bottom:2px;}
+.skel{background:rgba(255,255,255,0.065);border-radius:6px;animation:skelShim 1.5s ease-in-out infinite;}
+@keyframes skelShim{0%,100%{opacity:0.7}50%{opacity:0.3}}
+.skel-av{width:48px;height:48px;border-radius:50%;flex-shrink:0;}
+.skel-lines{flex:1;}
+.skel-l1{height:12px;width:50%;margin-bottom:7px;}
+.skel-l2{height:10px;width:80%;}
+.empty-state{text-align:center;padding:52px 24px 24px;}
+.empty-state p{font-size:13px;color:var(--text-dim);margin-top:10px;line-height:1.6;}
+.load-more-trigger{height:40px;}
 
-/* TAB BAR */
-.tab-bar{position:fixed;bottom:0;left:0;right:0;z-index:100;height:var(--tab-h);display:flex;align-items:center;padding:0 4px;background:rgba(18,8,18,.72);backdrop-filter:blur(32px) saturate(1.4);-webkit-backdrop-filter:blur(32px) saturate(1.4);border-top:1px solid rgba(255,255,255,.09);box-shadow:0 -2px 24px rgba(0,0,0,.4);padding-bottom:env(safe-area-inset-bottom,0px)}
-.tab-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;padding:8px 4px;border-radius:var(--r-md);transition:background .15s;text-decoration:none;position:relative}
-.tab-item:hover{background:rgba(255,255,255,.06)}
-.tab-item svg{width:20px;height:20px;fill:none;stroke:var(--text-dim);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:stroke .2s}
-.tab-item span{font-size:9.5px;color:var(--text-dim);font-weight:500;transition:color .2s}
-.tab-item.active svg{stroke:var(--purple-accent)}
-.tab-item.active span{color:var(--purple-accent);font-weight:700}
-.tab-active-pill{position:absolute;top:4px;width:28px;height:3px;background:var(--purple-accent);border-radius:2px;box-shadow:0 0 8px var(--purple-glow)}
-.tab-badge{position:absolute;top:5px;right:calc(50% - 14px);background:#ef4444;color:#fff;font-size:8px;font-weight:700;min-width:14px;height:14px;border-radius:7px;padding:0 3px;display:flex;align-items:center;justify-content:center}
+/* ============================================================
+   CONTACTS PAGE
+   ============================================================ */
+.contacts-search-wrap{padding:8px 14px 10px;position:relative;}
+.contacts-search-wrap input{
+  width:100%;background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.09);border-radius:13px;
+  padding:9px 36px 9px 36px;color:var(--text-pri);font-size:13px;outline:none;
+  transition:border-color 0.2s;
+}
+.contacts-search-wrap input::placeholder{color:var(--text-dim);}
+.contacts-search-wrap input:focus{border-color:rgba(155,89,182,0.4);}
+.cs-icon{position:absolute;left:25px;top:50%;transform:translateY(-50%);opacity:0.35;pointer-events:none;}
+.cs-icon svg{width:15px;height:15px;stroke:var(--text-pri);fill:none;stroke-width:2;stroke-linecap:round;}
 
-/* TOAST */
-.toast{position:fixed;bottom:calc(var(--tab-h) + 16px);left:50%;transform:translateX(-50%) translateY(80px);background:rgba(239,68,68,.9);color:#fff;padding:9px 18px;border-radius:20px;font-size:12px;font-weight:500;transition:transform .3s ease;z-index:999;pointer-events:none;white-space:nowrap}
-.toast.show{transform:translateX(-50%) translateY(0)}
+.contacts-add-btn{
+  display:flex;align-items:center;gap:8px;
+  margin:0 14px 10px;padding:10px 14px;
+  background:var(--violet-dim);border:1px solid rgba(155,89,182,0.25);
+  border-radius:var(--r-md);cursor:pointer;transition:background 0.15s;
+}
+.contacts-add-btn:hover{background:rgba(155,89,182,0.2);}
+.contacts-add-btn svg{width:16px;height:16px;stroke:var(--violet);fill:none;stroke-width:2;stroke-linecap:round;}
+.contacts-add-btn span{font-size:13px;color:var(--violet);font-weight:600;}
 
-@media(max-width:480px){.island-drop{width:calc(100vw - 24px)}}
+.contact-card{
+  display:flex;align-items:center;gap:12px;padding:10px 8px;
+  border-radius:var(--r-md);cursor:pointer;transition:background 0.15s;
+  border:1px solid transparent;margin:0 6px;
+}
+.contact-card:hover{background:rgba(255,255,255,0.055);border-color:rgba(255,255,255,0.06);}
+.contact-av{
+  width:48px;height:48px;border-radius:50%;background:var(--mid);flex-shrink:0;
+  overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;
+}
+.contact-av img{width:100%;height:100%;object-fit:cover;}
+.contact-info{min-width:0;flex:1;}
+.contact-name{font-size:13.5px;font-weight:600;color:var(--text-pri);display:flex;align-items:center;gap:4px;margin-bottom:2px;}
+.contact-sub{font-size:11.5px;color:var(--text-sec);}
+.contact-actions{display:flex;gap:6px;flex-shrink:0;}
+.contact-btn{
+  width:32px;height:32px;border-radius:50%;border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:background 0.15s;
+}
+.contact-btn.chat-btn{background:var(--violet-dim);}
+.contact-btn.chat-btn:hover{background:rgba(155,89,182,0.25);}
+.contact-btn.chat-btn svg{stroke:var(--violet);}
+.contact-btn.remove-btn{background:rgba(239,68,68,0.1);}
+.contact-btn.remove-btn:hover{background:rgba(239,68,68,0.2);}
+.contact-btn.remove-btn svg{stroke:var(--red);}
+.contact-btn svg{width:15px;height:15px;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+
+/* Add contact modal */
+.modal-overlay{
+  position:fixed;inset:0;z-index:500;
+  background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  display:flex;align-items:flex-end;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity 0.2s;
+}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal-sheet{
+  width:100%;max-width:480px;
+  background:linear-gradient(160deg,rgba(30,14,42,0.98) 0%,rgba(16,8,24,0.98) 100%);
+  backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);
+  border:1px solid rgba(255,255,255,0.11);border-top-color:rgba(255,255,255,0.18);
+  border-radius:24px 24px 0 0;
+  padding:20px 20px 40px;
+  transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.34,1.4,0.64,1);
+}
+.modal-overlay.open .modal-sheet{transform:translateY(0);}
+.modal-handle{width:36px;height:4px;background:rgba(255,255,255,0.18);border-radius:2px;margin:0 auto 18px;}
+.modal-title{font-size:16px;font-weight:700;color:var(--text-pri);margin-bottom:14px;}
+.modal-input{
+  width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);
+  border-radius:13px;padding:12px 16px;color:var(--text-pri);font-size:14px;outline:none;
+  transition:border-color 0.2s;margin-bottom:12px;
+}
+.modal-input:focus{border-color:rgba(155,89,182,0.4);}
+.modal-input::placeholder{color:var(--text-dim);}
+.modal-result{margin-bottom:12px;border-radius:13px;overflow:hidden;}
+.modal-result-card{
+  display:flex;align-items:center;gap:12px;padding:12px 14px;
+  background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:13px;
+}
+.modal-result-av{
+  width:42px;height:42px;border-radius:50%;background:var(--mid);
+  display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;overflow:hidden;
+}
+.modal-result-av img{width:100%;height:100%;object-fit:cover;}
+.modal-result-name{font-size:13.5px;font-weight:600;color:var(--text-pri);margin-bottom:2px;display:flex;align-items:center;gap:4px;}
+.modal-result-sub{font-size:11.5px;color:var(--text-sec);}
+.modal-btn{
+  width:100%;padding:13px;border:none;border-radius:13px;font-size:14px;font-weight:700;cursor:pointer;
+  transition:opacity 0.2s,transform 0.15s;
+}
+.modal-btn:active{transform:scale(0.98);}
+.modal-btn.primary{background:linear-gradient(135deg,var(--violet),#7c3aed);color:#fff;}
+.modal-btn.primary:disabled{opacity:0.5;cursor:not-allowed;}
+.modal-btn.secondary{background:rgba(255,255,255,0.07);color:var(--text-pri);margin-top:8px;}
+.modal-status{font-size:12px;color:var(--text-sec);text-align:center;margin-top:8px;min-height:18px;}
+.modal-status.err{color:var(--red);}
+.modal-status.ok{color:var(--green);}
+
+/* ============================================================
+   TAB BAR
+   ============================================================ */
+.tab-bar{
+  position:fixed;bottom:0;left:0;right:0;z-index:200;
+  height:var(--tab-h);display:flex;align-items:center;padding:0 4px;
+  background:rgba(12,6,18,0.82);
+  backdrop-filter:blur(32px) saturate(1.4);-webkit-backdrop-filter:blur(32px) saturate(1.4);
+  border-top:1px solid rgba(255,255,255,0.08);
+  box-shadow:0 -2px 20px rgba(0,0,0,0.4);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+.tab-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;cursor:pointer;padding:8px 4px;border-radius:var(--r-md);
+  transition:background 0.15s;text-decoration:none;position:relative;
+}
+.tab-item:hover{background:rgba(255,255,255,0.055);}
+.tab-item svg{width:21px;height:21px;fill:none;stroke:var(--text-dim);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:stroke 0.2s;}
+.tab-item span{font-size:9.5px;color:var(--text-dim);font-weight:500;transition:color 0.2s;}
+.tab-item.active svg{stroke:var(--violet);}
+.tab-item.active span{color:var(--violet);font-weight:700;}
+.tab-active-pill{
+  position:absolute;top:3px;width:26px;height:3px;
+  background:var(--violet);border-radius:2px;
+  box-shadow:0 0 8px var(--violet-glow);
+}
+.tab-badge{
+  position:absolute;top:4px;right:calc(50% - 15px);
+  background:var(--red);color:#fff;font-size:8px;font-weight:700;
+  min-width:15px;height:15px;border-radius:8px;padding:0 3px;
+  display:flex;align-items:center;justify-content:center;
+}
+
+/* Toast */
+.toast{
+  position:fixed;bottom:calc(var(--tab-h)+16px);left:50%;
+  transform:translateX(-50%) translateY(80px);
+  background:rgba(239,68,68,0.9);color:#fff;
+  padding:9px 18px;border-radius:20px;font-size:12px;font-weight:500;
+  transition:transform 0.3s ease;z-index:999;pointer-events:none;white-space:nowrap;
+}
+.toast.show{transform:translateX(-50%) translateY(0);}
+
+/* Context menu */
+.ctx-menu{
+  position:fixed;z-index:600;
+  background:rgba(14,7,22,0.94);
+  backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);
+  border:1px solid rgba(255,255,255,0.11);border-radius:14px;
+  padding:6px;box-shadow:0 12px 40px rgba(0,0,0,0.6);
+  min-width:160px;
+  transform:scale(0.9);opacity:0;pointer-events:none;
+  transition:transform 0.2s cubic-bezier(0.34,1.56,0.64,1),opacity 0.15s;
+}
+.ctx-menu.open{transform:scale(1);opacity:1;pointer-events:all;}
+.ctx-item{
+  display:flex;align-items:center;gap:9px;padding:9px 10px;
+  border-radius:9px;cursor:pointer;transition:background 0.15s;font-size:13px;color:var(--text-pri);
+}
+.ctx-item:hover{background:rgba(255,255,255,0.08);}
+.ctx-item.danger{color:var(--red);}
+.ctx-item svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12);border-radius:2px;}
 </style>
 </head>
 <body>
@@ -356,182 +596,273 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div class="bg-glow"></div>
 <div class="toast" id="toast"></div>
 
-<!-- Context Menu -->
-<div class="chat-ctx-menu" id="ctx-menu">
-  <div class="ctx-item" id="ctx-open"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Open Chat</div>
-  <div class="ctx-item" id="ctx-clear"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>Clear Chat</div>
-  <div class="ctx-item danger" id="ctx-delete"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>Delete &amp; Remove</div>
-</div>
-
-<!-- Notification Island -->
-<div class="notif-island" id="notif-island">
-  <div class="notif-avatar" id="ni-avatar"></div>
-  <div class="notif-body">
-    <div class="notif-app">EXILE</div>
-    <div class="notif-sender" id="ni-sender"></div>
-    <div class="notif-preview" id="ni-preview"></div>
+<!-- Context menu for chat options -->
+<div class="ctx-menu" id="ctx-menu">
+  <div class="ctx-item" id="ctx-open">
+    <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    Open Chat
   </div>
-  <button class="notif-close" onclick="collapseNotif(event)">✕</button>
-</div>
-
-<!-- Exile Island Dropdown Panel -->
-<div class="island-drop" id="island-drop">
-  <div class="island-drop-head">
-    <div class="island-drop-av" id="cp-avatar">⚔️</div>
-    <div>
-      <div class="island-drop-name" id="cp-name">—</div>
-      <div class="island-drop-handle" id="cp-handle">@—</div>
-    </div>
-    <div class="island-drop-exiles" id="cp-exiles">0 ⚔</div>
-  </div>
-
-  <!-- Page nav -->
-  <div class="island-page-nav">
-    <button class="island-nav-btn" id="island-prev" onclick="islandPage(-1)">
-      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-    </button>
-    <div class="island-page-dots" id="island-dots"></div>
-    <button class="island-nav-btn" id="island-next" onclick="islandPage(1)">
-      <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
-  </div>
-
-  <!-- Page 0: Profile & Level -->
-  <div class="island-page active" id="island-p0">
-    <div class="island-xp-row">
-      <div class="island-xp-label"><span id="cp-level-label">Level 1</span><span id="cp-xp-label">0 / 100 XP</span></div>
-      <div class="island-xp-bar"><div class="island-xp-fill" id="cp-xp-fill" style="width:0%"></div></div>
-    </div>
-    <div class="island-item" onclick="window.location.href='/me.html'">
-      <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-      <span class="island-item-label">View Profile</span>
-    </div>
-    <div class="island-item" onclick="window.location.href='/settings.html'">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      <span class="island-item-label">Settings</span>
-    </div>
-  </div>
-
-  <!-- Page 1: Notifications & Exiles -->
-  <div class="island-page" id="island-p1">
-    <div class="island-section-label">Notifications</div>
-    <div class="island-notif-row" onclick="toggleNotifications(document.getElementById('notif-toggle-btn'))">
-      <span class="label">Push Notifications</span>
-      <button class="toggle-sw on" id="notif-toggle-btn"></button>
-    </div>
-    <div class="island-divider"></div>
-    <div class="island-section-label">Exiles Economy</div>
-    <div class="island-item" onclick="window.location.href='/premium.html'">
-      <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-      <span class="island-item-label">Buy Premium</span>
-      <span class="island-item-sub">5 ⚔ / month</span>
-    </div>
-    <div class="island-item" onclick="window.location.href='/exiles.html'">
-      <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-      <span class="island-item-label">Send Exiles</span>
-    </div>
-  </div>
-
-  <!-- Page 2: Sign out -->
-  <div class="island-page" id="island-p2">
-    <div class="island-section-label">Account</div>
-    <div class="island-item" onclick="window.location.href='/leaderboard.html'">
-      <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-      <span class="island-item-label">Leaderboard</span>
-    </div>
-    <div class="island-item">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      <span class="island-item-label">About EXILE</span>
-    </div>
-    <div class="island-divider"></div>
-    <div class="island-item island-signout" id="logout-btn">
-      <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-      <span class="island-item-label">Sign Out</span>
-    </div>
+  <div class="ctx-item danger" id="ctx-clear">
+    <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+    Clear Chat
   </div>
 </div>
 
-<!-- HEADER -->
+<!-- ── HEADER ── -->
 <header class="site-header">
-  <div class="header-left">
-    <div class="logo">
-      <svg class="exile-logo-svg" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <a href="/" class="logo">
+    <svg width="26" height="26" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="sg" x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#e8a85c"/>
+          <stop offset="55%" stop-color="#c97b3a"/>
+          <stop offset="100%" stop-color="#9b59b6"/>
+        </linearGradient>
+        <linearGradient id="bg2" x1="22" y1="2" x2="22" y2="38" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#fff" stop-opacity="0.95"/>
+          <stop offset="60%" stop-color="#e8a85c"/>
+          <stop offset="100%" stop-color="#c97b3a"/>
+        </linearGradient>
+        <filter id="gf2"><feGaussianBlur stdDeviation="1.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      </defs>
+      <circle cx="22" cy="22" r="21" fill="url(#sg)" opacity="0.18"/>
+      <circle cx="22" cy="22" r="21" stroke="url(#sg)" stroke-width="1" opacity="0.45"/>
+      <g filter="url(#gf2)">
+        <polygon points="22,4 23.5,26 22,27.5 20.5,26" fill="url(#bg2)"/>
+        <polygon points="22,2 23.2,5.5 22,7 20.8,5.5" fill="#fff" opacity="0.95"/>
+      </g>
+      <g filter="url(#gf2)">
+        <rect x="13" y="26" width="18" height="3" rx="1.5" fill="url(#sg)" transform="rotate(-8,22,27.5)"/>
+        <circle cx="13.5" cy="26.5" r="1.5" fill="#c97b3a" transform="rotate(-8,22,27.5)"/>
+        <circle cx="30.5" cy="26.5" r="1.5" fill="#c97b3a" transform="rotate(-8,22,27.5)"/>
+      </g>
+      <rect x="21" y="29.5" width="2" height="8" rx="1" fill="url(#sg)" opacity="0.9"/>
+      <ellipse cx="22" cy="38.5" rx="2.5" ry="1.8" fill="#c97b3a" opacity="0.95"/>
+    </svg>
+    <div class="logo-text">EXILE</div>
+  </a>
+
+  <!-- EXILE ISLAND — centered -->
+  <div class="exile-island-wrap">
+    <div class="exile-island" id="exile-island">
+      <!-- Sword SVG instead of emoji -->
+      <svg class="island-sword-icon" viewBox="0 0 24 24" fill="none">
         <defs>
-          <linearGradient id="sG" x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#e8a85c"/><stop offset="55%" stop-color="#c97b3a"/><stop offset="100%" stop-color="#9b59b6"/>
+          <linearGradient id="swordG" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#e8a85c"/>
+            <stop offset="100%" stop-color="#9b59b6"/>
           </linearGradient>
-          <filter id="glow"><feGaussianBlur stdDeviation="1.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
         </defs>
-        <rect x="20" y="4" width="4" height="36" rx="2" fill="url(#sG)" filter="url(#glow)"/>
-        <rect x="8" y="16" width="28" height="4" rx="2" fill="url(#sG)" transform="rotate(-15,22,18)" filter="url(#glow)"/>
-        <circle cx="22" cy="22" r="3" fill="rgba(232,168,92,0.5)"/>
-        <line x1="26" y1="26" x2="36" y2="36" stroke="rgba(155,89,182,0.6)" stroke-width="2" stroke-linecap="round"/>
+        <path stroke="url(#swordG)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M14.5 17.5L3 6V3h3l11.5 11.5"/>
+        <path stroke="url(#swordG)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M13 19l6-6"/>
+        <path stroke="url(#swordG)" stroke-width="2" stroke-linecap="round" d="M16 16l4.5 4.5"/>
+        <path stroke="url(#swordG)" stroke-width="2" stroke-linecap="round" d="M7.5 7.5l-2.5 2.5"/>
       </svg>
-      <span class="logo-text">EXILE</span>
+      <div class="island-online-dot" id="island-dot"></div>
+      <div class="island-unread-pip" id="island-pip">0</div>
+    </div>
+
+    <!-- Drop panel -->
+    <div class="island-panel" id="island-panel">
+      <!-- Page nav -->
+      <div class="cp-header">
+        <div class="cp-title" id="cp-page-title">Profile</div>
+        <div class="cp-nav-btns">
+          <button class="cp-nav-btn active" data-page="0">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          </button>
+          <button class="cp-nav-btn" data-page="1">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          </button>
+          <button class="cp-nav-btn" data-page="2">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Page 0: Profile -->
+      <div class="cp-page active" id="cp-page-0">
+        <div class="cp-profile-row">
+          <div class="cp-avatar" id="cp-avatar">?</div>
+          <div class="cp-user-info">
+            <div class="cp-name" id="cp-name">
+              Loading…
+            </div>
+            <div class="cp-sub">
+              <span id="cp-tag">—</span>
+              <span style="color:var(--text-dim)">·</span>
+              <span id="cp-exiles-val">0</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--amber-light)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6"/></svg>
+            </div>
+          </div>
+        </div>
+        <div class="cp-stats-row">
+          <div class="cp-stat">
+            <div class="cp-stat-val" id="cp-level">—</div>
+            <div class="cp-stat-lbl">Level</div>
+          </div>
+          <div class="cp-stat">
+            <div class="cp-stat-val" id="cp-streaks">—</div>
+            <div class="cp-stat-lbl">Streak</div>
+          </div>
+          <div class="cp-stat">
+            <div class="cp-stat-val" id="cp-reputation">—</div>
+            <div class="cp-stat-lbl">Rep</div>
+          </div>
+        </div>
+        <div class="cp-xp-bar-wrap">
+          <div class="cp-xp-label">
+            <span id="cp-xp-progress">0 XP</span>
+            <span id="cp-xp-next">to next level</span>
+          </div>
+          <div class="cp-xp-bar"><div class="cp-xp-fill" id="cp-xp-fill" style="width:0%"></div></div>
+        </div>
+        <div class="cp-divider"></div>
+        <div class="cp-actions">
+          <div class="cp-action" onclick="window.location.href='/Me.html'">
+            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <div class="cp-action-label">View Profile</div>
+          </div>
+          <div class="cp-action" onclick="window.location.href='/settings.html'">
+            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <div class="cp-action-label">Settings</div>
+          </div>
+          <div class="cp-action danger" id="cp-logout">
+            <svg viewBox="0 0 24 24" stroke="var(--red)" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <div class="cp-action-label">Sign Out</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Page 1: Notifications -->
+      <div class="cp-page" id="cp-page-1">
+        <div class="cp-notif-list" id="cp-notif-list">
+          <div class="cp-notif-empty">No new notifications</div>
+        </div>
+      </div>
+
+      <!-- Page 2: Settings -->
+      <div class="cp-page" id="cp-page-2">
+        <div class="cp-setting-row">
+          <div class="label">Push Notifications</div>
+          <button class="toggle-sw on" id="notif-toggle"></button>
+        </div>
+        <div class="cp-divider"></div>
+        <div class="cp-actions">
+          <div class="cp-action" onclick="window.location.href='/settings.html'">
+            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <div class="cp-action-label">All Settings</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Exile Island centered -->
-  <div class="header-center">
-    <button class="exile-island-btn" id="exile-island-btn" aria-label="Control Panel">
-      <div class="island-sword">⚔️</div>
-      <div class="island-presence-dot" id="island-presence"></div>
-      <div class="island-unread-dot" id="island-unread-dot"></div>
-    </button>
-  </div>
-
-  <div class="header-right">
-    <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
-      <svg id="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-      <svg id="icon-sun" viewBox="0 0 24 24" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-    </button>
-  </div>
+  <!-- Header right — empty spacer to balance logo -->
+  <div style="width:72px"></div>
 </header>
 
-<!-- PAGE -->
-<div class="page" id="page-main">
-  <div class="search-wrap" id="search-wrap">
-    <div class="search-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
-    <input type="text" id="search-input" placeholder="Search chats, people, messages…" autocomplete="off"/>
-    <button class="search-clear" id="search-clear" onclick="clearSearch()">✕</button>
-    <div class="search-results" id="search-results"></div>
+<!-- ── DYNAMIC ISLAND NOTIFICATION ── -->
+<div class="notif-island" id="notif-island">
+  <div class="ni-avatar" id="ni-avatar">?</div>
+  <div class="ni-body">
+    <div class="ni-sender" id="ni-sender">Someone</div>
+    <div class="ni-preview" id="ni-preview">New message</div>
   </div>
-
-  <div class="section-label">My Chats</div>
-
-  <div id="skeleton-list" class="chat-list">
-    <div class="skeleton-card"><div class="skel skel-av"></div><div class="skel-lines"><div class="skel skel-l1"></div><div class="skel skel-l2"></div></div></div>
-    <div class="skeleton-card"><div class="skel skel-av"></div><div class="skel-lines"><div class="skel skel-l1"></div><div class="skel skel-l2"></div></div></div>
-    <div class="skeleton-card"><div class="skel skel-av"></div><div class="skel-lines"><div class="skel skel-l1"></div><div class="skel skel-l2"></div></div></div>
-    <div class="skeleton-card"><div class="skel skel-av"></div><div class="skel-lines"><div class="skel skel-l1"></div><div class="skel skel-l2"></div></div></div>
-    <div class="skeleton-card"><div class="skel skel-av"></div><div class="skel-lines"><div class="skel skel-l1"></div><div class="skel skel-l2"></div></div></div>
-  </div>
-
-  <div id="chat-list" class="chat-list" style="display:none"></div>
-  <div id="empty-state" class="empty-state" style="display:none">
-    <div style="font-size:36px">💬</div>
-    <p>No chats yet.<br>Search for someone to start a conversation.</p>
-  </div>
-  <div class="load-more-trigger" id="load-more"></div>
+  <button class="ni-close" id="ni-close">
+    <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="1" y1="1" x2="11" y2="11"/><line x1="11" y1="1" x2="1" y2="11"/></svg>
+  </button>
 </div>
 
-<!-- TAB BAR -->
+<!-- ── ADD CONTACT MODAL ── -->
+<div class="modal-overlay" id="add-contact-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Add Contact</div>
+    <input class="modal-input" id="add-contact-input" placeholder="Search by username or contact number…" autocomplete="off"/>
+    <div class="modal-result" id="modal-result" style="display:none"></div>
+    <div class="modal-status" id="modal-status"></div>
+    <button class="modal-btn primary" id="modal-search-btn">Search</button>
+    <button class="modal-btn secondary" id="modal-cancel-btn">Cancel</button>
+  </div>
+</div>
+
+<!-- ── MAIN PAGE ── -->
+<div class="page">
+
+  <!-- ===== CHATS VIEW ===== -->
+  <div id="chat-view" class="chat-page">
+    <div class="search-wrap" id="search-wrap">
+      <div class="search-icon">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </div>
+      <input type="text" id="search-input" placeholder="Search chats, people…" autocomplete="off"/>
+      <button class="search-clear" id="search-clear">
+        <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="1" y1="1" x2="11" y2="11"/><line x1="11" y1="1" x2="1" y2="11"/></svg>
+      </button>
+      <div class="search-results" id="search-results"></div>
+    </div>
+
+    <div class="section-label">My Chats</div>
+
+    <div id="skeleton-list" class="chat-list">
+      <div class="skeleton-card"><div class="skel skel-av"></div><div class="skel-lines"><div class="skel skel-l1"></div><div class="skel skel-l2"></div></div></div>
+      <div class="skeleton-card"><div class="skel skel-av"></div><div class="skel-lines"><div class="skel skel-l1"></div><div class="skel skel-l2"></div></div></div>
+      <div class="skeleton-card"><div class="skel skel-av"></div><div class="skel-lines"><div class="skel skel-l1"></div><div class="skel skel-l2"></div></div></div>
+      <div class="skeleton-card"><div class="skel skel-av"></div><div class="skel-lines"><div class="skel skel-l1"></div><div class="skel skel-l2"></div></div></div>
+    </div>
+
+    <div id="chat-list-el" class="chat-list" style="display:none"></div>
+
+    <div id="empty-state" class="empty-state" style="display:none">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto;display:block"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <p>No chats yet.<br>Search for someone to start a conversation.</p>
+    </div>
+
+    <div class="load-more-trigger" id="load-more"></div>
+  </div>
+
+  <!-- ===== CONTACTS VIEW ===== -->
+  <div id="contacts-view" class="contacts-page">
+    <div class="contacts-search-wrap">
+      <div class="cs-icon">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </div>
+      <input type="text" id="contacts-search" placeholder="Search contacts…" autocomplete="off"/>
+    </div>
+
+    <div class="contacts-add-btn" id="contacts-add-btn">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <span>Add New Contact</span>
+    </div>
+
+    <div class="section-label">My Contacts</div>
+    <div id="contacts-list-el"></div>
+    <div id="contacts-empty" class="empty-state" style="display:none">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto;display:block"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <p>No contacts yet.<br>Add someone to get started.</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── TAB BAR ── -->
 <nav class="tab-bar">
-  <div class="tab-item active" onclick="window.location.href='/home.html'">
-    <div class="tab-active-pill"></div>
+  <div class="tab-item active" id="tab-chats" onclick="switchView('chats')">
+    <div class="tab-active-pill" id="tab-chats-pill"></div>
     <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
     <span>My Chats</span>
     <div class="tab-badge" id="tab-unread" style="display:none">0</div>
   </div>
-  <a class="tab-item" href="/contacts.html">
+  <div class="tab-item" id="tab-contacts" onclick="switchView('contacts')">
     <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     <span>Contacts</span>
-  </a>
+  </div>
   <a class="tab-item" href="/explore.html">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
     <span>Explore</span>
   </a>
-  <a class="tab-item" href="/me.html">
+  <a class="tab-item" href="/Me.html">
     <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     <span>Me</span>
   </a>
@@ -542,492 +873,1075 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </nav>
 
 <script>
-// ── Theme IIFE ──
-(function(){const s=localStorage.getItem('theme');if(s==='dark')document.body.classList.add('dark-mode')})();
+// ============================================================
+//  STATE
+// ============================================================
+let myUserId = null;
+let ws = null;
+let cpWs = null;
+let chatMap = {};
+let contactsList = [];
+let page = 1;
+let loadingMore = false;
+let hasMore = true;
+let notificationsEnabled = true;
+let notifTimer = null;
+let pendingNotif = null;
+let typingTimers = {};
+let currentView = 'chats';
+let ctxChatId = null, ctxChatType = null, ctxPartnerId = null;
 
-// ── Globals ──
-let myUserId=null,ws=null,cpSocket=null;
-let chatMap={},page=1,loadingMore=false,hasMore=true;
-let notificationsEnabled=true,notifTimer=null,pendingNotif=null;
-let typingTimers={};
-let cpData={};
-let islandCurrentPage=0;
-const ISLAND_PAGES=3;
-
-const toastEl=document.getElementById('toast');
-function showToast(msg,color){
-  toastEl.textContent=msg;
-  toastEl.style.background=color||'rgba(239,68,68,.9)';
+// ============================================================
+//  UTILS
+// ============================================================
+const toastEl = document.getElementById('toast');
+function showToast(msg, color = 'rgba(239,68,68,0.9)') {
+  toastEl.textContent = msg;
+  toastEl.style.background = color;
   toastEl.classList.add('show');
-  setTimeout(()=>toastEl.classList.remove('show'),3200);
+  setTimeout(() => toastEl.classList.remove('show'), 3000);
 }
 
-// ── Theme toggle ──
-function initThemeToggle(){
-  const btn=document.getElementById('theme-toggle');
-  const moon=document.getElementById('icon-moon');
-  const sun=document.getElementById('icon-sun');
-  function sync(){const d=document.body.classList.contains('dark-mode');moon.style.display=d?'none':'';sun.style.display=d?'':'none'}
-  sync();
-  btn.addEventListener('click',()=>{const d=document.body.classList.toggle('dark-mode');localStorage.setItem('theme',d?'dark':'default');sync()});
+function esc(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-// ── Auth ──
-async function checkAuth(){
-  try{
-    const r=await fetch('/api/me',{credentials:'include'});
-    if(!r.ok){window.location.replace('/login');return null}
-    const{user}=await r.json();
-    myUserId=user.userId;
-    return user;
-  }catch{window.location.replace('/login');return null}
+function initials(name) {
+  return (name||'?').split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
 }
 
-// ── Time format ──
-function formatTime(iso){
-  if(!iso)return'';
-  const d=new Date(iso),now=new Date(),diff=(now-d)/1000;
-  if(diff<60)return'now';
-  if(diff<3600)return Math.floor(diff/60)+'m';
-  if(diff<86400)return d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-  if(diff<604800)return d.toLocaleDateString([],{weekday:'short'});
+function fmtTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso), now = new Date();
+  const diff = (now - d) / 1000;
+  if (diff < 60) return 'now';
+  if (diff < 3600) return Math.floor(diff/60) + 'm';
+  if (diff < 86400) return d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  if (diff < 604800) return d.toLocaleDateString([],{weekday:'short'});
   return d.toLocaleDateString([],{month:'short',day:'numeric'});
 }
-function escHtml(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
-function getInitials(n){return(n||'?').split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase()}
 
-// ── Build chat card ──
-function buildChatCard(chat){
-  const card=document.createElement('div');
-  card.className='chat-card';
-  card.dataset.chatId=chat.chatId;
+function avatarColor(id) {
+  const h = (id||'').split('').reduce((a,c)=>a+c.charCodeAt(0),0) % 360;
+  return `hsl(${h},28%,26%)`;
+}
 
-  // Long-press context menu
-  let pressTimer;
-  card.addEventListener('pointerdown',()=>{pressTimer=setTimeout(()=>openCtxMenu(chat,card),500)});
-  card.addEventListener('pointerup',()=>clearTimeout(pressTimer));
-  card.addEventListener('pointerleave',()=>clearTimeout(pressTimer));
-  card.addEventListener('click',()=>navigateToChat(chat));
+// ============================================================
+//  AUTH
+// ============================================================
+async function checkAuth() {
+  try {
+    const r = await fetch('/api/me', { credentials: 'include' });
+    if (!r.ok) { window.location.replace('/login'); return null; }
+    const { user } = await r.json();
+    myUserId = user.userId;
+    return user;
+  } catch {
+    window.location.replace('/login');
+    return null;
+  }
+}
+
+// ============================================================
+//  VIEW SWITCHING (SPA-style)
+// ============================================================
+function switchView(view) {
+  currentView = view;
+  document.getElementById('chat-view').classList.toggle('hidden', view !== 'chats');
+  document.getElementById('contacts-view').classList.toggle('visible', view === 'contacts');
+
+  // Tab bar
+  document.getElementById('tab-chats').classList.toggle('active', view === 'chats');
+  document.getElementById('tab-contacts').classList.toggle('active', view === 'contacts');
+  document.getElementById('tab-chats-pill').style.display = view === 'chats' ? '' : 'none';
+
+  if (view === 'contacts') {
+    loadContacts();
+  }
+}
+
+// ============================================================
+//  CHAT LIST
+// ============================================================
+function buildBadges(premium, verified) {
+  let html = '';
+  if (premium) {
+    html += `<img src="/premium.png" class="badge-img" alt="P" onerror="this.classList.add('err')">`;
+  }
+  if (verified) {
+    html += `<img src="/verified.png" class="badge-img" alt="V" onerror="this.classList.add('err')">`;
+  }
+  return html;
+}
+
+function buildChatCard(chat) {
+  const card = document.createElement('div');
+  card.className = 'chat-card';
+  card.dataset.chatId = chat.chatId;
 
   // Avatar
-  const av=document.createElement('div');
-  const cls=chat.chatType==='space'?'space-av':chat.chatType==='feed'?'feed-av':'';
-  av.className=`chat-avatar ${cls}`;
-  if(chat.avatar){
-    const img=document.createElement('img');
-    img.src=chat.avatar;img.alt='';
-    img.onerror=()=>{av.removeChild(img);av.textContent=getInitials(chat.name)};
-    av.appendChild(img);
-  }else{
-    av.textContent=getInitials(chat.name);
-    av.style.background=`hsl(${(chat.chatId||'').split('').reduce((a,c)=>a+c.charCodeAt(0),0)%360},30%,22%)`;
+  const avWrap = document.createElement('div');
+  avWrap.className = 'chat-avatar';
+  avWrap.style.background = avatarColor(chat.chatId);
+  if (chat.avatar) {
+    const img = document.createElement('img');
+    img.src = chat.avatar; img.alt = '';
+    img.onerror = () => { avWrap.removeChild(img); avWrap.textContent = initials(chat.name); };
+    avWrap.appendChild(img);
+  } else {
+    avWrap.textContent = initials(chat.name);
   }
-  if(chat.chatType==='dm'){
-    const dot=document.createElement('div');
-    dot.className='avatar-online-dot';
-    dot.id=`online-${chat.partnerId||chat.chatId}`;
-    av.appendChild(dot);
+  if (chat.chatType === 'dm') {
+    const dot = document.createElement('div');
+    dot.className = 'avatar-online-dot';
+    dot.id = `online-${chat.partnerId||chat.chatId}`;
+    avWrap.appendChild(dot);
   }
-  card.appendChild(av);
+  card.appendChild(avWrap);
 
   // Info
-  const info=document.createElement('div');
-  info.className='chat-info';
+  const info = document.createElement('div');
+  info.className = 'chat-info';
 
   // Row 1
-  const row1=document.createElement('div');
-  row1.className='chat-row1';
-  const nameWrap=document.createElement('div');
-  nameWrap.className='chat-name';
-  if(chat.premium){const img=document.createElement('img');img.src='/premium.png';img.className='badge-premium';img.onerror=()=>img.remove();nameWrap.appendChild(img)}
-  const nameSpan=document.createElement('span');
-  nameSpan.textContent=chat.name||'Unknown';
-  nameSpan.style.cssText='overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0';
+  const r1 = document.createElement('div');
+  r1.className = 'chat-row1';
+  const nameWrap = document.createElement('div');
+  nameWrap.className = 'chat-name';
+  // Premium badge before name
+  if (chat.premium) {
+    const img = document.createElement('img');
+    img.src = '/premium.png'; img.className = 'badge-img'; img.alt = '';
+    img.onerror = () => img.classList.add('err');
+    nameWrap.appendChild(img);
+  }
+  const nameSpan = document.createElement('span');
+  nameSpan.textContent = chat.name || 'Unknown';
+  nameSpan.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;';
   nameWrap.appendChild(nameSpan);
-  if(chat.verified){const img=document.createElement('img');img.src='/verified.png';img.className='badge-verified';img.onerror=()=>img.remove();nameWrap.appendChild(img)}
-  row1.appendChild(nameWrap);
-  const time=document.createElement('div');
-  time.className='chat-time';time.id=`time-${chat.chatId}`;
-  time.textContent=formatTime(chat.lastMessage?.sentAt);
-  row1.appendChild(time);
-  info.appendChild(row1);
+  // Verified badge after name
+  if (chat.verified) {
+    const img = document.createElement('img');
+    img.src = '/verified.png'; img.className = 'badge-img'; img.alt = '';
+    img.onerror = () => img.classList.add('err');
+    nameWrap.appendChild(img);
+  }
+  r1.appendChild(nameWrap);
+  const timeEl = document.createElement('div');
+  timeEl.className = 'chat-time';
+  timeEl.id = `time-${chat.chatId}`;
+  timeEl.textContent = fmtTime(chat.lastMessage?.sentAt);
+  r1.appendChild(timeEl);
+  info.appendChild(r1);
 
   // Row 2
-  const row2=document.createElement('div');
-  row2.className='chat-row2';
-  const preview=document.createElement('div');
-  preview.className='chat-preview';
-  preview.id=`preview-${chat.chatId}`;
-  const lm=chat.lastMessage;
-  if(lm?.preview){
-    if(chat._typing){preview.classList.add('typing');preview.textContent=chat._typing}
-    else{
-      if(lm.fromMe)preview.classList.add('fromme');
-      const pfx=lm.fromMe?'You: ':(chat.chatType!=='dm'&&lm.senderName?lm.senderName.split(' ')[0]+': ':'');
-      preview.textContent=pfx+lm.preview;
-    }
-  }else{
-    preview.textContent=chat.chatType==='dm'?'Start a conversation':`${chat.memberCount||0} members`;
-    preview.classList.add('fromme');
+  const r2 = document.createElement('div');
+  r2.className = 'chat-row2';
+  const prev = document.createElement('div');
+  prev.className = 'chat-preview';
+  prev.id = `preview-${chat.chatId}`;
+  const lm = chat.lastMessage;
+  if (lm?.preview) {
+    if (lm.fromMe) prev.classList.add('fromme');
+    const pfx = lm.fromMe ? 'You: ' : (chat.chatType !== 'dm' && lm.senderName ? lm.senderName.split(' ')[0]+': ' : '');
+    prev.textContent = pfx + lm.preview;
+  } else {
+    prev.textContent = chat.chatType === 'dm' ? 'Start a conversation' : `${chat.memberCount||0} members`;
+    prev.classList.add('fromme');
   }
-  row2.appendChild(preview);
-  const badge=document.createElement('div');
-  badge.className='unread-badge';badge.id=`badge-${chat.chatId}`;
-  if(chat.unreadCount>0){badge.textContent=chat.unreadCount>99?'99+':chat.unreadCount;badge.style.display='flex'}
-  else{badge.style.display='none'}
-  row2.appendChild(badge);
-  info.appendChild(row2);
+  r2.appendChild(prev);
+
+  const badge = document.createElement('div');
+  badge.className = 'unread-badge';
+  badge.id = `badge-${chat.chatId}`;
+  if ((chat.unreadCount||0) > 0) {
+    badge.textContent = chat.unreadCount > 99 ? '99+' : chat.unreadCount;
+    badge.style.display = 'flex';
+  } else {
+    badge.style.display = 'none';
+  }
+  r2.appendChild(badge);
+  info.appendChild(r2);
   card.appendChild(info);
+
+  // Click → navigate
+  card.addEventListener('click', () => navigateToChat(chat));
+
+  // Right-click / long-press → context menu
+  card.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    openCtxMenu(e.clientX, e.clientY, chat);
+  });
+  let longPressTimer;
+  card.addEventListener('touchstart', e => {
+    longPressTimer = setTimeout(() => openCtxMenu(
+      e.touches[0].clientX, e.touches[0].clientY, chat
+    ), 600);
+  }, { passive: true });
+  card.addEventListener('touchend', () => clearTimeout(longPressTimer));
+
   return card;
 }
 
-// ── Context menu ──
-let ctxChat=null;
-function openCtxMenu(chat,cardEl){
-  ctxChat=chat;
-  const menu=document.getElementById('ctx-menu');
-  const rect=cardEl.getBoundingClientRect();
-  menu.style.top=(rect.bottom+4)+'px';
-  menu.style.left=Math.min(rect.left,window.innerWidth-180)+'px';
-  menu.classList.add('open');
-}
-document.getElementById('ctx-open').addEventListener('click',()=>{if(ctxChat)navigateToChat(ctxChat);closeCtx()});
-document.getElementById('ctx-clear').addEventListener('click',async()=>{
-  if(!ctxChat||ctxChat.chatType!=='dm'){closeCtx();return}
-  const r=await fetch(`/api/messages/clear/${ctxChat.partnerId}`,{method:'DELETE',credentials:'include'});
-  if(r.ok){showToast('Chat cleared','rgba(155,89,182,.9)');chatMap[ctxChat.chatId].lastMessage={preview:null};renderChatList()}
-  closeCtx();
-});
-document.getElementById('ctx-delete').addEventListener('click',async()=>{
-  if(!ctxChat||ctxChat.chatType!=='dm'){closeCtx();return}
-  const r=await fetch(`/api/messages/clear/${ctxChat.partnerId}`,{method:'DELETE',credentials:'include'});
-  if(r.ok){delete chatMap[ctxChat.chatId];renderChatList();showToast('Chat removed','rgba(239,68,68,.9)')}
-  closeCtx();
-});
-function closeCtx(){document.getElementById('ctx-menu').classList.remove('open');ctxChat=null}
-document.addEventListener('click',e=>{if(!document.getElementById('ctx-menu').contains(e.target))closeCtx()});
-
-function navigateToChat(chat){
-  if(chat.chatType==='dm')window.location.href=`/chat/${chat.partnerId}`;
-  else if(chat.chatType==='space')window.location.href=`/space/${chat.chatId}`;
-  else if(chat.chatType==='feed')window.location.href=`/feed/${chat.chatId}`;
+function navigateToChat(chat) {
+  if (chat.chatType === 'dm') window.location.href = `/chat/${chat.partnerId}`;
+  else if (chat.chatType === 'space') window.location.href = `/space/${chat.chatId}`;
+  else if (chat.chatType === 'feed') window.location.href = `/feed/${chat.chatId}`;
 }
 
-function renderChatList(){
-  const listEl=document.getElementById('chat-list');
-  const emptyEl=document.getElementById('empty-state');
-  const items=Object.values(chatMap).sort((a,b)=>new Date(b._sortKey)-new Date(a._sortKey));
-  listEl.innerHTML='';
-  if(items.length===0){listEl.style.display='none';emptyEl.style.display='block';return}
-  listEl.style.display='block';emptyEl.style.display='none';
-  items.forEach(c=>listEl.appendChild(buildChatCard(c)));
+function upsertChat(chat) {
+  const key = chat.lastMessage?.sentAt || chat._sortKey || '1970-01-01T00:00:00Z';
+  chatMap[chat.chatId] = { ...chatMap[chat.chatId], ...chat, _sortKey: key };
 }
 
-function upsertChat(chat){
-  const sk=chat.lastMessage?.sentAt||chat._sortKey||'1970-01-01T00:00:00.000Z';
-  chatMap[chat.chatId]={...chatMap[chat.chatId],...chat,_sortKey:sk};
+function renderChatList() {
+  const el = document.getElementById('chat-list-el');
+  const em = document.getElementById('empty-state');
+  const items = Object.values(chatMap).sort((a,b) => new Date(b._sortKey) - new Date(a._sortKey));
+  el.innerHTML = '';
+  if (!items.length) { el.style.display='none'; em.style.display='block'; return; }
+  el.style.display='block'; em.style.display='none';
+  items.forEach(c => el.appendChild(buildChatCard(c)));
 }
 
-async function loadChats(p=1){
-  try{
-    const r=await fetch(`/api/chat-list?page=${p}`,{credentials:'include'});
-    if(!r.ok)throw new Error();
-    const{chats,hasMore:more}=await r.json();
-    hasMore=more;
-    if(p===1){chatMap={};document.getElementById('skeleton-list').style.display='none';document.getElementById('chat-list').style.display='block'}
+async function loadChats(p = 1) {
+  try {
+    const r = await fetch(`/api/chat-list?page=${p}`, { credentials: 'include' });
+    if (!r.ok) throw new Error();
+    const { chats, hasMore: more } = await r.json();
+    hasMore = more;
+    if (p === 1) {
+      chatMap = {};
+      document.getElementById('skeleton-list').style.display = 'none';
+      document.getElementById('chat-list-el').style.display = 'block';
+    }
     chats.forEach(upsertChat);
     renderChatList();
     updateUnreadBadge();
-    return true;
-  }catch{document.getElementById('skeleton-list').style.display='none';showToast('Could not load chats','rgba(245,158,11,.9)');return false}
-}
-
-function updateUnreadBadge(){
-  const total=Object.values(chatMap).reduce((s,c)=>s+(c.unreadCount||0),0);
-  const el=document.getElementById('tab-unread');
-  if(total>0){el.textContent=total>99?'99+':total;el.style.display='flex'}
-  else el.style.display='none';
-  const dot=document.getElementById('island-unread-dot');
-  const pres=document.getElementById('island-presence');
-  if(total>0){dot.style.display='block';pres.style.display='none'}
-  else{dot.style.display='none';pres.style.display='block'}
-}
-
-function updateChatBadge(chatId,count){
-  const b=document.getElementById(`badge-${chatId}`);
-  if(!b)return;
-  if(count>0){b.textContent=count>99?'99+':count;b.style.display='flex'}
-  else b.style.display='none';
-}
-
-function setTypingIndicator(chatId,label){
-  if(!chatMap[chatId])return;
-  chatMap[chatId]._typing=label;
-  const el=document.getElementById(`preview-${chatId}`);
-  if(el){el.className='chat-preview typing';el.textContent=label}
-  clearTimeout(typingTimers[chatId]);
-  typingTimers[chatId]=setTimeout(()=>clearTyping(chatId),6000);
-}
-function clearTyping(chatId){
-  if(!chatMap[chatId])return;
-  delete chatMap[chatId]._typing;
-  const el=document.getElementById(`preview-${chatId}`);
-  if(el){
-    el.className='chat-preview';
-    const lm=chatMap[chatId].lastMessage;
-    if(lm?.preview){
-      if(lm.fromMe)el.classList.add('fromme');
-      el.textContent=(lm.fromMe?'You: ':'')+(lm.preview||'');
-    }else{el.textContent='';el.classList.add('fromme')}
+  } catch {
+    document.getElementById('skeleton-list').style.display = 'none';
+    showToast('Could not load chats', 'rgba(245,158,11,0.9)');
   }
 }
 
-// ── Infinite scroll ──
-function initInfiniteScroll(){
-  const obs=new IntersectionObserver(async(entries)=>{
-    if(entries[0].isIntersecting&&!loadingMore&&hasMore){
-      loadingMore=true;page++;await loadChats(page);loadingMore=false;
-    }
-  },{threshold:.1});
-  obs.observe(document.getElementById('load-more'));
+function updateUnreadBadge() {
+  const total = Object.values(chatMap).reduce((s,c) => s+(c.unreadCount||0), 0);
+  const tb = document.getElementById('tab-unread');
+  const pip = document.getElementById('island-pip');
+  if (total > 0) {
+    tb.textContent = total > 99 ? '99+' : total;
+    tb.style.display = 'flex';
+    pip.textContent = total > 99 ? '99+' : total;
+    pip.classList.add('show');
+  } else {
+    tb.style.display = 'none';
+    pip.classList.remove('show');
+  }
 }
 
-// ── WebSocket ──
-function initWS(){
-  const proto=location.protocol==='https:'?'wss:':'ws:';
-  ws=new WebSocket(`${proto}//${location.host}/`);
-  ws.onopen=()=>setInterval(()=>{if(ws.readyState===1)ws.send(JSON.stringify({type:'ping'}))},25000);
-  ws.onmessage=e=>{try{handleWsMsg(JSON.parse(e.data))}catch{}};
-  ws.onclose=()=>setTimeout(initWS,3000);
-  ws.onerror=()=>ws.close();
+// ── Context menu ──
+function openCtxMenu(x, y, chat) {
+  ctxChatId = chat.chatId;
+  ctxChatType = chat.chatType;
+  ctxPartnerId = chat.partnerId;
+  const menu = document.getElementById('ctx-menu');
+  menu.style.left = Math.min(x, window.innerWidth - 180) + 'px';
+  menu.style.top = Math.min(y, window.innerHeight - 120) + 'px';
+  menu.classList.add('open');
 }
 
-function handleWsMsg(msg){
-  switch(msg.type){
-    case'newMessage':case'newGroupMessage':{
-      const chatId=msg.message?.conversationId||msg.message?.groupId||msg.groupId||msg.chat?.chatId;
-      const chatType=msg.chat?.chatType||(msg.message?.conversationId?'dm':'space');
-      if(!chatId)return;
-      const lm={preview:msg.message?.type==='text'?(msg.message.content?.text||'').slice(0,80):`[${msg.message?.type||'message'}]`,type:msg.message?.type,sentAt:msg.message?.sentAt,senderName:msg.from?.name||msg.message?.senderName,fromMe:msg.from?.userId===myUserId||msg.message?.senderId===myUserId};
-      if(chatMap[chatId]){
-        chatMap[chatId].lastMessage=lm;chatMap[chatId]._sortKey=lm.sentAt;
-        if(!msg.fromMe)chatMap[chatId].unreadCount=(chatMap[chatId].unreadCount||0)+1;
-        clearTyping(chatId);renderChatList();updateUnreadBadge();
-      }else loadChats(1);
-      if(!msg.fromMe&&notificationsEnabled)showNotification({name:msg.from?.name||msg.message?.senderName||'Someone',avatar:msg.from?.profilePicture||null,preview:lm.preview,chatId,chatType,partnerId:msg.from?.userId,chat:chatMap[chatId]});
-      break;
+function closeCtxMenu() {
+  document.getElementById('ctx-menu').classList.remove('open');
+}
+
+document.getElementById('ctx-open').addEventListener('click', () => {
+  const chat = chatMap[ctxChatId];
+  if (chat) navigateToChat(chat);
+  closeCtxMenu();
+});
+
+document.getElementById('ctx-clear').addEventListener('click', async () => {
+  closeCtxMenu();
+  if (!ctxChatId || !ctxPartnerId) return;
+  try {
+    const r = await fetch(`/api/messages/clear/${ctxPartnerId}`, {
+      method: 'DELETE', credentials: 'include'
+    });
+    if (r.ok) {
+      showToast('Chat cleared', 'rgba(155,89,182,0.9)');
+      if (chatMap[ctxChatId]) {
+        chatMap[ctxChatId].lastMessage = null;
+        chatMap[ctxChatId]._sortKey = '1970-01-01T00:00:00Z';
+        renderChatList();
+      }
+    } else {
+      showToast('Could not clear chat');
     }
-    case'chatListUpdate':{
-      const{chatId,chatType,lastMessage,fromMe}=msg;
-      if(chatId&&chatMap[chatId]){chatMap[chatId].lastMessage={...lastMessage,fromMe};chatMap[chatId]._sortKey=lastMessage?.sentAt||chatMap[chatId]._sortKey;clearTyping(chatId);renderChatList();updateUnreadBadge()}
-      break;
+  } catch {
+    showToast('Error clearing chat');
+  }
+});
+
+document.addEventListener('click', e => {
+  const menu = document.getElementById('ctx-menu');
+  if (!menu.contains(e.target)) closeCtxMenu();
+});
+
+// ============================================================
+//  CONTACTS
+// ============================================================
+async function loadContacts() {
+  try {
+    const r = await fetch('/api/contacts', { credentials: 'include' });
+    if (!r.ok) throw new Error();
+    const { contacts } = await r.json();
+    contactsList = contacts || [];
+    renderContacts(contactsList);
+  } catch {
+    showToast('Could not load contacts');
+  }
+}
+
+function renderContacts(list) {
+  const el = document.getElementById('contacts-list-el');
+  const em = document.getElementById('contacts-empty');
+  const query = document.getElementById('contacts-search').value.trim().toLowerCase();
+  const filtered = query ? list.filter(c =>
+    (c.name||'').toLowerCase().includes(query) ||
+    (c.username||'').toLowerCase().includes(query) ||
+    (c.contactNumber||'').includes(query)
+  ) : list;
+
+  el.innerHTML = '';
+  if (!filtered.length) { em.style.display='block'; return; }
+  em.style.display='none';
+
+  filtered.forEach(u => {
+    const card = document.createElement('div');
+    card.className = 'contact-card';
+
+    // Avatar
+    const av = document.createElement('div');
+    av.className = 'contact-av';
+    av.style.background = avatarColor(u.userId);
+    if (u.profilePicture) {
+      const img = document.createElement('img');
+      img.src = u.profilePicture; img.alt = '';
+      img.onerror = () => { av.removeChild(img); av.textContent = initials(u.name); };
+      av.appendChild(img);
+    } else {
+      av.textContent = initials(u.name);
     }
-    case'typing':{
-      const cid=msg.conversationId;
-      if(cid&&msg.userId!==myUserId){
-        if(msg.isTyping)setTypingIndicator(cid,'typing…');
-        else clearTyping(cid);
+    card.appendChild(av);
+
+    // Info
+    const info = document.createElement('div');
+    info.className = 'contact-info';
+    const nameRow = document.createElement('div');
+    nameRow.className = 'contact-name';
+    if (u.premium) {
+      const img = document.createElement('img');
+      img.src='/premium.png'; img.className='badge-img'; img.alt='';
+      img.onerror=()=>img.classList.add('err');
+      nameRow.appendChild(img);
+    }
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = u.name || 'Unknown';
+    nameRow.appendChild(nameSpan);
+    if (u.verified) {
+      const img = document.createElement('img');
+      img.src='/verified.png'; img.className='badge-img'; img.alt='';
+      img.onerror=()=>img.classList.add('err');
+      nameRow.appendChild(img);
+    }
+    info.appendChild(nameRow);
+    const sub = document.createElement('div');
+    sub.className = 'contact-sub';
+    sub.textContent = (u.contactNumber || '') + (u.username ? `  ·  @${u.username}` : '');
+    info.appendChild(sub);
+    card.appendChild(info);
+
+    // Actions
+    const actions = document.createElement('div');
+    actions.className = 'contact-actions';
+
+    const chatBtn = document.createElement('button');
+    chatBtn.className = 'contact-btn chat-btn';
+    chatBtn.title = 'Open Chat';
+    chatBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
+    chatBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      window.location.href = `/chat/${u.userId}`;
+    });
+    actions.appendChild(chatBtn);
+
+    const remBtn = document.createElement('button');
+    remBtn.className = 'contact-btn remove-btn';
+    remBtn.title = 'Remove Contact';
+    remBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="22" y1="11" x2="16" y2="11"/></svg>`;
+    remBtn.addEventListener('click', async e => {
+      e.stopPropagation();
+      try {
+        const res = await fetch(`/api/contacts/${u.userId}`, {
+          method: 'DELETE', credentials: 'include'
+        });
+        if (res.ok) {
+          contactsList = contactsList.filter(c => c.userId !== u.userId);
+          renderContacts(contactsList);
+          showToast('Contact removed', 'rgba(155,89,182,0.9)');
+        } else {
+          showToast('Failed to remove contact');
+        }
+      } catch { showToast('Error'); }
+    });
+    actions.appendChild(remBtn);
+    card.appendChild(actions);
+
+    // Click card → chat
+    card.addEventListener('click', () => window.location.href = `/chat/${u.userId}`);
+    el.appendChild(card);
+  });
+}
+
+document.getElementById('contacts-search').addEventListener('input', () => renderContacts(contactsList));
+
+// ── Add contact modal ──
+document.getElementById('contacts-add-btn').addEventListener('click', () => openAddModal());
+
+function openAddModal() {
+  document.getElementById('add-contact-input').value = '';
+  document.getElementById('modal-result').style.display = 'none';
+  document.getElementById('modal-status').textContent = '';
+  document.getElementById('modal-status').className = 'modal-status';
+  document.getElementById('modal-search-btn').disabled = false;
+  document.getElementById('add-contact-modal').classList.add('open');
+}
+
+document.getElementById('modal-cancel-btn').addEventListener('click', () => {
+  document.getElementById('add-contact-modal').classList.remove('open');
+});
+document.getElementById('add-contact-modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove('open');
+});
+
+let foundUser = null;
+document.getElementById('modal-search-btn').addEventListener('click', async () => {
+  const q = document.getElementById('add-contact-input').value.trim();
+  if (!q) return;
+  const statusEl = document.getElementById('modal-status');
+  const resultEl = document.getElementById('modal-result');
+  const btn = document.getElementById('modal-search-btn');
+
+  statusEl.textContent = 'Searching…';
+  statusEl.className = 'modal-status';
+  resultEl.style.display = 'none';
+  foundUser = null;
+
+  try {
+    // Try username first, then contact number
+    let res = await fetch(`/api/lookup?username=${encodeURIComponent(q.startsWith('@') ? q.slice(1) : q)}`, { credentials: 'include' });
+    let data = res.ok ? await res.json() : null;
+    if (!data || !data.userId) {
+      res = await fetch(`/api/lookup?contact=${encodeURIComponent(q)}`, { credentials: 'include' });
+      data = res.ok ? await res.json() : null;
+    }
+
+    if (!data || !data.userId) {
+      statusEl.textContent = 'User not found.';
+      statusEl.className = 'modal-status err';
+      return;
+    }
+
+    if (data.userId === myUserId) {
+      statusEl.textContent = "That's you!";
+      statusEl.className = 'modal-status err';
+      return;
+    }
+
+    foundUser = data;
+    statusEl.textContent = '';
+
+    const avBg = avatarColor(data.userId);
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = `
+      <div class="modal-result-card">
+        <div class="modal-result-av" style="background:${avBg}">
+          ${data.profilePicture ? `<img src="${esc(data.profilePicture)}" alt="" onerror="this.parentElement.textContent='${initials(data.name)}'">` : initials(data.name)}
+        </div>
+        <div style="min-width:0;flex:1">
+          <div class="modal-result-name">
+            ${data.premium ? `<img src="/premium.png" class="badge-img" alt="" onerror="this.classList.add('err')">` : ''}
+            ${esc(data.name)}
+            ${data.verified ? `<img src="/verified.png" class="badge-img" alt="" onerror="this.classList.add('err')">` : ''}
+          </div>
+          <div class="modal-result-sub">@${esc(data.username||'')} · ${esc(data.contactNumber||'')}</div>
+        </div>
+      </div>
+    `;
+
+    const alreadyContact = contactsList.some(c => c.userId === data.userId);
+    if (alreadyContact) {
+      btn.textContent = 'Already a Contact';
+      btn.disabled = true;
+    } else {
+      btn.textContent = 'Add Contact';
+      btn.disabled = false;
+      btn.onclick = null;
+      btn.addEventListener('click', addFoundContact, { once: true });
+    }
+
+  } catch {
+    statusEl.textContent = 'Search failed.';
+    statusEl.className = 'modal-status err';
+  }
+});
+
+document.getElementById('add-contact-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('modal-search-btn').click();
+});
+
+async function addFoundContact() {
+  if (!foundUser) return;
+  const statusEl = document.getElementById('modal-status');
+  try {
+    const r = await fetch(`/api/contacts/${foundUser.userId}`, {
+      method: 'POST', credentials: 'include'
+    });
+    const data = await r.json();
+    if (r.ok) {
+      statusEl.textContent = 'Contact added!';
+      statusEl.className = 'modal-status ok';
+      contactsList.push(foundUser);
+      renderContacts(contactsList);
+      setTimeout(() => document.getElementById('add-contact-modal').classList.remove('open'), 1200);
+    } else {
+      statusEl.textContent = data.error || 'Failed.';
+      statusEl.className = 'modal-status err';
+    }
+  } catch {
+    statusEl.textContent = 'Error adding contact.';
+    statusEl.className = 'modal-status err';
+  }
+}
+
+// ============================================================
+//  INFINITE SCROLL
+// ============================================================
+function initInfiniteScroll() {
+  const trigger = document.getElementById('load-more');
+  const obs = new IntersectionObserver(async entries => {
+    if (entries[0].isIntersecting && !loadingMore && hasMore) {
+      loadingMore = true; page++;
+      await loadChats(page); loadingMore = false;
+    }
+  }, { threshold: 0.1 });
+  obs.observe(trigger);
+}
+
+// ============================================================
+//  SOCKET.IO — Main namespace
+// ============================================================
+function initWS() {
+  // Load Socket.IO from the server
+  const script = document.createElement('script');
+  script.src = '/socket.io/socket.io.js';
+  script.onload = () => connectMainSocket();
+  document.head.appendChild(script);
+}
+
+function connectMainSocket() {
+  ws = io('/', { withCredentials: true });
+
+  ws.on('connect', () => {
+    console.log('Main socket connected:', ws.id);
+  });
+
+  ws.on('message', msg => handleWsMsg(msg));
+
+  ws.on('disconnect', () => {
+    console.log('Main socket disconnected, reconnecting…');
+  });
+}
+
+function handleWsMsg(msg) {
+  switch (msg.type) {
+    case 'newMessage':
+    case 'newGroupMessage': {
+      const chatId = msg.message?.conversationId || msg.message?.groupId || msg.groupId || msg.chat?.chatId;
+      const chatType = msg.chat?.chatType || (msg.message?.conversationId ? 'dm' : 'space');
+      if (!chatId) return;
+      const lm = {
+        preview: msg.message?.type === 'text'
+          ? (msg.message.content?.text||'').slice(0,80)
+          : `[${msg.message?.type||'message'}]`,
+        type: msg.message?.type,
+        sentAt: msg.message?.sentAt,
+        senderName: msg.from?.name || msg.message?.senderName,
+        fromMe: msg.from?.userId === myUserId || msg.message?.senderId === myUserId,
+      };
+      const existing = chatMap[chatId];
+      if (existing) {
+        existing.lastMessage = lm;
+        existing._sortKey = lm.sentAt;
+        if (!lm.fromMe) existing.unreadCount = (existing.unreadCount||0) + 1;
+        clearTyping(chatId);
+        renderChatList();
+        updateUnreadBadge();
+      } else {
+        loadChats(1);
+      }
+      if (!lm.fromMe && notificationsEnabled) {
+        const sender = msg.from || {};
+        showNotification({
+          name: sender.name || msg.message?.senderName || 'Someone',
+          avatar: sender.profilePicture || msg.message?.senderAvatar || null,
+          preview: lm.preview,
+          chatId, chatType, partnerId: sender.userId, chat: existing,
+        });
       }
       break;
     }
-    case'groupTyping':{
-      const gid=msg.groupId;if(!gid)return;
-      const others=(msg.typers||[]).filter(t=>t.userId!==myUserId);
-      if(others.length>0){const names=others.slice(0,2).map(t=>t.name.split(' ')[0]);const label=others.length===1?`${names[0]} is typing…`:`${names.join(' & ')} are typing…`;setTypingIndicator(gid,label)}
-      else clearTyping(gid);
+    case 'chatListUpdate': {
+      const { chatId, chatType, lastMessage, fromMe } = msg;
+      if (!chatId || !chatMap[chatId]) return;
+      chatMap[chatId].lastMessage = { ...lastMessage, fromMe };
+      chatMap[chatId]._sortKey = lastMessage?.sentAt || chatMap[chatId]._sortKey;
+      clearTyping(chatId);
+      renderChatList();
+      updateUnreadBadge();
       break;
     }
-    case'presence':{
-      const dot=document.getElementById(`online-${msg.userId}`);
-      if(dot)dot.classList.toggle('visible',msg.status==='online');
+    case 'typing': {
+      const cid = msg.conversationId;
+      if (!cid || msg.userId === myUserId) return;
+      if (msg.isTyping) setTyping(cid, 'typing…');
+      else clearTyping(cid);
       break;
     }
-    case'messagesRead':{
-      if(msg.readerId===myUserId&&chatMap[msg.conversationId]){chatMap[msg.conversationId].unreadCount=0;updateChatBadge(msg.conversationId,0);updateUnreadBadge()}
+    case 'groupTyping': {
+      const gid = msg.groupId;
+      if (!gid) return;
+      const others = (msg.typers||[]).filter(t => t.userId !== myUserId);
+      if (others.length > 0) {
+        const names = others.slice(0,2).map(t => t.name.split(' ')[0]);
+        setTyping(gid, names.join(' & ') + ' typing…');
+      } else clearTyping(gid);
       break;
     }
-    case'groupMessagesRead':{
-      if(msg.readerId===myUserId&&chatMap[msg.groupId]){chatMap[msg.groupId].unreadCount=0;updateChatBadge(msg.groupId,0);updateUnreadBadge()}
+    case 'presence': {
+      const dot = document.getElementById(`online-${msg.userId}`);
+      if (dot) dot.classList.toggle('visible', msg.status === 'online');
+      break;
+    }
+    case 'messagesRead':
+    case 'groupMessagesRead': {
+      const cid = msg.conversationId || msg.groupId;
+      if (chatMap[cid] && msg.readerId === myUserId) {
+        chatMap[cid].unreadCount = 0;
+        const badge = document.getElementById(`badge-${cid}`);
+        if (badge) badge.style.display = 'none';
+        updateUnreadBadge();
+      }
       break;
     }
   }
 }
 
-// ── Control Panel Socket (Socket.IO namespace /controlpanel) ──
-function initCPSocket(){
-  // Using Socket.IO-style but the server uses raw WS — connect raw WS to /controlpanel
-  const proto=location.protocol==='https:'?'wss:':'ws:';
-  cpSocket=new WebSocket(`${proto}//${location.host}/controlpanel`);
-  cpSocket.onmessage=e=>{
-    let msg;try{msg=JSON.parse(e.data)}catch{return}
-    if(msg.type==='init'||msg.type==='ping')handleCPMsg(msg);
-    else handleCPMsg(msg);
-  };
-  cpSocket.onclose=()=>setTimeout(initCPSocket,3500);
-  cpSocket.onerror=()=>cpSocket.close();
-}
-function handleCPMsg(msg){
-  if(msg.type==='init'){
-    cpData=msg;
-    document.getElementById('cp-name').textContent=msg.name||'—';
-    document.getElementById('cp-handle').textContent='@'+(msg.username||'—');
-    document.getElementById('cp-exiles').textContent=(msg.exiles||0)+' ⚔';
-    if(msg.profilePicture){const av=document.getElementById('cp-avatar');av.innerHTML=`<img src="${escHtml(msg.profilePicture)}" alt="">`;av.querySelector('img').onerror=()=>{av.innerHTML='⚔️'}}
-    updateXPBar(msg.levelInfo||msg);
-  }
-  if(msg.type==='xpUpdate')updateXPBar(msg);
-  if(msg.type==='exilesUpdate')document.getElementById('cp-exiles').textContent=(msg.exiles||0)+' ⚔';
-  if(msg.type==='notification'&&notificationsEnabled){
-    showNotification({name:msg.sender?.name||'EXILE',avatar:msg.sender?.profilePicture||null,preview:msg.preview,chatId:msg.conversationId,chatType:'dm',partnerId:msg.sender?.userId});
-  }
-  if(msg.type==='ping')cpSocket.send(JSON.stringify({type:'pong'}));
-}
-function updateXPBar(d){
-  if(!d)return;
-  const lvl=d.level||d.levelInfo?.level||1;
-  const pct=d.progressPct||d.levelInfo?.progressPct||0;
-  const cur=d.progressXp||d.levelInfo?.progressXp||0;
-  const nxt=d.neededXp||d.levelInfo?.neededXp||100;
-  document.getElementById('cp-level-label').textContent=`Level ${lvl}`;
-  document.getElementById('cp-xp-label').textContent=`${cur} / ${nxt} XP`;
-  document.getElementById('cp-xp-fill').style.width=pct+'%';
+function setTyping(chatId, label) {
+  if (chatMap[chatId]) chatMap[chatId]._typing = label;
+  const el = document.getElementById(`preview-${chatId}`);
+  if (el) { el.className = 'chat-preview typing'; el.textContent = label; }
+  clearTimeout(typingTimers[chatId]);
+  typingTimers[chatId] = setTimeout(() => clearTyping(chatId), 6000);
 }
 
-// ── Island panel pages ──
-function buildIslandDots(){
-  const dots=document.getElementById('island-dots');
-  dots.innerHTML='';
-  for(let i=0;i<ISLAND_PAGES;i++){
-    const d=document.createElement('div');
-    d.className='island-page-dot'+(i===islandCurrentPage?' active':'');
-    dots.appendChild(d);
+function clearTyping(chatId) {
+  if (chatMap[chatId]) chatMap[chatId]._typing = null;
+  const el = document.getElementById(`preview-${chatId}`);
+  if (!el) return;
+  const chat = chatMap[chatId];
+  if (!chat) return;
+  const lm = chat.lastMessage;
+  el.classList.remove('typing');
+  if (lm?.fromMe) el.classList.add('fromme'); else el.classList.remove('fromme');
+  const pfx = lm?.fromMe ? 'You: ' : (chat.chatType !== 'dm' && lm?.senderName ? lm.senderName.split(' ')[0]+': ' : '');
+  el.textContent = lm?.preview ? pfx + lm.preview : '';
+}
+
+// ============================================================
+//  SOCKET.IO — Control Panel namespace
+// ============================================================
+function connectCPSocket() {
+  cpWs = io('/controlpanel', { withCredentials: true });
+
+  cpWs.on('connect', () => console.log('CP socket connected'));
+
+  cpWs.on('message', msg => handleCPMsg(msg));
+
+  cpWs.on('disconnect', () => console.log('CP socket disconnected'));
+}
+
+function handleCPMsg(msg) {
+  switch (msg.type) {
+    case 'init':
+    case 'profile': {
+      updateCPProfile(msg);
+      if (msg.unreadPreviews?.length) renderCPNotifs(msg.unreadPreviews);
+      break;
+    }
+    case 'xpUpdate': {
+      document.getElementById('cp-level').textContent = msg.level || msg.levelInfo?.level || '—';
+      if (msg.xp !== undefined) updateXPBar(msg.xp, msg.nextLevelXp, msg.progressXp, msg.neededXp, msg.progressPct);
+      break;
+    }
+    case 'exilesUpdate': {
+      const el = document.getElementById('cp-exiles-val');
+      if (el) el.textContent = msg.exiles !== undefined ? msg.exiles : el.textContent;
+      break;
+    }
+    case 'notification': {
+      if (!notificationsEnabled) return;
+      addCPNotif(msg);
+      showNotification({
+        name: msg.sender?.name || 'Someone',
+        avatar: msg.sender?.profilePicture || null,
+        preview: msg.preview,
+        chatId: msg.conversationId,
+        chatType: 'dm',
+        partnerId: msg.sender?.userId,
+      });
+      break;
+    }
+    case 'ping': cpWs.emit('pong'); break;
   }
 }
-function islandPage(dir){
-  islandCurrentPage=(islandCurrentPage+dir+ISLAND_PAGES)%ISLAND_PAGES;
-  document.querySelectorAll('.island-page').forEach((p,i)=>p.classList.toggle('active',i===islandCurrentPage));
-  buildIslandDots();
+
+function updateCPProfile(data) {
+  const nameEl = document.getElementById('cp-name');
+  nameEl.innerHTML = '';
+  if (data.premium) {
+    const img = document.createElement('img');
+    img.src='/premium.png'; img.className='cp-badge-img'; img.alt='';
+    img.onerror=()=>img.classList.add('err');
+    nameEl.appendChild(img);
+  }
+  const ns = document.createElement('span');
+  ns.textContent = data.name || 'Unknown';
+  nameEl.appendChild(ns);
+  if (data.verified) {
+    const img = document.createElement('img');
+    img.src='/verified.png'; img.className='cp-badge-img'; img.alt='';
+    img.onerror=()=>img.classList.add('err');
+    nameEl.appendChild(img);
+  }
+
+  document.getElementById('cp-tag').textContent = data.tag || data.username ? `@${data.username}` : '—';
+  document.getElementById('cp-exiles-val').textContent = data.exiles || 0;
+  document.getElementById('cp-level').textContent = data.levelInfo?.level || data.level || '—';
+  document.getElementById('cp-streaks').textContent = data.streaks || 0;
+  document.getElementById('cp-reputation').textContent = data.reputation || 0;
+
+  const avEl = document.getElementById('cp-avatar');
+  if (data.profilePicture) {
+    avEl.innerHTML = `<img src="${esc(data.profilePicture)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+  } else {
+    avEl.textContent = initials(data.name);
+  }
+
+  if (data.levelInfo) {
+    updateXPBar(data.xp, data.levelInfo.nextLevelXp, data.levelInfo.progressXp, data.levelInfo.neededXp, data.levelInfo.progressPct);
+  }
 }
-function initIsland(){
-  const btn=document.getElementById('exile-island-btn');
-  const drop=document.getElementById('island-drop');
-  buildIslandDots();
-  btn.addEventListener('click',e=>{e.stopPropagation();drop.classList.toggle('open')});
-  document.addEventListener('click',e=>{if(!drop.contains(e.target)&&!btn.contains(e.target))drop.classList.remove('open')});
-  document.getElementById('logout-btn').addEventListener('click',async()=>{
-    await fetch('/auth/logout',{method:'POST',credentials:'include'});
-    window.location.replace('/login');
+
+function updateXPBar(xp, nextXp, progressXp, neededXp, pct) {
+  document.getElementById('cp-xp-progress').textContent = `${progressXp||0} XP`;
+  document.getElementById('cp-xp-next').textContent = `/ ${neededXp||0} to next`;
+  document.getElementById('cp-xp-fill').style.width = (pct||0) + '%';
+}
+
+function renderCPNotifs(previews) {
+  const list = document.getElementById('cp-notif-list');
+  list.innerHTML = '';
+  if (!previews || !previews.length) {
+    list.innerHTML = '<div class="cp-notif-empty">No new notifications</div>';
+    return;
+  }
+  previews.slice(0, 10).forEach(n => {
+    const sender = n.sender || {};
+    const item = document.createElement('div');
+    item.className = 'cp-notif-item';
+    item.innerHTML = `
+      <div class="cp-notif-av" style="background:${avatarColor(sender.userId||'')}">
+        ${sender.profilePicture ? `<img src="${esc(sender.profilePicture)}" alt="">` : initials(sender.name||'?')}
+      </div>
+      <div class="cp-notif-body">
+        <div class="cp-notif-sender">${esc(sender.name||'Someone')}</div>
+        <div class="cp-notif-prev">${esc(n.preview||'')}</div>
+      </div>
+      <div class="cp-notif-time">${fmtTime(n.sentAt)}</div>
+    `;
+    item.addEventListener('click', () => {
+      if (n.conversationId) {
+        const [a,b] = n.conversationId.split('_');
+        const partnerId = a === myUserId ? b : a;
+        window.location.href = `/chat/${partnerId}`;
+      }
+      closePanel();
+    });
+    list.appendChild(item);
   });
 }
 
-// ── Notifications toggle ──
-function toggleNotifications(btn){
-  notificationsEnabled=!notificationsEnabled;
-  btn.classList.toggle('on',notificationsEnabled);
-  localStorage.setItem('notificationsEnabled',notificationsEnabled?'1':'0');
-  showToast(notificationsEnabled?'Notifications on':'Notifications off','rgba(155,89,182,.9)');
+function addCPNotif(msg) {
+  const list = document.getElementById('cp-notif-list');
+  const empty = list.querySelector('.cp-notif-empty');
+  if (empty) empty.remove();
+  const sender = msg.sender || {};
+  const item = document.createElement('div');
+  item.className = 'cp-notif-item';
+  item.innerHTML = `
+    <div class="cp-notif-av" style="background:${avatarColor(sender.userId||'')}">
+      ${sender.profilePicture ? `<img src="${esc(sender.profilePicture)}" alt="">` : initials(sender.name||'?')}
+    </div>
+    <div class="cp-notif-body">
+      <div class="cp-notif-sender">${esc(sender.name||'Someone')}</div>
+      <div class="cp-notif-prev">${esc(msg.preview||'')}</div>
+    </div>
+    <div class="cp-notif-time">now</div>
+  `;
+  item.addEventListener('click', () => {
+    if (msg.conversationId) {
+      const [a,b] = msg.conversationId.split('_');
+      const partnerId = a === myUserId ? b : a;
+      window.location.href = `/chat/${partnerId}`;
+    }
+    closePanel();
+  });
+  list.insertBefore(item, list.firstChild);
 }
 
-// ── Dynamic Island Notification ──
-function showNotification({name,avatar,preview,chatId,chatType,partnerId,chat}){
-  if(!notificationsEnabled)return;
-  const island=document.getElementById('notif-island');
-  const avEl=document.getElementById('ni-avatar');
-  avEl.innerHTML='';
-  if(avatar){const img=document.createElement('img');img.src=avatar;img.alt='';img.onerror=()=>{avEl.textContent=(name||'?')[0].toUpperCase()};avEl.appendChild(img)}
-  else avEl.textContent=(name||'?')[0].toUpperCase();
-  document.getElementById('ni-sender').textContent=name;
-  document.getElementById('ni-preview').textContent=preview;
-  pendingNotif={chatId,chatType,partnerId,chat};
-  island.onclick=e=>{if(e.target.classList.contains('notif-close'))return;collapseNotif();if(pendingNotif)navigateToChat({chatId:pendingNotif.chatId,chatType:pendingNotif.chatType,partnerId:pendingNotif.partnerId})};
-  if(notifTimer)clearTimeout(notifTimer);
+// ============================================================
+//  NOTIFICATION ISLAND
+// ============================================================
+function showNotification({ name, avatar, preview, chatId, chatType, partnerId }) {
+  if (!notificationsEnabled) return;
+  const island = document.getElementById('notif-island');
+  const avEl = document.getElementById('ni-avatar');
+  avEl.innerHTML = '';
+  if (avatar) {
+    const img = document.createElement('img');
+    img.src = avatar; img.alt = '';
+    img.onerror = () => { avEl.textContent = (name||'?')[0].toUpperCase(); };
+    avEl.appendChild(img);
+  } else {
+    avEl.textContent = (name||'?')[0].toUpperCase();
+  }
+  document.getElementById('ni-sender').textContent = name;
+  document.getElementById('ni-preview').textContent = preview;
+  pendingNotif = { chatId, chatType, partnerId };
+
+  island.onclick = e => {
+    if (e.target.closest('.ni-close')) return;
+    collapseNotif();
+    if (pendingNotif) {
+      if (pendingNotif.chatType === 'dm' && pendingNotif.partnerId) window.location.href = `/chat/${pendingNotif.partnerId}`;
+      else if (pendingNotif.chatId) window.location.href = `/${pendingNotif.chatType}/${pendingNotif.chatId}`;
+    }
+  };
+
+  if (notifTimer) clearTimeout(notifTimer);
   island.classList.remove('collapsing');
   island.classList.add('show');
-  notifTimer=setTimeout(()=>collapseNotif(),5000);
-}
-function collapseNotif(e){
-  if(e)e.stopPropagation();
-  const island=document.getElementById('notif-island');
-  island.classList.remove('show');island.classList.add('collapsing');
-  setTimeout(()=>island.classList.remove('collapsing'),500);
-  if(notifTimer){clearTimeout(notifTimer);notifTimer=null}
+  notifTimer = setTimeout(() => collapseNotif(), 4500);
 }
 
-// ── Search ──
-let searchTimer=null;
-function initSearch(){
-  const input=document.getElementById('search-input');
-  const clearBtn=document.getElementById('search-clear');
-  const results=document.getElementById('search-results');
-  input.addEventListener('input',()=>{
-    const q=input.value.trim();
-    clearBtn.classList.toggle('visible',q.length>0);
-    clearTimeout(searchTimer);
-    if(q.length<1){results.classList.remove('open');return}
-    searchTimer=setTimeout(()=>doSearch(q),300);
+function collapseNotif() {
+  const island = document.getElementById('notif-island');
+  island.classList.remove('show');
+  island.classList.add('collapsing');
+  setTimeout(() => island.classList.remove('collapsing'), 500);
+  if (notifTimer) { clearTimeout(notifTimer); notifTimer = null; }
+}
+document.getElementById('ni-close').addEventListener('click', e => { e.stopPropagation(); collapseNotif(); });
+
+// ============================================================
+//  EXILE ISLAND PANEL
+// ============================================================
+const islandBtn = document.getElementById('exile-island');
+const panelEl = document.getElementById('island-panel');
+const pageTitles = ['Profile', 'Notifications', 'Settings'];
+
+function closePanel() { panelEl.classList.remove('open'); }
+
+islandBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  panelEl.classList.toggle('open');
+});
+
+document.addEventListener('click', e => {
+  if (!panelEl.contains(e.target) && !islandBtn.contains(e.target)) closePanel();
+});
+
+// Page nav
+document.querySelectorAll('.cp-nav-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const idx = parseInt(btn.dataset.page);
+    document.querySelectorAll('.cp-page').forEach((p,i) => p.classList.toggle('active', i===idx));
+    document.querySelectorAll('.cp-nav-btn').forEach((b,i) => b.classList.toggle('active', i===idx));
+    document.getElementById('cp-page-title').textContent = pageTitles[idx];
   });
-  input.addEventListener('focus',()=>{if(input.value.trim().length>1)results.classList.add('open')});
-  document.addEventListener('click',e=>{if(!document.getElementById('search-wrap').contains(e.target))results.classList.remove('open')});
-}
-async function doSearch(q){
-  const results=document.getElementById('search-results');
-  results.innerHTML='<div class="search-empty">Searching…</div>';
-  results.classList.add('open');
-  try{
-    const[usersRes,msgsRes]=await Promise.all([
-      fetch(`/api/search/users?q=${encodeURIComponent(q)}&limit=8`,{credentials:'include'}).then(r=>r.json()),
-      fetch(`/api/search/messages?q=${encodeURIComponent(q)}&limit=5`,{credentials:'include'}).then(r=>r.json()),
-    ]);
-    const users=usersRes.users||[],msgs=msgsRes.results||[];
-    results.innerHTML='';
-    if(!users.length&&!msgs.length){results.innerHTML='<div class="search-empty">No results found</div>';return}
-    if(users.length){
-      const hdr=document.createElement('div');
-      hdr.style.cssText='padding:6px 14px 2px;font-size:9px;font-weight:700;letter-spacing:.7px;color:var(--text-dim);text-transform:uppercase;';
-      hdr.textContent='People';results.appendChild(hdr);
-      users.forEach(u=>{
-        const item=document.createElement('div');item.className='search-result-item';
-        item.innerHTML=`<div class="sr-avatar">${u.profilePicture?`<img src="${escHtml(u.profilePicture)}" alt="">`:escHtml(getInitials(u.name))}</div><div class="sr-info"><div class="sr-name">${u.premium?'<img src="/premium.png" width="12">':''} ${escHtml(u.name)} ${u.verified?'<img src="/verified.png" width="12">':''}</div><div class="sr-sub">@${escHtml(u.username||'')} · ${escHtml(u.contactNumber||'')}</div></div><div class="sr-type">user</div>`;
-        item.addEventListener('click',()=>window.location.href=`/chat/${u.userId}`);
-        results.appendChild(item);
-      });
-    }
-    if(msgs.length){
-      const hdr=document.createElement('div');
-      hdr.style.cssText='padding:6px 14px 2px;font-size:9px;font-weight:700;letter-spacing:.7px;color:var(--text-dim);text-transform:uppercase;';
-      hdr.textContent='Messages';results.appendChild(hdr);
-      msgs.forEach(m=>{
-        const who=m.counterpart?.name||m.senderName||'Unknown';
-        const item=document.createElement('div');item.className='search-result-item';
-        item.innerHTML=`<div class="sr-avatar" style="border-radius:8px">${escHtml(getInitials(who))}</div><div class="sr-info"><div class="sr-name">${escHtml(who)}</div><div class="sr-sub">${escHtml(m.preview)}</div></div><div class="sr-type">${escHtml(m.chatType||'dm')}</div>`;
-        item.addEventListener('click',()=>navigateToChat({chatId:m.chatId,chatType:m.chatType,partnerId:m.counterpart?.userId}));
-        results.appendChild(item);
-      });
-    }
-  }catch{results.innerHTML='<div class="search-empty">Search failed</div>'}
-}
-function clearSearch(){
-  document.getElementById('search-input').value='';
-  document.getElementById('search-results').classList.remove('open');
-  document.getElementById('search-clear').classList.remove('visible');
-  document.getElementById('search-input').focus();
+});
+
+// Logout
+document.getElementById('cp-logout').addEventListener('click', async () => {
+  await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
+  window.location.replace('/login');
+});
+
+// Notifications toggle
+document.getElementById('notif-toggle').addEventListener('click', function() {
+  notificationsEnabled = !notificationsEnabled;
+  this.classList.toggle('on', notificationsEnabled);
+  localStorage.setItem('notificationsEnabled', notificationsEnabled ? '1' : '0');
+  showToast(notificationsEnabled ? 'Notifications on' : 'Notifications off', 'rgba(155,89,182,0.9)');
+});
+
+// ============================================================
+//  SEARCH
+// ============================================================
+let searchTimer = null;
+function initSearch() {
+  const input = document.getElementById('search-input');
+  const clearBtn = document.getElementById('search-clear');
+  const results = document.getElementById('search-results');
+
+  input.addEventListener('input', () => {
+    const q = input.value.trim();
+    clearBtn.classList.toggle('visible', q.length > 0);
+    clearTimeout(searchTimer);
+    if (q.length < 1) { results.classList.remove('open'); return; }
+    searchTimer = setTimeout(() => doSearch(q), 300);
+  });
+
+  input.addEventListener('focus', () => {
+    if (input.value.trim().length > 1) results.classList.add('open');
+  });
+
+  document.addEventListener('click', e => {
+    if (!document.getElementById('search-wrap').contains(e.target)) results.classList.remove('open');
+  });
+
+  clearBtn.addEventListener('click', () => {
+    input.value = ''; results.classList.remove('open');
+    clearBtn.classList.remove('visible'); input.focus();
+  });
 }
 
-// ── Init ──
-async function init(){
-  initThemeToggle();
-  const storedNotif=localStorage.getItem('notificationsEnabled');
-  if(storedNotif==='0'){notificationsEnabled=false;document.getElementById('notif-toggle-btn').classList.remove('on')}
-  const user=await checkAuth();
-  if(!user)return;
+async function doSearch(q) {
+  const results = document.getElementById('search-results');
+  results.innerHTML = '<div class="search-empty">Searching…</div>';
+  results.classList.add('open');
+  try {
+    const [ur, mr] = await Promise.all([
+      fetch(`/api/search/users?q=${encodeURIComponent(q)}&limit=8`, { credentials: 'include' }).then(r=>r.json()),
+      fetch(`/api/search/messages?q=${encodeURIComponent(q)}&limit=5`, { credentials: 'include' }).then(r=>r.json()),
+    ]);
+    const users = ur.users || [];
+    const msgs = mr.results || [];
+    results.innerHTML = '';
+    if (!users.length && !msgs.length) { results.innerHTML='<div class="search-empty">No results found</div>'; return; }
+
+    if (users.length) {
+      const hdr=document.createElement('div');
+      hdr.style.cssText='padding:6px 14px 2px;font-size:9px;font-weight:700;letter-spacing:0.7px;color:var(--text-dim);text-transform:uppercase;';
+      hdr.textContent='People'; results.appendChild(hdr);
+      users.forEach(u => {
+        const item=document.createElement('div');
+        item.className='search-result-item';
+        item.innerHTML=`
+          <div class="sr-avatar" style="background:${avatarColor(u.userId)}">
+            ${u.profilePicture ? `<img src="${esc(u.profilePicture)}" alt="">` : initials(u.name)}
+          </div>
+          <div class="sr-info">
+            <div class="sr-name">
+              ${u.premium?`<img src="/premium.png" width="12" height="12" onerror="this.style.display='none'">`:''}
+              ${esc(u.name)}
+              ${u.verified?`<img src="/verified.png" width="12" height="12" onerror="this.style.display='none'">`:''}
+            </div>
+            <div class="sr-sub">@${esc(u.username||'')} · ${esc(u.contactNumber||'')}</div>
+          </div>
+          <div class="sr-type">user</div>
+        `;
+        item.addEventListener('click', () => window.location.href=`/chat/${u.userId}`);
+        results.appendChild(item);
+      });
+    }
+
+    if (msgs.length) {
+      const hdr=document.createElement('div');
+      hdr.style.cssText='padding:6px 14px 2px;font-size:9px;font-weight:700;letter-spacing:0.7px;color:var(--text-dim);text-transform:uppercase;';
+      hdr.textContent='Messages'; results.appendChild(hdr);
+      msgs.forEach(m => {
+        const who=m.counterpart?.name||m.senderName||'Unknown';
+        const item=document.createElement('div');
+        item.className='search-result-item';
+        item.innerHTML=`
+          <div class="sr-avatar" style="background:${avatarColor(who)};border-radius:8px;font-size:12px;display:flex;align-items:center;justify-content:center;">${initials(who)}</div>
+          <div class="sr-info">
+            <div class="sr-name">${esc(who)}</div>
+            <div class="sr-sub">${esc(m.preview||'')}</div>
+          </div>
+          <div class="sr-type">${esc(m.chatType||'dm')}</div>
+        `;
+        item.addEventListener('click', () => {
+          const chat={chatId:m.chatId,chatType:m.chatType,partnerId:m.counterpart?.userId};
+          navigateToChat(chat);
+        });
+        results.appendChild(item);
+      });
+    }
+  } catch {
+    results.innerHTML='<div class="search-empty">Search failed</div>';
+  }
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+async function init() {
+  // Restore notif setting
+  const storedNotif = localStorage.getItem('notificationsEnabled');
+  if (storedNotif === '0') {
+    notificationsEnabled = false;
+    document.getElementById('notif-toggle').classList.remove('on');
+  }
+
+  const user = await checkAuth();
+  if (!user) return;
+
+  // Load initial data
   await loadChats(1);
-  initIsland();
+  updateUnreadBadge();
+
+  // Init UI
   initSearch();
   initInfiniteScroll();
-  initWS();
-  initCPSocket();
+
+  // Connect sockets after Socket.IO script loads
+  initWS(); // This loads socket.io.js then connects
+
+  // CP socket
+  const waitForIO = () => {
+    if (window.io) {
+      connectCPSocket();
+    } else {
+      setTimeout(waitForIO, 100);
+    }
+  };
+  waitForIO();
 }
-document.addEventListener('DOMContentLoaded',init);
+
+document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
 </html>
