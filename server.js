@@ -759,27 +759,22 @@ wss.on("connection", async (ws, req) => {
   
   let userId;
   requireAuth(req, { status: () => ({ json: () => {} }) }, () => {
-    userId = req.user.userId;  // set by requireAuth
+    userId = req.user.userId;
   });
   
   if (!userId) { ws.close(4001, "Unauthorized"); return; }
-});
 
   // Check if banned
   const userDoc = await db.collection("users").findOne({ userId });
   if (!userDoc || userDoc.banned) { ws.close(4003, "Banned"); return; }
-
   // Register socket
   if (!onlineClients.has(userId)) onlineClients.set(userId, new Set());
   onlineClients.get(userId).add(ws);
-
-  // Mark online in DB (respect privacy setting)
+  // Mark online in DB
   await db.collection("users").updateOne({ userId }, { $set: { status: "online" } });
-
-  // Notify contacts if setting allows
+  // Notify contacts
   notifyPresence(userId, "online").catch(console.error);
-
-  // Daily streak + XP (runs only once per calendar day per user)
+  // Daily streak + XP
   processDailyStreak(userId).catch(console.error);
 
   ws.on("message", async (raw) => {
