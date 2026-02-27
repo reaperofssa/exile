@@ -757,10 +757,14 @@ function broadcastCP(userId, payload) {
 wss.on("connection", async (ws, req) => {
   await new Promise(resolve => cookieParser()(req, {}, resolve));
   
+  console.log("cookies:", req.cookies);
+  
   let userId;
   requireAuth(req, { status: () => ({ json: () => {} }) }, () => {
     userId = req.user.userId;
   });
+  
+  console.log("userId:", userId);
   
   if (!userId) { ws.close(4001, "Unauthorized"); return; }
 
