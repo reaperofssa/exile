@@ -775,6 +775,7 @@ wss.on("connection", async (ws, req) => {
       }
     );
 
+    console.log("USER ID:", userId); // ADD THIS
     if (!userId) {
       ws.close(4001, "Unauthorized");
       return;
