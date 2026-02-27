@@ -781,6 +781,9 @@ wss.on("connection", async (ws, req) => {
   // Daily streak + XP
   processDailyStreak(userId).catch(console.error);
 
+  process.on('uncaughtException', (err) => console.error('UNCAUGHT:', err));
+  process.on('unhandledRejection', (err) => console.error('UNHANDLED:', err));
+  
   ws.on("message", async (raw) => {
     let msg;
     try { msg = JSON.parse(raw); } catch { return; }
