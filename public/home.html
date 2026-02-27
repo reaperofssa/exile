@@ -401,9 +401,12 @@ body{
 .chat-card{
   display:flex;align-items:center;gap:12px;padding:10px 8px;
   border-radius:var(--r-md);cursor:pointer;transition:background 0.15s;
-  border:1px solid transparent;position:relative;
+  background:rgba(255,255,255,0.035);
+  border:1px solid rgba(255,255,255,0.06);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  position:relative;margin-bottom:5px;
 }
-.chat-card:hover{background:rgba(255,255,255,0.055);border-color:rgba(255,255,255,0.06);}
+.chat-card:hover{background:rgba(255,255,255,0.07);border-color:rgba(255,255,255,0.1);}
 .chat-avatar{
   width:48px;height:48px;border-radius:50%;background:var(--mid);flex-shrink:0;
   position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;
@@ -475,9 +478,12 @@ body{
 .contact-card{
   display:flex;align-items:center;gap:12px;padding:10px 8px;
   border-radius:var(--r-md);cursor:pointer;transition:background 0.15s;
-  border:1px solid transparent;margin:0 6px;
+  background:rgba(255,255,255,0.035);
+  border:1px solid rgba(255,255,255,0.06);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  margin:0 10px 5px;
 }
-.contact-card:hover{background:rgba(255,255,255,0.055);border-color:rgba(255,255,255,0.06);}
+.contact-card:hover{background:rgba(255,255,255,0.07);border-color:rgba(255,255,255,0.1);}
 .contact-av{
   width:48px;height:48px;border-radius:50%;background:var(--mid);flex-shrink:0;
   overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;
@@ -852,7 +858,7 @@ body{
         <path stroke="url(#swordG)" stroke-width="2" stroke-linecap="round" d="M7.5 7.5l-2.5 2.5"/>
       </svg>
       <div class="island-online-dot" id="island-dot"></div>
-      <div class="island-unread-pip" id="island-pip">0</div>
+      <div class="island-unread-pip" id="island-pip"></div>
     </div>
 
     <!-- Drop panel -->
@@ -1204,10 +1210,10 @@ function buildChatCard(chat) {
   r1.className = 'chat-row1';
   const nameWrap = document.createElement('div');
   nameWrap.className = 'chat-name';
-  // Premium badge before name
-  if (chat.premium) {
+  // Verified badge BEFORE name
+  if (chat.verified) {
     const img = document.createElement('img');
-    img.src = '/premium.png'; img.className = 'badge-img'; img.alt = '';
+    img.src = '/verified.png'; img.className = 'badge-img'; img.alt = '';
     img.onerror = () => img.classList.add('err');
     nameWrap.appendChild(img);
   }
@@ -1215,10 +1221,10 @@ function buildChatCard(chat) {
   nameSpan.textContent = chat.name || 'Unknown';
   nameSpan.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;';
   nameWrap.appendChild(nameSpan);
-  // Verified badge after name
-  if (chat.verified) {
+  // Premium badge AFTER name
+  if (chat.premium) {
     const img = document.createElement('img');
-    img.src = '/verified.png'; img.className = 'badge-img'; img.alt = '';
+    img.src = '/premium.png'; img.className = 'badge-img'; img.alt = '';
     img.onerror = () => img.classList.add('err');
     nameWrap.appendChild(img);
   }
@@ -1435,18 +1441,20 @@ function renderContacts(list) {
     info.className = 'contact-info';
     const nameRow = document.createElement('div');
     nameRow.className = 'contact-name';
-    if (u.premium) {
+    // Verified BEFORE name
+    if (u.verified) {
       const img = document.createElement('img');
-      img.src='/premium.png'; img.className='badge-img'; img.alt='';
+      img.src='/verified.png'; img.className='badge-img'; img.alt='';
       img.onerror=()=>img.classList.add('err');
       nameRow.appendChild(img);
     }
     const nameSpan = document.createElement('span');
     nameSpan.textContent = u.name || 'Unknown';
     nameRow.appendChild(nameSpan);
-    if (u.verified) {
+    // Premium AFTER name
+    if (u.premium) {
       const img = document.createElement('img');
-      img.src='/verified.png'; img.className='badge-img'; img.alt='';
+      img.src='/premium.png'; img.className='badge-img'; img.alt='';
       img.onerror=()=>img.classList.add('err');
       nameRow.appendChild(img);
     }
@@ -1493,8 +1501,8 @@ function renderContacts(list) {
     actions.appendChild(remBtn);
     card.appendChild(actions);
 
-    // Click card → chat
-    card.addEventListener('click', () => window.location.href = `/chat/${u.userId}`);
+    // Click card → user profile
+    card.addEventListener('click', () => window.location.href = `/user/${u.userId}`);
     el.appendChild(card);
   });
 }
@@ -1566,9 +1574,9 @@ document.getElementById('modal-search-btn').addEventListener('click', async () =
         </div>
         <div style="min-width:0;flex:1">
           <div class="modal-result-name">
-            ${data.premium ? `<img src="/premium.png" class="badge-img" alt="" onerror="this.classList.add('err')">` : ''}
-            ${esc(data.name)}
             ${data.verified ? `<img src="/verified.png" class="badge-img" alt="" onerror="this.classList.add('err')">` : ''}
+            ${esc(data.name)}
+            ${data.premium ? `<img src="/premium.png" class="badge-img" alt="" onerror="this.classList.add('err')">` : ''}
           </div>
           <div class="modal-result-sub">@${esc(data.username||'')} · ${esc(data.contactNumber||'')}</div>
         </div>
@@ -1815,18 +1823,20 @@ function handleCPMsg(msg) {
 function updateCPProfile(data) {
   const nameEl = document.getElementById('cp-name');
   nameEl.innerHTML = '';
-  if (data.premium) {
+  // Verified BEFORE name
+  if (data.verified) {
     const img = document.createElement('img');
-    img.src='/premium.png'; img.className='cp-badge-img'; img.alt='';
+    img.src='/verified.png'; img.className='cp-badge-img'; img.alt='';
     img.onerror=()=>img.classList.add('err');
     nameEl.appendChild(img);
   }
   const ns = document.createElement('span');
   ns.textContent = data.name || 'Unknown';
   nameEl.appendChild(ns);
-  if (data.verified) {
+  // Premium AFTER name
+  if (data.premium) {
     const img = document.createElement('img');
-    img.src='/verified.png'; img.className='cp-badge-img'; img.alt='';
+    img.src='/premium.png'; img.className='cp-badge-img'; img.alt='';
     img.onerror=()=>img.classList.add('err');
     nameEl.appendChild(img);
   }
@@ -2060,9 +2070,9 @@ async function doSearch(q) {
           </div>
           <div class="sr-info">
             <div class="sr-name">
-              ${u.premium?`<img src="/premium.png" width="12" height="12" onerror="this.style.display='none'">`:''}
-              ${esc(u.name)}
               ${u.verified?`<img src="/verified.png" width="12" height="12" onerror="this.style.display='none'">`:''}
+              ${esc(u.name)}
+              ${u.premium?`<img src="/premium.png" width="12" height="12" onerror="this.style.display='none'">`:''}
             </div>
             <div class="sr-sub">@${esc(u.username||'')} · ${esc(u.contactNumber||'')}</div>
           </div>
