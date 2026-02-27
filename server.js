@@ -757,14 +757,10 @@ function broadcastCP(userId, payload) {
 wss.on("connection", async (ws, req) => {
   await new Promise(resolve => cookieParser()(req, {}, resolve));
   
-  console.log("cookies:", req.cookies);
-  
   let userId;
   requireAuth(req, { status: () => ({ json: () => {} }) }, () => {
     userId = req.user.userId;
   });
-  
-  console.log("userId:", userId);
   
   if (!userId) { ws.close(4001, "Unauthorized"); return; }
 
@@ -775,9 +771,12 @@ wss.on("connection", async (ws, req) => {
   if (!onlineClients.has(userId)) onlineClients.set(userId, new Set());
   onlineClients.get(userId).add(ws);
   // Mark online in DB
-  await db.collection("users").updateOne({ userId }, { $set: { status: "onlinex" } });
- 
-  
+  await db.collection("users").updateOne({ userId }, { $set: { status: "online" } });
+  // Notify contacts
+  notifyPresence(userId, "online").catch(console.error);
+  // Daily streak + XP
+  processDailyStreak(userId).catch(console.error);
+
   ws.on("message", async (raw) => {
     let msg;
     try { msg = JSON.parse(raw); } catch { return; }
