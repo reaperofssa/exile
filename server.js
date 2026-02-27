@@ -2739,28 +2739,55 @@ app.post("/api/bots", requireAuth, upload.single("profilePicture"), async (req, 
 
   // Max 3 bots per user
   const count = await bots.countDocuments({ ownerId });
-  if (count >= 3) return res.status(403).json({ error: "Maximum of 3 bots per account." });
+  if (count >= 3)
+    return res.status(403).json({ error: "Maximum of 3 bots per account." });
 
   const { name, username, description } = req.body;
-  if (!name?.trim()) return res.status(400).json({ error: "name is required." });
+  if (!name?.trim())
+    return res.status(400).json({ error: "name is required." });
 
   const clean = username?.trim();
-  const uErr  = validateUsername(clean);
-  if (uErr) return res.status(400).json({ error: uErr });
-  if (!clean.toLowerCase().endsWith("bot"))
-    return res.status(400).json({ error: 'Bot username must end with "bot".' });
 
-  // Global uniqueness: check bots AND users
+  // Inline validation (bot version)
+  if (!clean)
+    return res.status(400).json({ error: "Username is required." });
+
+  if (clean.length < 3)
+    return res.status(400).json({ error: "Username must be at least 3 characters." });
+
+  if (!/^[a-zA-Z0-9_]+$/.test(clean))
+    return res.status(400).json({
+      error: "Username can only contain letters, numbers, and underscores."
+    });
+
+  if (clean.startsWith("_") || clean.endsWith("_"))
+    return res.status(400).json({
+      error: "Username cannot start or end with an underscore."
+    });
+
+  // Bot-specific rule
+  if (!clean.toLowerCase().endsWith("bot"))
+    return res.status(400).json({
+      error: 'Bot username must end with "bot".'
+    });
+
+  // Global uniqueness
   const users = db.collection("users");
+
   if (await bots.findOne({ usernameLower: clean.toLowerCase() }))
     return res.status(409).json({ error: "Bot username already taken." });
+
   if (await users.findOne({ usernameLower: clean.toLowerCase() }))
     return res.status(409).json({ error: "Username already taken by a user." });
 
   let profilePictureUrl = null;
   if (req.file) {
-    try { profilePictureUrl = await uploadToCatbox(req.file.buffer, req.file.originalname || "bot.jpg"); }
-    catch (e) { /* non-fatal */ }
+    try {
+      profilePictureUrl = await uploadToCatbox(
+        req.file.buffer,
+        req.file.originalname || "bot.jpg"
+      );
+    } catch (e) {}
   }
 
   const botId    = await generateBotId();
@@ -2771,25 +2798,26 @@ app.post("/api/bots", requireAuth, upload.single("profilePicture"), async (req, 
     botId,
     ownerId,
     botToken,
-    name:          name.trim(),
-    username:      clean,
+    name: name.trim(),
+    username: clean,
     usernameLower: clean.toLowerCase(),
-    tag:           `#${clean}`,
-    description:   description?.trim() || "",
+    tag: `#${clean}`,
+    description: description?.trim() || "",
     profilePicture: profilePictureUrl,
-    isBot:         true,
-    status:        "offline",
-    disabled:      false,
-    createdAt:     now,
+    isBot: true,
+    status: "offline",
+    disabled: false,
+    createdAt: now,
   };
 
   await bots.insertOne(bot);
 
-  grantXP(ownerId, "createBot", 1).catch(()=>{});
+  grantXP(ownerId, "createBot", 1).catch(() => {});
+
   res.status(201).json({
-    message:  "Bot created.",
-    bot:      botStub(bot),
-    botToken, // Only returned once — developer should store this
+    message: "Bot created.",
+    bot: botStub(bot),
+    botToken,
   });
 });
 
