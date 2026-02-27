@@ -778,12 +778,27 @@ wss.on("connection", async (ws, req) => {
       return;
     }
 
-    const userDoc = await db.collection("users").findOne({ userId });
+  let userDoc;
+try {
+  userDoc = await db.collection("users").findOne({ userId });
+} catch (err) {
+  console.error("🔥 DB error fetching userDoc:", err);
+  if (ws.readyState === ws.OPEN) ws.close(1011, "DB error"); // Server error
+  return;
+}
 
-    if (!userDoc || userDoc.banned) {
-      ws.close(4003, "Banned");
-      return;
-    }
+// Handle not found or banned users
+if (!userDoc) {
+  console.warn(`⚠️ User not found: ${userId}`);
+  if (ws.readyState === ws.OPEN) ws.close(4004, "User not found"); // optional custom code
+  return;
+}
+
+if (userDoc.banned) {
+  console.warn(`🚫 Banned user attempted WS: ${userId}`);
+  if (ws.readyState === ws.OPEN) ws.close(4003, "Banned");
+  return;
+}
 
     if (!onlineClients.has(userId)) {
       onlineClients.set(userId, new Set());
