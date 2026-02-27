@@ -9,24 +9,24 @@
    TOKENS
    ============================================================ */
 :root {
-  --deep:          #0d0610;
-  --mid:           #160d1e;
+  --deep:          #120812;
+  --mid:           #1e0e24;
   --surface:       #1c1128;
   --amber:         #c97b3a;
   --amber-light:   #e8a85c;
   --violet:        #9b59b6;
-  --violet-glow:   rgba(155,89,182,0.25);
+  --violet-glow:   rgba(155,89,182,0.3);
   --violet-dim:    rgba(155,89,182,0.12);
   --green:         #22c55e;
   --red:           #ef4444;
   --text-pri:      rgba(255,255,255,0.93);
   --text-sec:      rgba(255,255,255,0.55);
-  --text-dim:      rgba(255,255,255,0.28);
+  --text-dim:      rgba(255,255,255,0.3);
   --glass-bg:      rgba(255,255,255,0.06);
   --glass-border:  rgba(255,255,255,0.10);
   --glass-top:     rgba(255,255,255,0.18);
   --r-sm: 8px; --r-md: 14px; --r-lg: 20px;
-  --tab-h: 66px; --header-h: 52px;
+  --tab-h: 58px; --header-h: 44px;
 }
 
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
@@ -36,22 +36,38 @@ body{
   background:var(--deep); color:var(--text-pri);
   min-height:100vh; -webkit-font-smoothing:antialiased;
   overscroll-behavior:none;
+  transition:background 0.3s,color 0.3s;
 }
 
-/* ── Backgrounds ── */
+/* ── Backgrounds — exact match to chat page ── */
 .bg-base{
-  position:fixed;inset:0;z-index:0;
-  background:
-    radial-gradient(ellipse 140% 60% at 50% -5%,  #2d1245 0%,transparent 60%),
-    radial-gradient(ellipse 80% 50%  at 10% 80%,  #1a0c28 0%,transparent 55%),
-    radial-gradient(ellipse 90% 40%  at 90% 50%,  #38184a 0%,transparent 50%),
-    linear-gradient(175deg,#180f22 0%,#0d0610 60%);
+  position:fixed;inset:0;z-index:-3;
+  background:var(--deep);
 }
 .bg-glow{
-  position:fixed;inset:0;z-index:1;pointer-events:none;
+  position:fixed;inset:0;z-index:-2;pointer-events:none;
   background:
-    radial-gradient(ellipse 60% 20% at 50% 20%,rgba(201,123,58,0.07) 0%,transparent 70%),
-    radial-gradient(ellipse 40% 15% at 20% 65%,rgba(155,89,182,0.04) 0%,transparent 55%);
+    radial-gradient(ellipse 60% 50% at 15% 20%,rgba(155,89,182,0.12) 0%,transparent 70%),
+    radial-gradient(ellipse 40% 40% at 85% 80%,rgba(201,123,58,0.08) 0%,transparent 60%);
+}
+/* ── SVG background pattern — from chat page ── */
+.bg-pattern{
+  position:fixed;inset:0;z-index:-1;pointer-events:none;
+  overflow:hidden;opacity:1;
+}
+.bg-pattern svg{
+  position:absolute;inset:0;width:100%;height:100%;
+}
+.bp-sym{
+  transform-origin:center;
+  animation:bpDrift linear infinite;
+  will-change:transform,opacity;
+}
+@keyframes bpDrift{
+  0%   { transform:translateY(0px)   rotate(0deg)   scale(1);   opacity:var(--op-from); }
+  30%  { transform:translateY(-8px)  rotate(4deg)   scale(1.02);opacity:var(--op-to); }
+  60%  { transform:translateY(-3px)  rotate(-3deg)  scale(0.98);opacity:var(--op-mid); }
+  100% { transform:translateY(0px)   rotate(0deg)   scale(1);   opacity:var(--op-from); }
 }
 
 /* ── Glass utility ── */
@@ -77,14 +93,28 @@ body{
   -webkit-backdrop-filter:blur(32px) saturate(1.3);
   border-bottom:1px solid rgba(255,255,255,0.08);
 }
-.logo{display:flex;align-items:center;gap:8px;text-decoration:none;}
+.logo{display:flex;align-items:center;gap:6px;text-decoration:none;}
 .logo-text{
-  font-size:13px;font-weight:800;letter-spacing:3.5px;text-transform:uppercase;
+  font-size:11px;font-weight:800;letter-spacing:3.5px;text-transform:uppercase;
   background:linear-gradient(120deg,#fff 20%,var(--amber-light) 55%,var(--violet) 100%);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
 }
 
-/* ── EXILE ISLAND — centered pill in header ── */
+/* Community pill */
+.community-pill{
+  display:flex;align-items:center;gap:5px;
+  background:rgba(201,123,58,0.12);
+  border:1px solid rgba(201,123,58,0.28);
+  border-radius:20px;
+  padding:4px 10px 4px 8px;
+  cursor:pointer;text-decoration:none;
+  transition:background 0.18s,transform 0.15s;
+  flex-shrink:0;
+}
+.community-pill:hover{background:rgba(201,123,58,0.2);transform:scale(1.02);}
+.community-pill:active{transform:scale(0.97);}
+.community-pill svg{width:13px;height:13px;stroke:var(--amber-light);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
+.community-pill span{font-size:11px;font-weight:700;color:var(--amber-light);letter-spacing:0.3px;}
 .exile-island-wrap{
   position:absolute;left:50%;transform:translateX(-50%);
   display:flex;flex-direction:column;align-items:center;
@@ -97,8 +127,8 @@ body{
   -webkit-backdrop-filter:blur(40px) saturate(1.8);
   border:1px solid rgba(255,255,255,0.13);
   border-top-color:rgba(255,255,255,0.22);
-  border-radius:24px;
-  padding:7px 14px 7px 10px;
+  border-radius:14px;
+  padding:5px 10px 5px 8px;
   cursor:pointer;
   box-shadow:0 4px 24px rgba(0,0,0,0.4),0 0 0 1px rgba(155,89,182,0.18);
   transition:box-shadow 0.25s,transform 0.2s;
@@ -110,12 +140,12 @@ body{
   transform:scale(1.02);
 }
 .exile-island:active{transform:scale(0.97);}
-.island-sword-icon{width:22px;height:22px;flex-shrink:0;}
+.island-sword-icon{width:17px;height:17px;flex-shrink:0;}
 .island-online-dot{
-  width:8px;height:8px;border-radius:50%;
+  width:6px;height:6px;border-radius:50%;
   background:var(--green);
-  box-shadow:0 0 6px rgba(34,197,94,0.7);
-  flex-shrink:0;margin-left:5px;
+  box-shadow:0 0 5px rgba(34,197,94,0.7);
+  flex-shrink:0;margin-left:4px;
 }
 .island-unread-pip{
   position:absolute;top:-4px;right:-4px;
@@ -129,17 +159,17 @@ body{
 
 /* ── Island Drop Panel ── */
 .island-panel{
-  position:absolute;top:calc(100% + 10px);left:50%;transform:translateX(-50%) translateY(-8px) scale(0.94);
+  position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%) translateY(-8px) scale(0.94);
   z-index:209;
-  width:300px;
-  background:linear-gradient(160deg,rgba(255,255,255,0.08) 0%,rgba(255,255,255,0.03) 100%);
-  backdrop-filter:blur(48px) saturate(1.5);
-  -webkit-backdrop-filter:blur(48px) saturate(1.5);
-  border:1px solid rgba(255,255,255,0.11);
-  border-top-color:rgba(255,255,255,0.20);
-  border-radius:20px;
+  width:290px;
+  background:rgba(18,8,18,0.72);
+  backdrop-filter:blur(48px) saturate(1.8);
+  -webkit-backdrop-filter:blur(48px) saturate(1.8);
+  border:1px solid rgba(255,255,255,0.10);
+  border-top-color:rgba(255,255,255,0.18);
+  border-radius:18px;
   padding:0;
-  box-shadow:0 16px 56px rgba(0,0,0,0.55),0 0 0 1px rgba(155,89,182,0.10);
+  box-shadow:0 16px 56px rgba(0,0,0,0.65),0 1px 0 inset rgba(255,255,255,0.08);
   opacity:0;pointer-events:none;
   transition:transform 0.32s cubic-bezier(0.34,1.56,0.64,1),opacity 0.22s ease;
   transform-origin:top center;
@@ -157,7 +187,7 @@ body{
 /* Panel header */
 .cp-header{
   display:flex;align-items:center;justify-content:space-between;
-  padding:14px 16px 10px;
+  padding:12px 14px 9px;
   border-bottom:1px solid rgba(255,255,255,0.07);
 }
 .cp-title{font-size:11px;font-weight:700;letter-spacing:0.7px;color:var(--text-dim);text-transform:uppercase;}
@@ -172,18 +202,18 @@ body{
 
 /* Page 1 — Profile */
 .cp-profile-row{
-  display:flex;align-items:center;gap:12px;padding:14px 16px;
+  display:flex;align-items:center;gap:10px;padding:11px 14px;
 }
 .cp-avatar{
-  width:44px;height:44px;border-radius:50%;
+  width:38px;height:38px;border-radius:50%;
   background:linear-gradient(135deg,var(--amber),var(--violet));
   flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;
-  font-size:16px;font-weight:700;
+  font-size:14px;font-weight:700;
 }
 .cp-avatar img{width:100%;height:100%;object-fit:cover;}
 .cp-user-info{min-width:0;flex:1;}
-.cp-name{font-size:14px;font-weight:700;color:var(--text-pri);display:flex;align-items:center;gap:5px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
-.cp-sub{font-size:11px;color:var(--text-sec);margin-top:1px;display:flex;align-items:center;gap:5px;}
+.cp-name{font-size:13px;font-weight:700;color:var(--text-pri);display:flex;align-items:center;gap:5px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.cp-sub{font-size:10px;color:var(--text-sec);margin-top:1px;display:flex;align-items:center;gap:5px;}
 .cp-badge-img{width:13px;height:13px;flex-shrink:0;}
 .cp-badge-img.err{display:none;}
 
@@ -193,10 +223,10 @@ body{
 }
 .cp-stat{
   background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);
-  border-radius:10px;padding:8px;text-align:center;
+  border-radius:10px;padding:7px;text-align:center;
 }
-.cp-stat-val{font-size:15px;font-weight:800;color:var(--text-pri);}
-.cp-stat-lbl{font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;}
+.cp-stat-val{font-size:13px;font-weight:800;color:var(--text-pri);}
+.cp-stat-lbl{font-size:8px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;}
 
 .cp-xp-bar-wrap{padding:0 14px 12px;}
 .cp-xp-label{display:flex;justify-content:space-between;font-size:10px;color:var(--text-sec);margin-bottom:5px;}
@@ -261,19 +291,19 @@ body{
    DYNAMIC ISLAND NOTIFICATION
    ============================================================ */
 .notif-island{
-  position:fixed;top:10px;left:50%;
+  position:fixed;top:8px;left:50%;
   transform:translateX(-50%) scaleX(0.12) scaleY(0.6);
   z-index:400;
-  background:rgba(6,3,12,0.92);
+  background:rgba(18,8,18,0.78);
   backdrop-filter:blur(48px) saturate(1.8);
   -webkit-backdrop-filter:blur(48px) saturate(1.8);
-  border:1px solid rgba(255,255,255,0.13);
-  border-top-color:rgba(255,255,255,0.22);
-  border-radius:28px;
-  padding:10px 14px;
-  display:flex;align-items:center;gap:10px;
+  border:1px solid rgba(255,255,255,0.12);
+  border-top-color:rgba(255,255,255,0.20);
+  border-radius:24px;
+  padding:8px 12px;
+  display:flex;align-items:center;gap:9px;
   max-width:calc(100vw - 80px);
-  box-shadow:0 6px 40px rgba(0,0,0,0.65),0 0 0 1px rgba(155,89,182,0.14);
+  box-shadow:0 6px 40px rgba(0,0,0,0.65),0 1px 0 inset rgba(255,255,255,0.08);
   cursor:pointer;opacity:0;pointer-events:none;
   transition:transform 0.5s cubic-bezier(0.34,1.56,0.64,1),opacity 0.28s ease,border-radius 0.4s;
   will-change:transform,opacity;overflow:hidden;white-space:nowrap;
@@ -538,8 +568,8 @@ body{
   transition:background 0.15s;text-decoration:none;position:relative;
 }
 .tab-item:hover{background:rgba(255,255,255,0.055);}
-.tab-item svg{width:21px;height:21px;fill:none;stroke:var(--text-dim);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:stroke 0.2s;}
-.tab-item span{font-size:9.5px;color:var(--text-dim);font-weight:500;transition:color 0.2s;}
+.tab-item svg{width:18px;height:18px;fill:none;stroke:var(--text-dim);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:stroke 0.2s;}
+.tab-item span{font-size:9px;color:var(--text-dim);font-weight:500;transition:color 0.2s;}
 .tab-item.active svg{stroke:var(--violet);}
 .tab-item.active span{color:var(--violet);font-weight:700;}
 .tab-active-pill{
@@ -594,6 +624,169 @@ body{
 
 <div class="bg-base"></div>
 <div class="bg-glow"></div>
+
+<!-- ── Background SVG pattern (from chat page) ── -->
+<div class="bg-pattern" aria-hidden="true">
+<svg viewBox="0 0 390 844" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gp1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#9b59b6" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#c97b3a" stop-opacity="0.10"/>
+    </linearGradient>
+    <linearGradient id="gp2" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#c97b3a" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#9b59b6" stop-opacity="0.08"/>
+    </linearGradient>
+    <linearGradient id="gp3" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#9b59b6" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#e8a85c" stop-opacity="0.06"/>
+    </linearGradient>
+  </defs>
+  <!-- Chat bubbles -->
+  <g class="bp-sym" style="--op-from:0.55;--op-to:0.7;--op-mid:0.6;animation-duration:9.2s;animation-delay:-1.1s">
+    <rect x="18" y="48" width="62" height="36" rx="18" ry="18" fill="url(#gp1)" stroke="rgba(155,89,182,0.18)" stroke-width="1"/>
+    <rect x="18" y="48" width="22" height="10" rx="5" fill="rgba(155,89,182,0.12)"/>
+    <circle cx="18" cy="84" r="6" fill="url(#gp1)"/>
+  </g>
+  <g class="bp-sym" style="--op-from:0.35;--op-to:0.5;--op-mid:0.4;animation-duration:12s;animation-delay:-4.5s">
+    <rect x="28" y="102" width="38" height="22" rx="11" ry="11" fill="url(#gp3)" stroke="rgba(201,123,58,0.15)" stroke-width="0.8"/>
+    <circle cx="28" cy="124" r="4" fill="url(#gp3)"/>
+  </g>
+  <g class="bp-sym" style="--op-from:0.45;--op-to:0.6;--op-mid:0.5;animation-duration:10.5s;animation-delay:-2.8s">
+    <rect x="292" y="62" width="76" height="42" rx="21" ry="21" fill="url(#gp2)" stroke="rgba(201,123,58,0.18)" stroke-width="1"/>
+    <rect x="292" y="62" width="76" height="14" rx="7" fill="rgba(201,123,58,0.07)"/>
+    <circle cx="368" cy="104" r="7" fill="url(#gp2)"/>
+  </g>
+  <g class="bp-sym" style="--op-from:0.3;--op-to:0.45;--op-mid:0.35;animation-duration:14.1s;animation-delay:-6s">
+    <rect x="12" y="310" width="54" height="30" rx="15" ry="15" fill="url(#gp1)" stroke="rgba(155,89,182,0.14)" stroke-width="0.8"/>
+    <circle cx="12" cy="340" r="5" fill="url(#gp1)"/>
+  </g>
+  <g class="bp-sym" style="--op-from:0.38;--op-to:0.52;--op-mid:0.44;animation-duration:11.3s;animation-delay:-3.3s">
+    <rect x="300" y="280" width="68" height="38" rx="19" ry="19" fill="url(#gp2)" stroke="rgba(201,123,58,0.16)" stroke-width="0.8"/>
+    <circle cx="368" cy="318" r="6" fill="url(#gp2)"/>
+  </g>
+  <g class="bp-sym" style="--op-from:0.28;--op-to:0.42;--op-mid:0.33;animation-duration:13.7s;animation-delay:-7.2s">
+    <rect x="16" y="640" width="48" height="28" rx="14" ry="14" fill="url(#gp3)" stroke="rgba(155,89,182,0.12)" stroke-width="0.7"/>
+    <circle cx="16" cy="668" r="4.5" fill="url(#gp3)"/>
+  </g>
+  <g class="bp-sym" style="--op-from:0.35;--op-to:0.48;--op-mid:0.4;animation-duration:10.8s;animation-delay:-5.1s">
+    <rect x="298" y="680" width="72" height="38" rx="19" fill="url(#gp2)" stroke="rgba(201,123,58,0.14)" stroke-width="0.8"/>
+    <circle cx="370" cy="718" r="6" fill="url(#gp2)"/>
+  </g>
+  <!-- Paper planes -->
+  <g class="bp-sym" style="--op-from:0.3;--op-to:0.45;--op-mid:0.36;animation-duration:15s;animation-delay:-0.8s">
+    <g transform="translate(175,30) rotate(-35)" fill="none" stroke="rgba(155,89,182,0.28)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="0,-18 16,10 0,4 -16,10" fill="rgba(155,89,182,0.08)"/>
+      <line x1="0" y1="4" x2="0" y2="10"/>
+    </g>
+  </g>
+  <g class="bp-sym" style="--op-from:0.22;--op-to:0.35;--op-mid:0.28;animation-duration:17.4s;animation-delay:-9s">
+    <g transform="translate(362,420) rotate(-25)" fill="none" stroke="rgba(201,123,58,0.22)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="0,-14 12,8 0,3 -12,8" fill="rgba(201,123,58,0.06)"/>
+      <line x1="0" y1="3" x2="0" y2="8"/>
+    </g>
+  </g>
+  <g class="bp-sym" style="--op-from:0.2;--op-to:0.32;--op-mid:0.25;animation-duration:18.6s;animation-delay:-12s">
+    <g transform="translate(24,500) rotate(-40)" fill="none" stroke="rgba(155,89,182,0.2)" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="0,-12 10,7 0,2.5 -10,7" fill="rgba(155,89,182,0.05)"/>
+      <line x1="0" y1="2.5" x2="0" y2="7"/>
+    </g>
+  </g>
+  <g class="bp-sym" style="--op-from:0.28;--op-to:0.4;--op-mid:0.33;animation-duration:16.2s;animation-delay:-4s">
+    <g transform="translate(195,790) rotate(-30)" fill="none" stroke="rgba(201,123,58,0.24)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="0,-16 14,9 0,3.5 -14,9" fill="rgba(201,123,58,0.07)"/>
+      <line x1="0" y1="3.5" x2="0" y2="9"/>
+    </g>
+  </g>
+  <!-- Reaction circles -->
+  <g class="bp-sym" style="--op-from:0.25;--op-to:0.38;--op-mid:0.3;animation-duration:11.8s;animation-delay:-2.2s">
+    <circle cx="85" cy="175" r="13" fill="rgba(155,89,182,0.08)" stroke="rgba(155,89,182,0.2)" stroke-width="0.8"/>
+    <text x="85" y="180" text-anchor="middle" font-size="13" fill="rgba(155,89,182,0.35)">♥</text>
+  </g>
+  <g class="bp-sym" style="--op-from:0.2;--op-to:0.32;--op-mid:0.25;animation-duration:13.5s;animation-delay:-7.8s">
+    <circle cx="320" cy="195" r="11" fill="rgba(201,123,58,0.07)" stroke="rgba(201,123,58,0.18)" stroke-width="0.8"/>
+    <text x="320" y="200" text-anchor="middle" font-size="11" fill="rgba(201,123,58,0.3)">★</text>
+  </g>
+  <g class="bp-sym" style="--op-from:0.18;--op-to:0.28;--op-mid:0.22;animation-duration:15.9s;animation-delay:-10s">
+    <circle cx="50" cy="420" r="10" fill="rgba(155,89,182,0.06)" stroke="rgba(155,89,182,0.16)" stroke-width="0.7"/>
+    <text x="50" y="425" text-anchor="middle" font-size="10" fill="rgba(155,89,182,0.28)">✦</text>
+  </g>
+  <g class="bp-sym" style="--op-from:0.22;--op-to:0.34;--op-mid:0.27;animation-duration:12.4s;animation-delay:-3.6s">
+    <circle cx="348" cy="560" r="12" fill="rgba(201,123,58,0.07)" stroke="rgba(201,123,58,0.17)" stroke-width="0.7"/>
+    <text x="348" y="565" text-anchor="middle" font-size="11" fill="rgba(201,123,58,0.3)">♦</text>
+  </g>
+  <g class="bp-sym" style="--op-from:0.18;--op-to:0.28;--op-mid:0.22;animation-duration:17s;animation-delay:-8.4s">
+    <circle cx="155" cy="730" r="10" fill="rgba(155,89,182,0.06)" stroke="rgba(155,89,182,0.15)" stroke-width="0.7"/>
+    <text x="155" y="735" text-anchor="middle" font-size="10" fill="rgba(155,89,182,0.26)">♥</text>
+  </g>
+  <!-- Double tick -->
+  <g class="bp-sym" style="--op-from:0.22;--op-to:0.34;--op-mid:0.27;animation-duration:14.6s;animation-delay:-5.5s">
+    <g transform="translate(340,148)" stroke="rgba(155,89,182,0.3)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none">
+      <polyline points="-10,0 -4,6 6,-7"/><polyline points="-4,0 2,6 12,-7"/>
+    </g>
+  </g>
+  <g class="bp-sym" style="--op-from:0.18;--op-to:0.28;--op-mid:0.22;animation-duration:16.8s;animation-delay:-11s">
+    <g transform="translate(40,600)" stroke="rgba(201,123,58,0.24)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" fill="none">
+      <polyline points="-8,0 -3,5 5,-6"/><polyline points="-3,0 2,5 10,-6"/>
+    </g>
+  </g>
+  <!-- Crown / star -->
+  <g class="bp-sym" style="--op-from:0.2;--op-to:0.3;--op-mid:0.24;animation-duration:19s;animation-delay:-6.7s">
+    <g transform="translate(195,460)" fill="rgba(201,123,58,0.1)" stroke="rgba(201,123,58,0.22)" stroke-width="0.9" stroke-linejoin="round">
+      <polygon points="0,-14 3.5,-5 13,-5 5.5,1.5 8.5,11 0,5.5 -8.5,11 -5.5,1.5 -13,-5 -3.5,-5"/>
+    </g>
+  </g>
+  <g class="bp-sym" style="--op-from:0.15;--op-to:0.25;--op-mid:0.19;animation-duration:21s;animation-delay:-13s">
+    <g transform="translate(358,340)" fill="rgba(155,89,182,0.08)" stroke="rgba(155,89,182,0.2)" stroke-width="0.8" stroke-linejoin="round">
+      <polygon points="0,-10 2.5,-3.5 9.5,-3.5 4,1 6,8 0,4 -6,8 -4,1 -9.5,-3.5 -2.5,-3.5"/>
+    </g>
+  </g>
+  <!-- Audio bars -->
+  <g class="bp-sym" style="--op-from:0.2;--op-to:0.32;--op-mid:0.25;animation-duration:13.2s;animation-delay:-4.9s">
+    <g transform="translate(88,580)" stroke="rgba(155,89,182,0.26)" stroke-width="2" stroke-linecap="round" fill="none">
+      <line x1="-14" y1="0" x2="-14" y2="-6"/><line x1="-8" y1="0" x2="-8" y2="-12"/>
+      <line x1="-2" y1="0" x2="-2" y2="-16"/><line x1="4" y1="0" x2="4" y2="-10"/>
+      <line x1="10" y1="0" x2="10" y2="-4"/>
+    </g>
+  </g>
+  <g class="bp-sym" style="--op-from:0.16;--op-to:0.26;--op-mid:0.2;animation-duration:15.5s;animation-delay:-8.8s">
+    <g transform="translate(295,390)" stroke="rgba(201,123,58,0.22)" stroke-width="1.8" stroke-linecap="round" fill="none">
+      <line x1="-12" y1="0" x2="-12" y2="-5"/><line x1="-6" y1="0" x2="-6" y2="-10"/>
+      <line x1="0" y1="0" x2="0" y2="-14"/><line x1="6" y1="0" x2="6" y2="-8"/>
+      <line x1="12" y1="0" x2="12" y2="-3"/>
+    </g>
+  </g>
+  <!-- Sparkle dots -->
+  <circle cx="142" cy="58" r="2.5" fill="rgba(201,123,58,0.25)"><animate attributeName="opacity" values="0.25;0.55;0.25" dur="4.2s" repeatCount="indefinite" begin="-1.1s"/></circle>
+  <circle cx="258" cy="132" r="2" fill="rgba(155,89,182,0.3)"><animate attributeName="opacity" values="0.3;0.6;0.3" dur="5.8s" repeatCount="indefinite" begin="-2.9s"/></circle>
+  <circle cx="62" cy="240" r="1.8" fill="rgba(155,89,182,0.22)"><animate attributeName="opacity" values="0.22;0.45;0.22" dur="6.4s" repeatCount="indefinite" begin="-4.1s"/></circle>
+  <circle cx="335" cy="478" r="2.2" fill="rgba(201,123,58,0.2)"><animate attributeName="opacity" values="0.2;0.42;0.2" dur="7.1s" repeatCount="indefinite" begin="-0.6s"/></circle>
+  <circle cx="108" cy="650" r="2" fill="rgba(155,89,182,0.2)"><animate attributeName="opacity" values="0.2;0.4;0.2" dur="5.3s" repeatCount="indefinite" begin="-3.4s"/></circle>
+  <circle cx="268" cy="750" r="2.5" fill="rgba(201,123,58,0.22)"><animate attributeName="opacity" values="0.22;0.48;0.22" dur="6.7s" repeatCount="indefinite" begin="-1.8s"/></circle>
+  <circle cx="190" cy="530" r="1.6" fill="rgba(155,89,182,0.18)"><animate attributeName="opacity" values="0.18;0.38;0.18" dur="8s" repeatCount="indefinite" begin="-5.2s"/></circle>
+  <circle cx="380" cy="640" r="2" fill="rgba(201,123,58,0.18)"><animate attributeName="opacity" values="0.18;0.36;0.18" dur="9.2s" repeatCount="indefinite" begin="-7s"/></circle>
+  <!-- Cross sparkles -->
+  <g opacity="0.28"><animate attributeName="opacity" values="0.28;0.5;0.28" dur="5s" repeatCount="indefinite" begin="-1.5s"/>
+    <g transform="translate(230,88)" stroke="rgba(201,123,58,0.8)" stroke-width="1.3" stroke-linecap="round">
+      <line x1="-5" y1="0" x2="5" y2="0"/><line x1="0" y1="-5" x2="0" y2="5"/>
+      <line x1="-3" y1="-3" x2="3" y2="3"/><line x1="3" y1="-3" x2="-3" y2="3"/>
+    </g>
+  </g>
+  <g opacity="0.22"><animate attributeName="opacity" values="0.22;0.4;0.22" dur="7.3s" repeatCount="indefinite" begin="-3.8s"/>
+    <g transform="translate(72,370)" stroke="rgba(155,89,182,0.7)" stroke-width="1.2" stroke-linecap="round">
+      <line x1="-4" y1="0" x2="4" y2="0"/><line x1="0" y1="-4" x2="0" y2="4"/>
+      <line x1="-2.5" y1="-2.5" x2="2.5" y2="2.5"/><line x1="2.5" y1="-2.5" x2="-2.5" y2="2.5"/>
+    </g>
+  </g>
+  <g opacity="0.2"><animate attributeName="opacity" values="0.2;0.38;0.2" dur="9s" repeatCount="indefinite" begin="-6.1s"/>
+    <g transform="translate(320,700)" stroke="rgba(201,123,58,0.7)" stroke-width="1.1" stroke-linecap="round">
+      <line x1="-4" y1="0" x2="4" y2="0"/><line x1="0" y1="-4" x2="0" y2="4"/>
+      <line x1="-2.5" y1="-2.5" x2="2.5" y2="2.5"/><line x1="2.5" y1="-2.5" x2="-2.5" y2="2.5"/>
+    </g>
+  </g>
+</svg>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- Context menu for chat options -->
@@ -611,7 +804,7 @@ body{
 <!-- ── HEADER ── -->
 <header class="site-header">
   <a href="/" class="logo">
-    <svg width="26" height="26" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg width="22" height="22" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="sg" x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stop-color="#e8a85c"/>
@@ -758,8 +951,11 @@ body{
     </div>
   </div>
 
-  <!-- Header right — empty spacer to balance logo -->
-  <div style="width:72px"></div>
+  <!-- Community pill — right side -->
+  <a class="community-pill" href="/community.html">
+    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <span>Community</span>
+  </a>
 </header>
 
 <!-- ── DYNAMIC ISLAND NOTIFICATION ── -->
