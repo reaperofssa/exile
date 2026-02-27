@@ -932,6 +932,7 @@ if (userDoc.banned) {
   // CLOSE HANDLER
   // ─────────────────────────
   ws.on("close", async () => {
+   console.log("WS CLOSE — userId:", userId, "socket count:", onlineClients.get(userId)?.size);
     try {
       const sockets = getSocketsForUser(userId);
       if (!sockets) return;
