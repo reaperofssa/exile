@@ -755,6 +755,8 @@ function broadcastCP(userId, payload) {
 }
 
 wss.on("connection", async (ws, req) => {
+  console.log("RAW COOKIES:", req.headers.cookie);
+  console.log("TOKEN FOUND:", req.headers.cookie?.includes('token='));
   let userId;
 
   // ─────────────────────────
