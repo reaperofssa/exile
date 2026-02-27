@@ -775,14 +775,8 @@ wss.on("connection", async (ws, req) => {
   if (!onlineClients.has(userId)) onlineClients.set(userId, new Set());
   onlineClients.get(userId).add(ws);
   // Mark online in DB
-  await db.collection("users").updateOne({ userId }, { $set: { status: "online" } });
-  // Notify contacts
-  notifyPresence(userId, "online").catch(console.error);
-  // Daily streak + XP
-  processDailyStreak(userId).catch(console.error);
-
-  process.on('uncaughtException', (err) => console.error('UNCAUGHT:', err));
-  process.on('unhandledRejection', (err) => console.error('UNHANDLED:', err));
+  await db.collection("users").updateOne({ userId }, { $set: { status: "onlinex" } });
+ 
   
   ws.on("message", async (raw) => {
     let msg;
