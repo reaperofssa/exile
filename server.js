@@ -775,34 +775,38 @@ wss.on("connection", async (ws, req) => {
       }
     );
 
-    console.log("USER ID:", userId); // ADD THIS
-    if (!userId) {
-      ws.close(4001, "Unauthorized");
-      return;
-    }
+    console.log("USER ID:", userId);
 
-  let userDoc;
-try {
-  userDoc = await db.collection("users").findOne({ userId });
-} catch (err) {
-  console.error("🔥 DB error fetching userDoc:", err);
-  if (ws.readyState === ws.OPEN) ws.close(1011, "DB error"); // Server error
+if (!userId) {
+  ws.close(4001, "Unauthorized");
   return;
 }
 
-// Handle not found or banned users
+let userDoc;
+try {
+  console.log("FETCHING USER DOC...");
+  userDoc = await db.collection("users").findOne({ userId });
+  console.log("USER DOC FOUND:", !!userDoc, "BANNED:", userDoc?.banned);
+} catch (err) {
+  console.error("DB ERROR:", err);
+  ws.close(1011, "DB error");
+  return;
+}
+
 if (!userDoc) {
-  console.warn(`⚠️ User not found: ${userId}`);
-  if (ws.readyState === ws.OPEN) ws.close(4004, "User not found"); // optional custom code
+  console.log("NO USER DOC — CLOSING 4004");
+  ws.close(4004, "User not found");
   return;
 }
 
 if (userDoc.banned) {
-  console.warn(`🚫 Banned user attempted WS: ${userId}`);
-  if (ws.readyState === ws.OPEN) ws.close(4003, "Banned");
+  console.log("BANNED — CLOSING 4003");
+  ws.close(4003, "Banned");
   return;
 }
 
+console.log("PAST ALL CHECKS — ADDING TO ONLINE CLIENTS");
+    
     if (!onlineClients.has(userId)) {
       onlineClients.set(userId, new Set());
     }
