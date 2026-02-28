@@ -3150,10 +3150,7 @@ function renderInline(str, parent) {
 
   // Single-pass regex: URLs first (greedy), then inline markers
   // Groups: 1=url  2=*bold*  3=bold-inner  4=_italic_  5=italic-inner  6=`code`  7=code-inner  8=stray-marker
-  const RE = /(https?:\/\/[^\s<>"'`*_]+)|(\*([^*
-]{1,300})\*)|(_([^_
-]{1,300})_)|(`([^`
-]{1,300})`)|([*_`])/g;
+  const RE = /(https?:\/\/[^\s<>"'`*_]+)|(\*([^*]{1,300})\*)|(_((?!\s)[^_]{1,300}(?<!\s))_)|(`([^`]{1,300})`)|([*_`])/g;
   let last = 0, m;
   while ((m = RE.exec(str)) !== null) {
     if (m.index > last) parent.appendChild(document.createTextNode(str.slice(last, m.index)));
