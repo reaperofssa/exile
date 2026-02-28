@@ -846,6 +846,20 @@ mainNsp.on("connection", async (socket) => {
     }, userId);
   });
 
+  socket.on("joinGroup", ({ groupId, groupType }) => {
+  socket.join(`group:${groupId}`);
+});
+
+socket.on("groupTyping", ({ groupId, groupType }) => {
+  const typer = { userId: socket._userId, name: socket._userName };
+  socket.to(`group:${groupId}`).emit("message", {
+    type: "groupTyping",
+    groupId,
+    typers: [typer],
+    count: 1,
+  });
+});
+  
   // ── groupTyping ──
   socket.on("groupTyping", async ({ groupId, isTyping }) => {
     if (!groupId) return;
@@ -2013,6 +2027,113 @@ app.delete("/api/messages/clear/:withUserId", requireAuth, async (req, res) => {
   res.json({ message: "Chat cleared." });
 });
 
+
+// ════════════════════════════════════════════════════════════════
+//  NEW ROUTES — paste into server.js before connectDB() call
+// ════════════════════════════════════════════════════════════════
+
+// ── Serve group.html for space/feed/join routes ───────────────────
+app.get("/space/:spaceId",     (req, res) => res.sendFile(path.join(__dirname, "public", "group.html")));
+app.get("/feed/:feedId",       (req, res) => res.sendFile(path.join(__dirname, "public", "group.html")));
+app.get("/join-space/:joinId", (req, res) => res.sendFile(path.join(__dirname, "public", "group.html")));
+app.get("/join-feed/:joinId",  (req, res) => res.sendFile(path.join(__dirname, "public", "group.html")));
+
+// ── Join-info preview (GET — no actual join) ──────────────────────
+/**
+ * GET /api/spaces/join-info/:joinId
+ * GET /api/feeds/join-info/:joinId
+ * Returns group name/bio/memberCount for the join page preview.
+ * Does NOT require auth or join the group.
+ */
+app.get("/api/spaces/join-info/:joinId", async (req, res) => {
+  const space = await db.collection("spaces").findOne({ joinId: req.params.joinId });
+  if (!space) return res.status(404).json({ error: "Space not found." });
+  if (space.banned) return res.json({ banned: true, banReason: space.banReason });
+  res.json({
+    group: {
+      spaceId:      space.spaceId,
+      name:         space.name,
+      bio:          space.bio,
+      profileImage: space.profileImage,
+      memberCount:  space.memberCount || 0,
+      premium:      space.premium || false,
+      joinId:       space.joinId,
+      joinLink:     space.joinLink,
+      createdAt:    space.createdAt,
+    }
+  });
+});
+
+app.get("/api/feeds/join-info/:joinId", async (req, res) => {
+  const feed = await db.collection("feeds").findOne({ joinId: req.params.joinId });
+  if (!feed) return res.status(404).json({ error: "Feed not found." });
+  if (feed.banned) return res.json({ banned: true, banReason: feed.banReason });
+  res.json({
+    group: {
+      feedId:       feed.feedId,
+      name:         feed.name,
+      bio:          feed.bio,
+      profileImage: feed.profileImage,
+      memberCount:  feed.memberCount || 0,
+      premium:      feed.premium || false,
+      joinId:       feed.joinId,
+      joinLink:     feed.joinLink,
+      createdAt:    feed.createdAt,
+    }
+  });
+});
+
+// ── Member status check (for UX decisions in frontend) ───────────
+/**
+ * GET /api/:groupType/:groupId/me/status
+ * Returns the requesting user's membership status in a space or feed.
+ * Used by frontend to decide what to show (input, feed-sub-bar, join page).
+ */
+app.get("/api/:groupType/:groupId/me/status", requireAuth, async (req, res) => {
+  const { groupType, groupId } = req.params;
+  const userId  = req.user.userId;
+  const col     = groupType === "space" ? "spaces" : "feeds";
+  const idField = groupType === "space" ? "spaceId" : "feedId";
+
+  const group = await db.collection(col).findOne({ [idField]: groupId });
+  if (!group) return res.status(404).json({ error: "Group not found." });
+  if (group.banned) return res.json({ banned: true, banReason: group.banReason });
+
+  const member = getMember(group, userId);
+
+  if (!member) return res.json({ isMember: false, isBanned: false, isAdmin: false, isOwner: false });
+
+  res.json({
+    isMember:  !member.isBanned,
+    isBanned:  member.isBanned || false,
+    isMuted:   member.isMuted  || false,
+    isAdmin:   member.isAdmin  || group.ownerId === userId,
+    isOwner:   group.ownerId === userId,
+    canPost:   !member.isBanned && !member.isMuted &&
+               (groupType === "space" || member.isAdmin || group.ownerId === userId),
+    joinedAt:  member.joinedAt,
+  });
+});
+
+// ── Socket.IO: joinGroup event ────────────────────────────────────
+// Add inside your mainNsp.on("connection") handler:
+//
+//   socket.on("joinGroup", ({ groupId, groupType }) => {
+//     socket.join(`group:${groupId}`);
+//   });
+//
+//   socket.on("groupTyping", ({ groupId, groupType }) => {
+//     // broadcast to group room (already handled by broadcastToGroup in existing code)
+//     // just forward typing event to group
+//     const typer = { userId: socket._userId, name: socket._userName };
+//     socket.to(`group:${groupId}`).emit("message", {
+//       type: "groupTyping", groupId,
+//       typers: [typer], count: 1,
+//     });
+//   });
+//
+// NOTE: Your existing broadcastToGroup already iterates members directly,
+// so the socket.join room is optional but recommended for cleaner broadcasting.
 // ── Conversation list ──
 /**
  * GET /api/chat-list?page=1
