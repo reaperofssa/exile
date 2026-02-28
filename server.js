@@ -2142,6 +2142,83 @@ app.get("/api/:groupType/:groupId/me/status", requireAuth, async (req, res) => {
  * Each entry has: type, id, name, avatar, lastMessage{senderName,preview,sentAt,type},
  * unreadCount, isTyping[], and for groups: memberCount, premium, premiumExpiry.
  */
+
+app.get('/api/spaces/by-join/:joinId', async (req, res) => {
+  const space = await db.collection('spaces').findOne({ joinId: req.params.joinId });
+  if (!space) return res.status(404).json({ error: 'Space not found.' });
+  if (space.banned) return res.json({ banned: true, banReason: space.banReason });
+  res.json({ space: sanitizeGroup(space) });
+});
+
+app.get('/api/feeds/by-join/:joinId', async (req, res) => {
+  const feed = await db.collection('feeds').findOne({ joinId: req.params.joinId });
+  if (!feed) return res.status(404).json({ error: 'Feed not found.' });
+  if (feed.banned) return res.json({ banned: true, banReason: feed.banReason });
+  res.json({ feed: sanitizeGroup(feed) });
+});
+
+app.patch('/api/:groupType/:groupId/messages/:messageId', requireAuth, async (req, res) => {
+  const { groupType, groupId, messageId } = req.params;
+  const userId = req.user.userId;
+  const { text } = req.body;
+  if (!text?.trim()) return res.status(400).json({ error: 'text is required.' });
+  const msg = await db.collection('groupMessages').findOne({ messageId, groupId });
+  if (!msg || msg.deleted) return res.status(404).json({ error: 'Message not found.' });
+  if (msg.senderId !== userId) return res.status(403).json({ error: 'Not your message.' });
+  const now = new Date().toISOString();
+  await db.collection('groupMessages').updateOne(
+    { messageId },
+    { $set: { 'content.text': text.trim(), editedAt: now } }
+  );
+  broadcastToGroup(groupId, {
+    type: 'groupMessageEdited',
+    groupId,
+    messageId,
+    text: text.trim(),
+    editedAt: now
+  });
+  res.json({ message: 'Edited.' });
+});
+
+app.delete('/api/:groupType/:groupId/messages/:messageId', requireAuth, async (req, res) => {
+  const { groupType, groupId, messageId } = req.params;
+  const userId = req.user.userId;
+  const col = groupType === 'space' ? 'spaces' : 'feeds';
+  const idField = groupType === 'space' ? 'spaceId' : 'feedId';
+  const group = await db.collection(col).findOne({ [idField]: groupId });
+  if (!group) return res.status(404).json({ error: 'Group not found.' });
+  const msg = await db.collection('groupMessages').findOne({ messageId, groupId });
+  if (!msg || msg.deleted) return res.status(404).json({ error: 'Message not found.' });
+  const member = getMember(group, userId);
+  if (msg.senderId !== userId && !member?.isAdmin && !isOwner(group, userId))
+    return res.status(403).json({ error: 'Not authorized.' });
+  await db.collection('groupMessages').updateOne(
+    { messageId },
+    { $set: { deleted: true, content: {}, deletedAt: new Date().toISOString() } }
+  );
+  broadcastToGroup(groupId, { type: 'groupMessageDeleted', groupId, messageId });
+  res.json({ message: 'Deleted.' });
+});
+
+app.get('/api/:groupType/:groupId/my-status', requireAuth, async (req, res) => {
+  const { groupType, groupId } = req.params;
+  const userId = req.user.userId;
+  const col = groupType === 'space' ? 'spaces' : 'feeds';
+  const idField = groupType === 'space' ? 'spaceId' : 'feedId';
+  const group = await db.collection(col).findOne({ [idField]: groupId });
+  if (!group) return res.status(404).json({ error: 'Not found.' });
+  const member = (group.members || []).find(m => m.userId === userId);
+  if (!member) return res.json({ isMember: false });
+  res.json({
+    isMember: true,
+    isBanned: member.isBanned || false,
+    isMuted: member.isMuted || false,
+    isAdmin: member.isAdmin || false,
+    isOwner: member.isOwner || false,
+    joinedAt: member.joinedAt,
+  });
+});
+
 app.get("/api/chat-list", requireAuth, async (req, res) => {
   const myId = req.user.userId;
   const page = Math.max(parseInt(req.query.page) || 1, 1);
