@@ -101,10 +101,9 @@ body{
 /* ══════════════════════════════════════════════════
    EXILE ISLAND — exact copy from home.html
    ══════════════════════════════════════════════════ */
-/* exile-island-wrap needs to stay centered vertically in the 56px content zone */
+/* exile-island-wrap centered in the content row */
 .exile-island-wrap{
   position:absolute;left:50%;transform:translateX(-50%);
-  bottom:9px;
   display:flex;flex-direction:column;align-items:center;
   z-index:210;
 }
@@ -270,18 +269,20 @@ body{
 /* ── Header ── */
 .chat-header{
   position:sticky;top:0;z-index:200;
-  display:flex;align-items:flex-end;gap:10px;
-  padding:0 12px 0 12px;
+  display:flex;flex-direction:column;
   padding-top:env(safe-area-inset-top, 0px);
-  height:calc(56px + env(safe-area-inset-top, 0px));
   background:linear-gradient(180deg,rgba(18,8,18,0.96) 0%,rgba(18,8,18,0.88) 100%);
   backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
   border-bottom:1px solid rgba(255,255,255,0.08);
   flex-shrink:0;
 }
-/* Push header inner content down to 56px zone, not behind notch */
-.chat-header > *{
-  margin-bottom:9px;
+/* The actual content row sits below the status bar */
+.chat-header-inner{
+  display:flex;align-items:center;gap:10px;
+  padding:0 12px;
+  height:56px;
+  width:100%;
+  position:relative;
 }
 .btn-back{
   display:flex;align-items:center;justify-content:center;
@@ -1231,6 +1232,7 @@ body{
 
 <!-- ── HEADER ── -->
 <header class="chat-header">
+<div class="chat-header-inner">
   <button class="btn-back" onclick="goBack()" aria-label="Back">
     <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
   </button>
@@ -1355,6 +1357,7 @@ body{
       <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
     </button>
   </div>
+</div>
 </header>
 
 <!-- ── DYNAMIC ISLAND NOTIFICATION ── -->
