@@ -2897,6 +2897,198 @@ app.get('/blocks/check/:userId', requireAuth, async (req, res) => {
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
+app.post("/api/messages/to-bot",
+  requireAuth,
+  upload.fields([
+    { name: "media",     maxCount: 1 },
+    { name: "thumbnail", maxCount: 1 },
+  ]),
+  async (req, res) => {
+    const senderId = req.user.userId;
+    const botId    = req.query.to;
+    if (!botId) return res.status(400).json({ error: "Query param ?to=<botId> is required." });
+
+    // Resolve bot
+    const bot = await db.collection("bots").findOne({ botId });
+    if (!bot)         return res.status(404).json({ error: "Bot not found." });
+    if (bot.disabled) return res.status(403).json({ error: "This bot is currently disabled." });
+
+    // Check if user blocked the bot (or bot blocked user — bots can't block but be safe)
+    const blocked = await db.collection("blocks").findOne({
+      $or: [
+        { blockerId: senderId, blockedId: botId },
+        { blockerId: botId,    blockedId: senderId },
+      ],
+    });
+    if (blocked) return res.status(403).json({ error: "Messaging not available." });
+
+    const sender = await db.collection("users").findOne({ userId: senderId });
+    if (!sender)        return res.status(404).json({ error: "Sender not found." });
+    if (sender.banned)  return res.status(403).json({ error: "Your account is banned." });
+
+    // Rate-limit (bots should not be spammed)
+    const spam = await checkSpam(senderId);
+    if (spam.throttled) return res.status(429).json({ error: "Slow down — you are sending messages too fast." });
+
+    const { type, text, caption, replyToMessageId } = req.body;
+    const validTypes = ["text", "image", "image_caption", "sticker", "audio", "voice"];
+    if (!type || !validTypes.includes(type))
+      return res.status(400).json({ error: `type must be one of: ${validTypes.join(", ")}` });
+
+    const content = { replyToMessageId: replyToMessageId || null };
+
+    // Text
+    if (type === "text") {
+      if (!text?.trim()) return res.status(400).json({ error: "text is required." });
+      if (text.trim().length > MSG_TEXT_MAX)
+        return res.status(400).json({ error: `Text exceeds ${MSG_TEXT_MAX} characters.` });
+      content.text = text.trim();
+    }
+
+    // Media
+    const needsMedia = ["image", "image_caption", "sticker", "audio", "voice"];
+    if (needsMedia.includes(type)) {
+      const file = req.files?.media?.[0];
+      if (!file) return res.status(400).json({ error: "media file is required." });
+      try { content.mediaUrl = await uploadToCatbox(file.buffer, file.originalname || "media"); }
+      catch (e) { return res.status(500).json({ error: "Media upload failed: " + e.message }); }
+      content.mediaSize     = file.size;
+      content.mediaMimeType = file.mimetype;
+    }
+
+    if (type === "image_caption") {
+      if (caption && caption.trim().length > MSG_CAPTION_MAX)
+        return res.status(400).json({ error: `Caption exceeds ${MSG_CAPTION_MAX} characters.` });
+      content.caption = caption?.trim() || "";
+    }
+
+    if (type === "sticker") content.isSticker = true;
+    if (type === "voice")   content.isVoice   = true;
+
+    // Handle reply
+    let replyTo = null;
+    if (content.replyToMessageId) {
+      const original = await db.collection("messages").findOne({ messageId: content.replyToMessageId });
+      if (original && !original.deleted) {
+        replyTo = {
+          messageId:      original.messageId,
+          senderId:       original.senderId,
+          senderName:     original.senderName || sender.name,
+          senderUsername: original.senderUsername || sender.username,
+          type:           original.type,
+          content:        original.content,
+          preview:        original.type === "text"
+            ? (original.content?.text || "").slice(0, 60) + ((original.content?.text || "").length > 60 ? "…" : "")
+            : `[${original.type}]`,
+          sentAt:         original.sentAt,
+        };
+      }
+    }
+
+    // Build and store message
+    const conversationId = makeConversationId(senderId, botId);
+    const messageId      = uuidv4();
+    const now            = new Date().toISOString();
+
+    const message = {
+      messageId,
+      conversationId,
+      chatId:          conversationId,
+      chatType:        "private",
+      senderId,
+      senderIsBot:     false,
+      senderName:      sender.name,
+      senderUsername:  sender.username,
+      senderAvatar:    sender.profilePicture,
+      senderPremium:   sender.premium  || false,
+      senderVerified:  sender.verified || false,
+      recipientId:     botId,
+      type, content, replyTo,
+      sentAt:   now,
+      editedAt: null,
+      readAt:   null,
+      deleted:  false,
+      reactions: {},
+    };
+
+    await db.collection("messages").insertOne(message);
+
+    // Upsert conversation
+    await db.collection("conversations").updateOne(
+      { conversationId },
+      {
+        $set: {
+          conversationId,
+          participants:        [senderId, botId],
+          lastMessageId:       messageId,
+          lastMessageAt:       now,
+          lastSenderId:        senderId,
+          lastMessageType:     type,
+          lastMessagePreview:  type === "text" ? (content.text || "").slice(0, 60) : `[${type}]`,
+        },
+        $setOnInsert: { createdAt: now },
+      },
+      { upsert: true }
+    );
+
+    // XP for sending
+    const isMedia = ["image","image_caption","sticker","audio","voice"].includes(type);
+    grantXP(senderId, isMedia ? "sendMedia" : "sendMessage", 1).catch(() => {});
+
+    // ── Deliver to sender's own socket (fromMe: true / messageSent) ──
+    broadcast(senderId, {
+      type:    "messageSent",
+      fromMe:  true,
+      chat:    { chatId: conversationId, chatType: "dm" },
+      from:    userStub(sender),
+      message: {
+        ...message,
+        sender: userStub(sender),
+      },
+    });
+
+    // ── Deliver to bot's WebSocket so bot can respond ──
+    const botSocketId = botClients.get(botId);
+    if (botSocketId) {
+      botNsp.to(botSocketId).emit("message", {
+        type:    "newMessage",
+        fromMe:  false,
+        chat:    { chatId: conversationId, chatType: "private" },
+        from: {
+          userId:         sender.userId,
+          name:           sender.name,
+          username:       sender.username,
+          tag:            sender.tag,
+          profilePicture: sender.profilePicture,
+          premium:        sender.premium  || false,
+          verified:       sender.verified || false,
+          level:          sender.level    || computeLevel(sender.xp || 0),
+          isBot:          false,
+        },
+        message,
+      });
+    }
+
+    // chatListUpdate so sender's chat list reorders
+    broadcast(senderId, {
+      type:     "chatListUpdate",
+      chatId:   conversationId,
+      chatType: "dm",
+      fromMe:   true,
+      lastMessage: {
+        preview:    type === "text"
+          ? (content.text || "").slice(0, 80) + ((content.text || "").length > 80 ? "…" : "")
+          : `[${type}]`,
+        type,
+        sentAt:     now,
+        senderName: sender.name,
+      },
+    });
+
+    res.status(201).json({ message });
+  }
+);
+
 // ── Delete a bot ──────────────────────────────────────────────────────────────
 app.delete("/api/bots/:botId", requireAuth, async (req, res) => {
   const bots = db.collection("bots");
