@@ -946,7 +946,7 @@ body{
 
 <!-- ── HEADER ── -->
 <header class="chat-header">
-  <button class="btn-back" onclick="window.history.back()" aria-label="Back">
+  <button class="btn-back" onclick="goBack()" aria-label="Back">
     <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
   </button>
   <div class="recipient-info" id="groupInfo" onclick="openGroupSheet()">
@@ -1169,7 +1169,7 @@ body{
     <div id="joinTypeBadge" class="join-type-badge">…</div>
     <div class="join-members" id="joinMembers">…</div>
     <button class="join-btn" id="joinBtn" onclick="doJoin()">Join</button>
-    <button class="join-cancel" onclick="window.history.back()">Go Back</button>
+    <button class="join-cancel" onclick="goBack()">Go Back</button>
   </div>
 </div>
 
@@ -1424,7 +1424,7 @@ async function loadMessages(direction = 'initial') {
   }
 
   try {
-    let url = `/api/${GROUP_TYPE}s/${GROUP_ID}/messages?limit=40`;
+    let url = `/api/${GROUP_TYPE}/${GROUP_ID}/messages?limit=40`;
     if (direction === 'older' && oldestId) url += `&before=${oldestId}`;
 
     const res  = await fetch(url, {credentials:'include'});
@@ -1924,7 +1924,7 @@ async function sendOrRecord() {
     if (selectedFile) fd.append('media', selectedFile);
     if (savedReply) fd.append('replyToMessageId', savedReply.messageId);
 
-    const res  = await fetch(`/api/${GROUP_TYPE}s/${GROUP_ID}/messages`, {method:'POST', credentials:'include', body: fd});
+    const res  = await fetch(`/api/${GROUP_TYPE}/${GROUP_ID}/messages`, {method:'POST', credentials:'include', body: fd});
     const data = await res.json();
     if (!res.ok) showToast(data.error || 'Send failed');
     else {
@@ -1953,7 +1953,7 @@ async function doEdit() {
   const msgId = editingMsg.messageId;
   cancelEdit();
   try {
-    const res = await fetch(`/api/${GROUP_TYPE}s/${GROUP_ID}/messages/${msgId}`, {
+    const res = await fetch(`/api/${GROUP_TYPE}/${GROUP_ID}/messages/${msgId}`, {
       method: 'PATCH', credentials: 'include',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({text}),
@@ -1964,14 +1964,14 @@ async function doEdit() {
 
 async function deleteMessage(msgId) {
   try {
-    const res = await fetch(`/api/${GROUP_TYPE}s/${GROUP_ID}/messages/${msgId}`, {method:'DELETE', credentials:'include'});
+    const res = await fetch(`/api/${GROUP_TYPE}/${GROUP_ID}/messages/${msgId}`, {method:'DELETE', credentials:'include'});
     if (!res.ok) { const d=await res.json(); showToast(d.error||'Delete failed'); }
   } catch { showToast('Network error'); }
 }
 
 async function pinMessage(msgId) {
   try {
-    const res = await fetch(`/api/${GROUP_TYPE}s/${GROUP_ID}/messages/${msgId}/pin`, {method:'POST', credentials:'include'});
+    const res = await fetch(`/api/${GROUP_TYPE}/${GROUP_ID}/messages/${msgId}/pin`, {method:'POST', credentials:'include'});
     if (!res.ok) { const d=await res.json(); showToast(d.error||'Pin failed'); }
     else showToast('Message pinned 📌');
   } catch { showToast('Network error'); }
@@ -1981,7 +1981,7 @@ async function unpinMessage(e) {
   if (e) e.stopPropagation();
   if (!confirm('Unpin this message?')) return;
   try {
-    const res = await fetch(`/api/${GROUP_TYPE}s/${GROUP_ID}/unpin`, {method:'POST', credentials:'include'});
+    const res = await fetch(`/api/${GROUP_TYPE}/${GROUP_ID}/unpin`, {method:'POST', credentials:'include'});
     if (!res.ok) { const d=await res.json(); showToast(d.error||'Unpin failed'); }
     else { GROUP.pinnedMessageId = null; document.getElementById('pinnedBar').classList.add('hidden'); showToast('Unpinned'); }
   } catch { showToast('Network error'); }
@@ -1997,7 +1997,7 @@ async function sendReaction(msgId, emoji) {
   msg.reactions[emoji] = { count: uids.length, users: uids };
   refreshReactions(msgId);
   try {
-    const res = await fetch(`/api/${GROUP_TYPE}s/${GROUP_ID}/messages/${msgId}/react`, {
+    const res = await fetch(`/api/${GROUP_TYPE}/${GROUP_ID}/messages/${msgId}/react`, {
       method:'POST', credentials:'include',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({emoji}),
@@ -2198,7 +2198,7 @@ async function startVoiceRecording() {
       mediaRecorder = null; stream.getTracks().forEach(t => t.stop());
       const fd = new FormData(); fd.append('type','voice'); fd.append('media', file);
       try {
-        const res = await fetch(`/api/${GROUP_TYPE}s/${GROUP_ID}/messages`, {method:'POST', credentials:'include', body:fd});
+        const res = await fetch(`/api/${GROUP_TYPE}/${GROUP_ID}/messages`, {method:'POST', credentials:'include', body:fd});
         const d = await res.json();
         if (!res.ok) showToast(d.error || 'Send failed');
       } catch { showToast('Network error'); }
@@ -2362,7 +2362,7 @@ async function reportGroup() {
   const clean = reason.trim().toLowerCase();
   if (!valid.includes(clean)) { showToast('Invalid reason'); return; }
   try {
-    const res = await fetch(`/api/${GROUP_TYPE}s/${GROUP_ID}/report`, {method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify({reason:clean})});
+    const res = await fetch(`/api/${GROUP_TYPE}/${GROUP_ID}/report`, {method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify({reason:clean})});
     const d = await res.json();
     showToast(res.ok ? 'Report submitted' : (d.error||'Failed'));
   } catch { showToast('Network error'); }
@@ -2624,7 +2624,7 @@ async function fetchSearch(q) {
   const el = document.getElementById('searchResults');
   el.innerHTML = '<div class="sr-empty">Searching…</div>';
   try {
-    const res  = await fetch(`/api/${GROUP_TYPE}s/${GROUP_ID}/messages/search?q=${encodeURIComponent(q)}&limit=30`, {credentials:'include'});
+    const res  = await fetch(`/api/${GROUP_TYPE}/${GROUP_ID}/messages/search?q=${encodeURIComponent(q)}&limit=30`, {credentials:'include'});
     const data = await res.json();
     const msgs = data.messages || [];
     if (!msgs.length) { el.innerHTML = `<div class="sr-empty">No results for "${esc(q)}"</div>`; return; }
@@ -2711,6 +2711,18 @@ function formatDuration(s) { const m=Math.floor(s/60),sec=Math.floor(s%60);retur
 function formatBytes(b) { if(b<1024)return b+' B';if(b<1048576)return(b/1024).toFixed(1)+' KB';return(b/1048576).toFixed(1)+' MB'; }
 
 let toastTimer;
+function goBack() {
+  const ref = document.referrer;
+  const cur = window.location.href;
+  const joinPattern = /\/(join-space|join-feed)\//;
+  // If no referrer, referrer is join page, referrer is same page, or referrer is current page
+  if (!ref || joinPattern.test(ref) || ref === cur || ref.replace(/\/$/, '') === cur.replace(/\/$/, '')) {
+    window.location.href = '/home.html';
+  } else {
+    window.history.back();
+  }
+}
+
 function showToast(msg) {
   const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2700);
@@ -2782,7 +2794,7 @@ document.addEventListener('visibilitychange', () => {
   bgRefreshTimer = setTimeout(async () => {
     if (!newestId || !GROUP_ID) return;
     try {
-      const res = await fetch(`/api/${GROUP_TYPE}s/${GROUP_ID}/messages?after=${newestId}&limit=50`, {credentials:'include'});
+      const res = await fetch(`/api/${GROUP_TYPE}/${GROUP_ID}/messages?after=${newestId}&limit=50`, {credentials:'include'});
       if (!res.ok) return;
       const data = await res.json();
       const msgs = data.messages || [];
@@ -2816,9 +2828,6 @@ window.addEventListener('focus', () => {
     }, 400);
   }
 });
-
-
-// ─────────────────────────────────────────────────────────────────────
 
 // ── Boot ──────────────────────────────────────────────────────────────
 init();
