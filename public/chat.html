@@ -1064,7 +1064,7 @@ body{
 
 <!-- Header -->
 <header class="chat-header">
-  <button class="btn-back" onclick="history.back()" title="Back">
+  <button class="btn-back" onclick="goBack()" title="Back">
     <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
   </button>
   <div class="recipient-info" id="recipientInfo" onclick="openProfile()">
@@ -1090,7 +1090,7 @@ body{
 <!-- Bot banner -->
 <div class="bot-banner" id="botBanner" style="display:none">
   <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><line x1="12" y1="7" x2="12" y2="11"/></svg>
-  This is a bot. It can only reply after you send a message first.
+  This is a bot. It can only reply after you send a message to start the chat.
 </div>
 
 <!-- Message list -->
@@ -2000,6 +2000,17 @@ function insertDateSeparators() {
   });
 }
 
+function goBack() {
+  const ref = document.referrer;
+  if (ref) {
+    // Navigate to referrer with a cache-busting param, then replace history
+    const url = new URL(ref);
+    url.searchParams.set('_r', Date.now());
+    window.location.replace(url.toString());
+  } else {
+    window.history.back();
+  }
+}
 // ─── WEBSOCKET ────────────────────────────────
 function convId() {
   return [ME.userId, RECIPIENT_ID].sort().join('_');
