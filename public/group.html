@@ -1619,7 +1619,12 @@ function handleWsMessage(msg) {
       if (msg.type === 'memberLeft') GROUP.members = GROUP.members.filter(m=>m.userId!==uid);
       else {
         const m_ = GROUP.members.find(m=>m.userId===uid);
-        if (m_) m_.isBanned = true;
+        if (m_) { m_.isBanned = true; m_.isAdmin = false; }
+        const am_ = allMembers.find(m=>m.userId===uid);
+        if (am_) { am_.isBanned = true; am_.isAdmin = false; }
+        else allMembers = [...(GROUP.members || [])];
+        const sheet = document.getElementById('groupSheet');
+        if (sheet?.classList.contains('show') && gsActiveTab === 1) filterMembers();
       }
       GROUP.memberCount = Math.max(0, (GROUP.memberCount||1) - 1);
       document.getElementById('headerSub').textContent = `${GROUP.memberCount} member${GROUP.memberCount!==1?'s':''}`;
@@ -1630,7 +1635,13 @@ function handleWsMessage(msg) {
   if (msg.type === 'memberPromoted') {
     if (msg.groupId !== GROUP_ID) return;
     const m_ = getMember(msg.targetId);
-    if (m_) m_.isAdmin = true;
+    if (m_) { m_.isAdmin = true; m_.isBanned = false; }
+    // Sync allMembers
+    const am_ = allMembers.find(m => m.userId === msg.targetId);
+    if (am_) { am_.isAdmin = true; am_.isBanned = false; }
+    else if (m_) allMembers = [...(GROUP.members || [])];
+    const sheet = document.getElementById('groupSheet');
+    if (sheet?.classList.contains('show') && gsActiveTab === 1) filterMembers();
     if (msg.targetId === ME?.userId) { IS_ADMIN = true; CAN_SEND = true; renderInput(); renderHeader(); showToast('You are now an admin!'); }
     return;
   }
@@ -1639,7 +1650,29 @@ function handleWsMessage(msg) {
     if (msg.groupId !== GROUP_ID) return;
     const m_ = getMember(msg.targetId);
     if (m_) m_.isAdmin = false;
+    const am_ = allMembers.find(m => m.userId === msg.targetId);
+    if (am_) am_.isAdmin = false;
+    else allMembers = [...(GROUP.members || [])];
+    const sheet = document.getElementById('groupSheet');
+    if (sheet?.classList.contains('show') && gsActiveTab === 1) filterMembers();
     if (msg.targetId === ME?.userId) { IS_ADMIN = false; if (IS_FEED) { CAN_SEND = false; renderInput(); } showToast('Your admin rights were revoked'); }
+    return;
+  }
+
+  if (msg.type === 'memberMuted') {
+    if (msg.groupId !== GROUP_ID) return;
+    const m_ = getMember(msg.targetId);
+    if (m_) m_.isMuted = msg.muted;
+    const am_ = allMembers.find(m => m.userId === msg.targetId);
+    if (am_) am_.isMuted = msg.muted;
+    else allMembers = [...(GROUP.members || [])];
+    const sheet = document.getElementById('groupSheet');
+    if (sheet?.classList.contains('show') && gsActiveTab === 1) filterMembers();
+    if (msg.targetId === ME?.userId) {
+      CAN_SEND = !msg.muted;
+      renderInput();
+      showToast(msg.muted ? 'You have been muted' : 'You have been unmuted');
+    }
     return;
   }
 
@@ -2592,15 +2625,22 @@ async function memberAction(action, targetId) {
     const d   = await res.json();
     if (res.ok) {
       showToast(d.message || 'Done');
-      // Update local member data
+      // Update GROUP.members
       const m_ = getMember(targetId);
       if (m_) {
-        if (action === 'promote') m_.isAdmin = true;
-        if (action === 'demote')  m_.isAdmin = false;
-        if (action === 'ban')     m_.isBanned = true;
-        if (action === 'unban')   m_.isBanned = false;
-        if (action === 'mute')    m_.isMuted = true;
-        if (action === 'unmute')  m_.isMuted = false;
+        if (action === 'promote') { m_.isAdmin = true; m_.isBanned = false; }
+        if (action === 'demote')  { m_.isAdmin = false; }
+        if (action === 'ban')     { m_.isBanned = true; m_.isAdmin = false; }
+        if (action === 'unban')   { m_.isBanned = false; }
+        if (action === 'mute')    { m_.isMuted = true; }
+        if (action === 'unmute')  { m_.isMuted = false; }
+      }
+      // Sync allMembers with GROUP.members
+      allMembers = [...(GROUP.members || [])];
+      // Re-render members list if visible
+      const sheet = document.getElementById('groupSheet');
+      if (sheet && sheet.classList.contains('show') && gsActiveTab === 1) {
+        filterMembers();
       }
     } else showToast(d.error || 'Action failed');
   } catch { showToast('Network error'); }
@@ -2828,6 +2868,7 @@ window.addEventListener('focus', () => {
     }, 400);
   }
 });
+
 
 // ── Boot ──────────────────────────────────────────────────────────────
 init();
