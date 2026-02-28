@@ -101,8 +101,10 @@ body{
 /* ══════════════════════════════════════════════════
    EXILE ISLAND — exact copy from home.html
    ══════════════════════════════════════════════════ */
+/* exile-island-wrap needs to stay centered vertically in the 56px content zone */
 .exile-island-wrap{
   position:absolute;left:50%;transform:translateX(-50%);
+  bottom:9px;
   display:flex;flex-direction:column;align-items:center;
   z-index:210;
 }
@@ -233,7 +235,7 @@ body{
 
 /* DYNAMIC ISLAND NOTIFICATION */
 .notif-island{
-  position:fixed;top:8px;left:50%;
+  position:fixed;top:calc(8px + env(safe-area-inset-top, 0px));left:50%;
   transform:translateX(-50%) scaleX(0.12) scaleY(0.6);
   z-index:400;background:rgba(255,255,255,0.08);
   backdrop-filter:blur(20px) saturate(1.8) brightness(1.1);
@@ -268,12 +270,18 @@ body{
 /* ── Header ── */
 .chat-header{
   position:sticky;top:0;z-index:200;
-  display:flex;align-items:center;gap:10px;
-  padding:0 12px;height:56px;
+  display:flex;align-items:flex-end;gap:10px;
+  padding:0 12px 0 12px;
+  padding-top:env(safe-area-inset-top, 0px);
+  height:calc(56px + env(safe-area-inset-top, 0px));
   background:linear-gradient(180deg,rgba(18,8,18,0.96) 0%,rgba(18,8,18,0.88) 100%);
   backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
   border-bottom:1px solid rgba(255,255,255,0.08);
   flex-shrink:0;
+}
+/* Push header inner content down to 56px zone, not behind notch */
+.chat-header > *{
+  margin-bottom:9px;
 }
 .btn-back{
   display:flex;align-items:center;justify-content:center;
