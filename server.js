@@ -2034,9 +2034,27 @@ app.get("/api/chat-list", requireAuth, async (req, res) => {
     .toArray();
 
   const partnerIds  = convos.map(c => c.participants.find(id => id !== myId));
-  const partnerDocs = await db.collection("users")
-    .find({ userId: { $in: partnerIds } }).toArray();
-  const partnerMap  = Object.fromEntries(partnerDocs.map(u => [u.userId, u]));
+
+// Fetch from both users and bots collections
+const [partnerUserDocs, partnerBotDocs] = await Promise.all([
+  db.collection("users").find({ userId: { $in: partnerIds } }).toArray(),
+  db.collection("bots").find({ botId: { $in: partnerIds } }).toArray(),
+]);
+
+// Normalize bot docs to look like user docs for the map
+const normalizedBotDocs = partnerBotDocs.map(b => ({
+  userId:         b.botId,
+  name:           b.name,
+  username:       b.username,
+  profilePicture: b.profilePicture,
+  premium:        false,
+  verified:       false,
+  isBot:          true,
+}));
+
+const partnerMap = Object.fromEntries(
+  [...partnerUserDocs, ...normalizedBotDocs].map(u => [u.userId, u])
+);
 
   // Batch unread counts per conversation — respect clearedAt per user
   // Build a per-conversation clearedAt map for this user
