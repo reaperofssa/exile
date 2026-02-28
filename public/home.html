@@ -95,7 +95,7 @@ body{
 }
 .logo{display:flex;align-items:center;gap:6px;text-decoration:none;}
 .logo-text{
-  font-size:11px;font-weight:800;letter-spacing:3.5px;text-transform:uppercase;
+  font-size:15px;font-weight:800;letter-spacing:3.5px;text-transform:uppercase;
   background:linear-gradient(120deg,#fff 20%,var(--amber-light) 55%,var(--violet) 100%);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
 }
@@ -122,15 +122,15 @@ body{
 }
 .exile-island{
   display:flex;align-items:center;gap:0;
-  background:rgba(8,4,14,0.75);
+  background:rgba(255,255,255,0.07);
   backdrop-filter:blur(40px) saturate(1.8);
   -webkit-backdrop-filter:blur(40px) saturate(1.8);
-  border:1px solid rgba(255,255,255,0.13);
-  border-top-color:rgba(255,255,255,0.22);
+  border:1px solid rgba(255,255,255,0.18);
+  border-top-color:rgba(255,255,255,0.28);
   border-radius:14px;
   padding:5px 10px 5px 8px;
   cursor:pointer;
-  box-shadow:0 4px 24px rgba(0,0,0,0.4),0 0 0 1px rgba(155,89,182,0.18);
+  box-shadow:0 4px 24px rgba(0,0,0,0.3),0 0 0 1px rgba(155,89,182,0.18);
   transition:box-shadow 0.25s,transform 0.2s;
   user-select:none;
   position:relative;
@@ -158,26 +158,41 @@ body{
 .island-unread-pip.show{display:flex;}
 
 /* ── Island Drop Panel ── */
+@keyframes islandOpen{
+  0%   { transform:translateX(-50%) scaleX(0.35) scaleY(0); max-height:0; opacity:0; }
+  40%  { transform:translateX(-50%) scaleX(1)    scaleY(0); max-height:0; opacity:0.6; }
+  100% { transform:translateX(-50%) scaleX(1)    scaleY(1); max-height:600px; opacity:1; }
+}
+@keyframes islandClose{
+  0%   { transform:translateX(-50%) scaleX(1) scaleY(1); max-height:600px; opacity:1; }
+  50%  { transform:translateX(-50%) scaleX(1) scaleY(0); max-height:0; opacity:0.4; }
+  100% { transform:translateX(-50%) scaleX(0.35) scaleY(0); max-height:0; opacity:0; }
+}
 .island-panel{
-  position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%) translateY(-8px) scale(0.94);
+  position:absolute;top:calc(100% + 8px);left:50%;
+  transform:translateX(-50%) scaleX(0.35) scaleY(0);
+  transform-origin:top center;
   z-index:209;
   width:290px;
-  background:rgba(18,8,18,0.72);
+  background:rgba(18,8,18,0.15);
   backdrop-filter:blur(48px) saturate(1.8);
   -webkit-backdrop-filter:blur(48px) saturate(1.8);
-  border:1px solid rgba(255,255,255,0.10);
-  border-top-color:rgba(255,255,255,0.18);
+  border:1px solid rgba(255,255,255,0.13);
+  border-top-color:rgba(255,255,255,0.22);
   border-radius:18px;
   padding:0;
-  box-shadow:0 16px 56px rgba(0,0,0,0.65),0 1px 0 inset rgba(255,255,255,0.08);
+  box-shadow:0 16px 56px rgba(0,0,0,0.55),0 1px 0 inset rgba(255,255,255,0.08);
   opacity:0;pointer-events:none;
-  transition:transform 0.32s cubic-bezier(0.34,1.56,0.64,1),opacity 0.22s ease;
-  transform-origin:top center;
   overflow:hidden;
+  max-height:0;
 }
 .island-panel.open{
-  transform:translateX(-50%) translateY(0) scale(1);
-  opacity:1;pointer-events:all;
+  animation:islandOpen 0.42s cubic-bezier(0.34,1.1,0.64,1) forwards;
+  pointer-events:all;
+}
+.island-panel.closing{
+  animation:islandClose 0.3s ease-in forwards;
+  pointer-events:none;
 }
 
 /* Panel pages */
@@ -294,10 +309,10 @@ body{
   position:fixed;top:8px;left:50%;
   transform:translateX(-50%) scaleX(0.12) scaleY(0.6);
   z-index:400;
-  background:rgba(18,8,18,0.78);
+  background:rgba(255,255,255,0.08);
   backdrop-filter:blur(48px) saturate(1.8);
   -webkit-backdrop-filter:blur(48px) saturate(1.8);
-  border:1px solid rgba(255,255,255,0.12);
+  border:1px solid rgba(255,255,255,0.18);
   border-top-color:rgba(255,255,255,0.20);
   border-radius:24px;
   padding:8px 12px;
@@ -366,9 +381,9 @@ body{
 .search-clear.visible{display:flex;}
 .search-results{
   position:absolute;top:calc(100% + 4px);left:14px;right:14px;
-  background:rgba(10,5,18,0.94);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);
-  border:1px solid rgba(255,255,255,0.11);border-radius:var(--r-md);z-index:50;
-  max-height:320px;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,0.55);display:none;
+  background:rgba(255,255,255,0.06);backdrop-filter:blur(40px) saturate(1.6);-webkit-backdrop-filter:blur(40px) saturate(1.6);
+  border:1px solid rgba(255,255,255,0.14);border-top-color:rgba(255,255,255,0.22);border-radius:var(--r-md);z-index:50;
+  max-height:320px;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,0.4);display:none;
 }
 .search-results.open{display:block;}
 .search-result-item{
@@ -582,6 +597,10 @@ body{
   position:absolute;top:3px;width:26px;height:3px;
   background:var(--violet);border-radius:2px;
   box-shadow:0 0 8px var(--violet-glow);
+}
+.tab-active-pill.amber{
+  background:var(--amber-light);
+  box-shadow:0 0 8px rgba(201,123,58,0.6);
 }
 .tab-badge{
   position:absolute;top:4px;right:calc(50% - 15px);
@@ -912,7 +931,7 @@ body{
         <div class="cp-xp-bar-wrap">
           <div class="cp-xp-label">
             <span id="cp-xp-progress">0 XP</span>
-            <span id="cp-xp-next">to next level</span>
+            <span id="cp-xp-next">/ 100 XP</span>
           </div>
           <div class="cp-xp-bar"><div class="cp-xp-fill" id="cp-xp-fill" style="width:0%"></div></div>
         </div>
@@ -989,6 +1008,19 @@ body{
   </div>
 </div>
 
+<!-- ── CREATE SPACE/FEED MODAL ── -->
+<div class="modal-overlay" id="create-group-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="create-group-title">Create Space</div>
+    <input class="modal-input" id="create-group-name" placeholder="Name…" autocomplete="off" maxlength="60"/>
+    <input class="modal-input" id="create-group-bio" placeholder="Bio (optional)…" autocomplete="off" maxlength="200" style="margin-top:8px;"/>
+    <div class="modal-status" id="create-group-status"></div>
+    <button class="modal-btn primary" id="create-group-submit-btn">Create</button>
+    <button class="modal-btn secondary" id="create-group-cancel-btn">Cancel</button>
+  </div>
+</div>
+
 <!-- ── MAIN PAGE ── -->
 <div class="page">
 
@@ -1038,6 +1070,17 @@ body{
       <span>Add New Contact</span>
     </div>
 
+    <div style="display:flex;gap:8px;padding:0 16px 4px;">
+      <button id="create-space-btn" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:rgba(155,89,182,0.12);border:1px solid rgba(155,89,182,0.25);border-radius:10px;padding:9px 12px;color:var(--violet);font-size:11.5px;font-weight:600;cursor:pointer;transition:background 0.15s;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="12" y1="9" x2="12" y2="15"/><line x1="9" y1="12" x2="15" y2="12"/></svg>
+        Create Space
+      </button>
+      <button id="create-feed-btn" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:rgba(201,123,58,0.12);border:1px solid rgba(201,123,58,0.25);border-radius:10px;padding:9px 12px;color:var(--amber-light);font-size:11.5px;font-weight:600;cursor:pointer;transition:background 0.15s;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="9" y1="10" x2="15" y2="10"/></svg>
+        Create Feed
+      </button>
+    </div>
+
     <div class="section-label">My Contacts</div>
     <div id="contacts-list-el"></div>
     <div id="contacts-empty" class="empty-state" style="display:none">
@@ -1057,6 +1100,7 @@ body{
     <div class="tab-badge" id="tab-unread" style="display:none">0</div>
   </div>
   <div class="tab-item" id="tab-contacts" onclick="switchView('contacts')">
+    <div class="tab-active-pill amber" id="tab-contacts-pill" style="display:none"></div>
     <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     <span>Contacts</span>
   </div>
@@ -1156,6 +1200,7 @@ function switchView(view) {
   document.getElementById('tab-chats').classList.toggle('active', view === 'chats');
   document.getElementById('tab-contacts').classList.toggle('active', view === 'contacts');
   document.getElementById('tab-chats-pill').style.display = view === 'chats' ? '' : 'none';
+  document.getElementById('tab-contacts-pill').style.display = view === 'contacts' ? '' : 'none';
 
   if (view === 'contacts') {
     loadContacts();
@@ -1512,6 +1557,92 @@ document.getElementById('contacts-search').addEventListener('input', () => rende
 // ── Add contact modal ──
 document.getElementById('contacts-add-btn').addEventListener('click', () => openAddModal());
 
+// ─── Create Space / Feed ───────────────────────────────────────────────────
+let createGroupType = 'space';
+
+function openCreateGroupModal(type) {
+  createGroupType = type;
+  document.getElementById('create-group-title').textContent = type === 'space' ? 'Create Space' : 'Create Feed';
+  document.getElementById('create-group-submit-btn').textContent = type === 'space' ? 'Create Space' : 'Create Feed';
+  document.getElementById('create-group-submit-btn').style.background = type === 'space'
+    ? 'rgba(155,89,182,0.85)' : 'rgba(201,123,58,0.85)';
+  document.getElementById('create-group-name').value = '';
+  document.getElementById('create-group-bio').value = '';
+  document.getElementById('create-group-status').textContent = '';
+  document.getElementById('create-group-modal').classList.add('open');
+}
+
+document.getElementById('create-space-btn').addEventListener('click', () => openCreateGroupModal('space'));
+document.getElementById('create-feed-btn').addEventListener('click', () => openCreateGroupModal('feed'));
+
+document.getElementById('create-group-cancel-btn').addEventListener('click', () => {
+  document.getElementById('create-group-modal').classList.remove('open');
+});
+document.getElementById('create-group-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('create-group-modal'))
+    document.getElementById('create-group-modal').classList.remove('open');
+});
+
+document.getElementById('create-group-submit-btn').addEventListener('click', async () => {
+  const name = document.getElementById('create-group-name').value.trim();
+  const bio  = document.getElementById('create-group-bio').value.trim();
+  const statusEl = document.getElementById('create-group-status');
+  const btn = document.getElementById('create-group-submit-btn');
+
+  if (!name) { statusEl.textContent = 'Name is required.'; statusEl.style.color = '#ef4444'; return; }
+
+  btn.disabled = true;
+  statusEl.textContent = 'Creating…';
+  statusEl.style.color = 'rgba(255,255,255,0.5)';
+
+  try {
+    const endpoint = createGroupType === 'space' ? '/api/spaces' : '/api/feeds';
+    const fd = new FormData();
+    fd.append('name', name);
+    if (bio) fd.append('bio', bio);
+
+    const r = await fetch(endpoint, { method: 'POST', body: fd, credentials: 'include' });
+    const data = await r.json();
+
+    if (!r.ok) {
+      statusEl.textContent = data.error || 'Failed to create.';
+      statusEl.style.color = '#ef4444';
+      btn.disabled = false;
+      return;
+    }
+
+    // Get the new group id
+    const group = data.space || data.feed;
+    const groupId = group?.spaceId || group?.feedId;
+    const label = createGroupType === 'space' ? 'Space created' : 'Feed created';
+
+    statusEl.textContent = `${label}! Sending intro message…`;
+    statusEl.style.color = '#22c55e';
+
+    // Auto-send message using /api/:groupType/:groupId/messages
+    if (groupId) {
+      try {
+        const msgFd = new FormData();
+        msgFd.append('type', 'text');
+        msgFd.append('text', label);
+        await fetch(`/api/${createGroupType}s/${groupId}/messages`, {
+          method: 'POST', body: msgFd, credentials: 'include'
+        });
+      } catch(e) { /* non-fatal */ }
+    }
+
+    setTimeout(() => {
+      document.getElementById('create-group-modal').classList.remove('open');
+      showToast(`${label}!`, createGroupType === 'space' ? 'rgba(155,89,182,0.9)' : 'rgba(201,123,58,0.9)');
+    }, 800);
+
+  } catch(e) {
+    statusEl.textContent = 'Network error.';
+    statusEl.style.color = '#ef4444';
+    btn.disabled = false;
+  }
+});
+
 function openAddModal() {
   document.getElementById('add-contact-input').value = '';
   document.getElementById('modal-result').style.display = 'none';
@@ -1860,8 +1991,8 @@ function updateCPProfile(data) {
 }
 
 function updateXPBar(xp, nextXp, progressXp, neededXp, pct) {
-  document.getElementById('cp-xp-progress').textContent = `${progressXp||0} XP`;
-  document.getElementById('cp-xp-next').textContent = `/ ${neededXp||0} to next`;
+  document.getElementById('cp-xp-progress').textContent = `${progressXp||0}`;
+  document.getElementById('cp-xp-next').textContent = `/ ${neededXp||0} XP`;
   document.getElementById('cp-xp-fill').style.width = (pct||0) + '%';
 }
 
@@ -1977,11 +2108,23 @@ const islandBtn = document.getElementById('exile-island');
 const panelEl = document.getElementById('island-panel');
 const pageTitles = ['Profile', 'Notifications', 'Settings'];
 
-function closePanel() { panelEl.classList.remove('open'); }
+function closePanel() {
+  if (!panelEl.classList.contains('open') && !panelEl.classList.contains('closing')) return;
+  panelEl.classList.remove('open');
+  panelEl.classList.add('closing');
+  panelEl.addEventListener('animationend', () => {
+    panelEl.classList.remove('closing');
+  }, { once: true });
+}
 
 islandBtn.addEventListener('click', e => {
   e.stopPropagation();
-  panelEl.classList.toggle('open');
+  if (panelEl.classList.contains('open')) {
+    closePanel();
+  } else {
+    panelEl.classList.remove('closing');
+    panelEl.classList.add('open');
+  }
 });
 
 document.addEventListener('click', e => {
