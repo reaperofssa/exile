@@ -1759,6 +1759,11 @@ function buildMessageRow(msg) {
   }
 
   const isMe = msg.senderId === ME.userId;
+  // For bot messages, sender stub may be null (bots aren't in users collection)
+  // Fall back to RECIPIENT if it's the bot's message
+  const senderStub = msg.sender || (
+    !isMe && IS_BOT ? { ...RECIPIENT, userId: RECIPIENT_ID } : null
+  );
   const row = document.createElement('div');
   row.className = `msg-row ${isMe ? 'me' : 'them'}`;
   row.dataset.msgId    = msg.messageId;
@@ -2043,9 +2048,13 @@ function handleWsMessage(msg) {
 
   if (msg.type === 'newMessage') {
     const m = msg.message;
-    // Only process messages belonging to this conversation
-    if (!((m.senderId===RECIPIENT_ID && m.recipientId===ME.userId) ||
-          (m.senderId===ME.userId    && m.recipientId===RECIPIENT_ID))) return;
+    // Build the expected conversationId for this chat
+    const expectedConvId = convId();
+    // Accept if conversationId matches, OR if sender/recipient pair matches this chat
+    const matchesConv = m.conversationId === expectedConvId || m.chatId === expectedConvId;
+    const matchesPair = (m.senderId === RECIPIENT_ID && (m.recipientId === ME.userId || !m.recipientId)) ||
+                        (m.senderId === ME.userId    && m.recipientId === RECIPIENT_ID);
+    if (!matchesConv && !matchesPair) return;
     if (messages[m.messageId]) return;
     document.getElementById('emptyState')?.remove();
     messages[m.messageId] = m;
@@ -2068,9 +2077,16 @@ function handleWsMessage(msg) {
   }
 
   if (msg.type === 'messageSent') {
-    // echo of own send — already in optimistic render
+    // echo of own send — already in optimistic render, just ensure it's stored
     const m = msg.message;
-    if (m && !messages[m.messageId]) {
+    if (!m) return;
+    // Accept if it's for this conversation (covers both user-to-user and user-to-bot)
+    const expectedConvId = convId();
+    const matchesConv = m.conversationId === expectedConvId || m.chatId === expectedConvId;
+    const matchesPair = (m.senderId === ME.userId && m.recipientId === RECIPIENT_ID) ||
+                        (m.senderId === ME.userId && IS_BOT);
+    if (!matchesConv && !matchesPair) return;
+    if (m.messageId && !messages[m.messageId]) {
       messages[m.messageId] = m;
     }
     return;
@@ -2277,7 +2293,11 @@ async function sendMessage() {
   if (isTyping) { isTyping=false; sendWS({type:'typing',conversationId:convId(),isTyping:false}); }
 
   try {
-    const res  = await fetch(`/api/messages?to=${RECIPIENT_ID}`, { method:'POST', credentials:'include', body:formData });
+    // Bots live in the bots collection, not users — use the user→bot endpoint
+    const endpoint = IS_BOT
+      ? `/api/messages/to-bot?to=${RECIPIENT_ID}`
+      : `/api/messages?to=${RECIPIENT_ID}`;
+    const res  = await fetch(endpoint, { method:'POST', credentials:'include', body:formData });
     const data = await res.json();
     if (res.ok && data.message) {
       replaceOptimistic(tempId, data.message);
@@ -2423,7 +2443,7 @@ function cancelEdit() {
 }
 
 // ─── CONTEXT MENU ─────────────────────────────
-const QUICK_EMOJIS = ['❤️','😂','😮','😭','🔥','👍','👎','💜'];
+const QUICK_EMOJIS = ['❤️','😂','😮','😢','🔥','👍','👎','💜'];
 
 function addContextListeners(row, msg) {
   const isMe = msg.senderId === ME.userId;
@@ -2527,7 +2547,10 @@ async function startVoiceRecording() {
       // Send voice
       const fd=new FormData(); fd.append('type','voice'); fd.append('media',file);
       try {
-        const res=await fetch(`/api/messages?to=${RECIPIENT_ID}`,{method:'POST',credentials:'include',body:fd});
+        const voiceEndpoint = IS_BOT
+          ? `/api/messages/to-bot?to=${RECIPIENT_ID}`
+          : `/api/messages?to=${RECIPIENT_ID}`;
+        const res=await fetch(voiceEndpoint,{method:'POST',credentials:'include',body:fd});
         const d=await res.json();
         if(res.ok&&d.message) addOptimistic(d.message); else showToast(d.error||'Send failed');
       } catch { showToast('Network error'); }
