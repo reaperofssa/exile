@@ -669,11 +669,12 @@ body{
 .toast{
   position:fixed;bottom:calc(var(--tab-h)+16px);left:50%;
   transform:translateX(-50%) translateY(80px);
+  opacity:0;
   background:rgba(239,68,68,0.9);color:#fff;
   padding:9px 18px;border-radius:20px;font-size:12px;font-weight:500;
-  transition:transform 0.3s ease;z-index:999;pointer-events:none;white-space:nowrap;
+  transition:transform 0.3s ease, opacity 0.3s ease;z-index:999;pointer-events:none;white-space:nowrap;
 }
-.toast.show{transform:translateX(-50%) translateY(0);}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
 
 /* Context menu */
 .ctx-menu{
@@ -1208,11 +1209,13 @@ let ctxChatId = null, ctxChatType = null, ctxPartnerId = null;
 //  UTILS
 // ============================================================
 const toastEl = document.getElementById('toast');
+let toastTimer = null;
 function showToast(msg, color = 'rgba(239,68,68,0.9)') {
   toastEl.textContent = msg;
   toastEl.style.background = color;
   toastEl.classList.add('show');
-  setTimeout(() => toastEl.classList.remove('show'), 3000);
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 3000);
 }
 
 function esc(s) {
@@ -1684,7 +1687,7 @@ document.getElementById('create-group-submit-btn').addEventListener('click', asy
   const statusEl = document.getElementById('create-group-status');
   const btn = document.getElementById('create-group-submit-btn');
 
-  if (!name) { statusEl.textContent = 'Name is required.'; statusEl.style.color = '#ef4444'; return; }
+  if (!name) { statusEl.textContent = 'Name is required.'; statusEl.style.color = '#ef4444'; setTimeout(() => { statusEl.textContent = ''; statusEl.style.color = ''; }, 3000); return; }
 
   btn.disabled = true;
   statusEl.textContent = 'Creating…';
@@ -1702,6 +1705,7 @@ document.getElementById('create-group-submit-btn').addEventListener('click', asy
     if (!r.ok) {
       statusEl.textContent = data.error || 'Failed to create.';
       statusEl.style.color = '#ef4444';
+      setTimeout(() => { statusEl.textContent = ''; statusEl.style.color = ''; }, 3000);
       btn.disabled = false;
       return;
     }
@@ -1735,6 +1739,7 @@ document.getElementById('create-group-submit-btn').addEventListener('click', asy
   } catch(e) {
     statusEl.textContent = 'Network error.';
     statusEl.style.color = '#ef4444';
+    setTimeout(() => { statusEl.textContent = ''; statusEl.style.color = ''; }, 3000);
     btn.disabled = false;
   }
 });
@@ -1780,12 +1785,14 @@ document.getElementById('modal-search-btn').addEventListener('click', async () =
     if (!data || !data.userId) {
       statusEl.textContent = 'User not found.';
       statusEl.className = 'modal-status err';
+      setTimeout(() => { statusEl.textContent = ''; statusEl.className = 'modal-status'; }, 3000);
       return;
     }
 
     if (data.userId === myUserId) {
       statusEl.textContent = "That's you!";
       statusEl.className = 'modal-status err';
+      setTimeout(() => { statusEl.textContent = ''; statusEl.className = 'modal-status'; }, 3000);
       return;
     }
 
@@ -1824,6 +1831,7 @@ document.getElementById('modal-search-btn').addEventListener('click', async () =
   } catch {
     statusEl.textContent = 'Search failed.';
     statusEl.className = 'modal-status err';
+    setTimeout(() => { statusEl.textContent = ''; statusEl.className = 'modal-status'; }, 3000);
   }
 });
 
@@ -1848,10 +1856,12 @@ async function addFoundContact() {
     } else {
       statusEl.textContent = data.error || 'Failed.';
       statusEl.className = 'modal-status err';
+      setTimeout(() => { statusEl.textContent = ''; statusEl.className = 'modal-status'; }, 3000);
     }
   } catch {
     statusEl.textContent = 'Error adding contact.';
     statusEl.className = 'modal-status err';
+    setTimeout(() => { statusEl.textContent = ''; statusEl.className = 'modal-status'; }, 3000);
   }
 }
 
