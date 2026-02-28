@@ -2,18 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-
 <link rel="manifest" href="/manifest.json">
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-
 <!-- iOS PWA support -->
 <link rel="apple-touch-icon" href="/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
-<title>EXILE</title>
+<title>EXILE — Chats</title>
 <style>
 /* ============================================================
    TOKENS
@@ -39,6 +35,35 @@
   --tab-h: 58px; --header-h: 44px;
 }
 
+body.dark-mode {
+  --deep:          #000000;
+  --mid:           #0a0a0a;
+  --surface:       #0d0d0d;
+  --amber:         #8b5a2b;
+  --amber-light:   #a07038;
+  --violet:        #7a46a0;
+  --violet-glow:   rgba(122,70,160,0.2);
+  --violet-dim:    rgba(122,70,160,0.12);
+  --text-pri:      rgba(255,255,255,0.88);
+  --text-sec:      rgba(255,255,255,0.45);
+  --text-dim:      rgba(255,255,255,0.22);
+}
+
+/* ── Prevent text selection & zoom on long-press (match chat.html) ── */
+*{
+  -webkit-user-select:none;
+  -moz-user-select:none;
+  user-select:none;
+  -webkit-touch-callout:none;
+  -webkit-tap-highlight-color:transparent;
+}
+/* Re-allow selection only in inputs/textareas */
+input,textarea{
+  -webkit-user-select:text;
+  -moz-user-select:text;
+  user-select:text;
+  -webkit-touch-callout:default;
+}
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
 html,body{height:100%;overflow-x:hidden;}
 body{
@@ -851,6 +876,10 @@ body{
     <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
     Open Chat
   </div>
+  <div class="ctx-item" id="ctx-profile">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    View Profile
+  </div>
   <div class="ctx-item danger" id="ctx-clear">
     <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
     Clear Chat
@@ -1154,21 +1183,15 @@ body{
 </nav>
 
 <script>
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js")
-      .then(reg => console.log("SW registered"))
-      .catch(err => console.log("SW failed", err));
-  });
-}
-</script>
-<script>
 // ============================================================
 //  STATE
 // ============================================================
 let myUserId = null;
 let ws = null;
 let cpWs = null;
+// ── Theme (match chat.html) ──
+(function(){ if(localStorage.getItem('theme')==='dark') document.body.classList.add('dark-mode'); })();
+
 let chatMap = {};
 let contactsList = [];
 let page = 1;
@@ -1327,6 +1350,14 @@ function buildChatCard(chat) {
     img.onerror = () => img.classList.add('err');
     nameWrap.appendChild(img);
   }
+  // BOT badge — if username ends with 'bot' (case-insensitive)
+  const isBot = chat.chatType === 'dm' && chat.username && chat.username.toLowerCase().endsWith('bot');
+  if (isBot) {
+    const botBadge = document.createElement('span');
+    botBadge.textContent = 'BOT';
+    botBadge.style.cssText = 'font-size:8px;font-weight:800;letter-spacing:0.5px;padding:1px 5px;border-radius:4px;flex-shrink:0;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;';
+    nameWrap.appendChild(botBadge);
+  }
   r1.appendChild(nameWrap);
   const timeEl = document.createElement('div');
   timeEl.className = 'chat-time';
@@ -1446,8 +1477,10 @@ function openCtxMenu(x, y, chat) {
   ctxChatType = chat.chatType;
   ctxPartnerId = chat.partnerId;
   const menu = document.getElementById('ctx-menu');
+  // Only show "View Profile" for DM chats (not spaces/feeds)
+  document.getElementById('ctx-profile').style.display = chat.chatType === 'dm' ? 'flex' : 'none';
   menu.style.left = Math.min(x, window.innerWidth - 180) + 'px';
-  menu.style.top = Math.min(y, window.innerHeight - 120) + 'px';
+  menu.style.top = Math.min(y, window.innerHeight - 140) + 'px';
   menu.classList.add('open');
 }
 
@@ -1459,6 +1492,14 @@ document.getElementById('ctx-open').addEventListener('click', () => {
   const chat = chatMap[ctxChatId];
   if (chat) navigateToChat(chat);
   closeCtxMenu();
+});
+
+document.getElementById('ctx-profile').addEventListener('click', () => {
+  const chat = chatMap[ctxChatId];
+  closeCtxMenu();
+  if (chat && chat.chatType === 'dm' && chat.partnerId) {
+    window.location.href = `/user/${chat.partnerId}`;
+  }
 });
 
 document.getElementById('ctx-clear').addEventListener('click', async () => {
@@ -2367,6 +2408,15 @@ async function init() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js")
+      .then(reg => console.log("SW registered"))
+      .catch(err => console.log("SW failed", err));
+  });
+}
 </script>
 </body>
 </html>
