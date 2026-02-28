@@ -2,22 +2,40 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<link rel="manifest" href="/manifest.json">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>EXILE — Group</title>
 <style>
 :root {
-  --dusk-deep:     #120812;
-  --dusk-mid:      #1e0e24;
+  /* ── exact tokens from home.html ── */
+  --deep:          #120812;
+  --mid:           #1e0e24;
+  --surface:       #1c1128;
   --amber:         #c97b3a;
   --amber-light:   #e8a85c;
-  --purple-accent: #9b59b6;
-  --purple-glow:   rgba(155,89,182,0.3);
-  --text-primary:  rgba(255,255,255,0.93);
+  --violet:        #9b59b6;
+  --violet-glow:   rgba(155,89,182,0.3);
+  --violet-dim:    rgba(155,89,182,0.12);
+  --green:         #22c55e;
+  --red:           #ef4444;
+  --text-pri:      rgba(255,255,255,0.93);
   --text-sec:      rgba(255,255,255,0.55);
   --text-dim:      rgba(255,255,255,0.3);
-  --r-sm: 8px;
-  --r-md: 12px;
-  --r-lg: 16px;
+  --glass-bg:      rgba(255,255,255,0.06);
+  --glass-border:  rgba(255,255,255,0.10);
+  --glass-top:     rgba(255,255,255,0.18);
+  --r-sm: 8px; --r-md: 14px; --r-lg: 20px;
+  --tab-h: 58px; --header-h: 56px;
+  /* ── aliases for group page ── */
+  --dusk-deep:     var(--deep);
+  --dusk-mid:      var(--mid);
+  --purple-accent: var(--violet);
+  --purple-glow:   var(--violet-glow);
+  --text-primary:  var(--text-pri);
   --bubble-me:     #4a1a6e;
   --bubble-them:   #1e1428;
   --bubble-me-brd: rgba(155,89,182,0.4);
@@ -26,13 +44,15 @@
   --success: rgba(16,185,129,0.9);
 }
 body.dark-mode {
-  --dusk-deep:     #000000;
-  --dusk-mid:      #0a0a0a;
+  --deep:          #000000;
+  --mid:           #0a0a0a;
+  --surface:       #0d0d0d;
   --amber:         #8b5a2b;
   --amber-light:   #a07038;
-  --purple-accent: #7a46a0;
-  --purple-glow:   rgba(122,70,160,0.2);
-  --text-primary:  rgba(255,255,255,0.88);
+  --violet:        #7a46a0;
+  --violet-glow:   rgba(122,70,160,0.2);
+  --violet-dim:    rgba(122,70,160,0.12);
+  --text-pri:      rgba(255,255,255,0.88);
   --text-sec:      rgba(255,255,255,0.45);
   --text-dim:      rgba(255,255,255,0.22);
   --bubble-me:     #2d1040;
@@ -44,14 +64,14 @@ body.dark-mode {
 html{height:100%;-webkit-text-size-adjust:100%;}
 body{
   height:100%;height:100dvh;
-  font-family:'Segoe UI',system-ui,sans-serif;
-  background:var(--dusk-deep);
-  color:var(--text-primary);
+  font-family:'SF Pro Display',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--deep);
+  color:var(--text-pri);
   display:flex;flex-direction:column;
   overflow:hidden;
   transition:background 0.3s,color 0.3s;
 }
-.bg-base{position:fixed;inset:0;background:var(--dusk-deep);z-index:-3;}
+.bg-base{position:fixed;inset:0;background:var(--deep);z-index:-3;}
 .bg-glow{
   position:fixed;inset:0;z-index:-2;pointer-events:none;
   background:
@@ -68,9 +88,186 @@ body{
   100% { transform:translateY(0px)   rotate(0deg)   scale(1);   opacity:var(--op-from); }
 }
 
+/* ── Glass utility (from home.html) ── */
+.glass{
+  background:linear-gradient(160deg,rgba(255,255,255,0.09) 0%,rgba(255,255,255,0.04) 40%,rgba(255,255,255,0.035) 100%);
+  backdrop-filter:blur(28px) saturate(1.4);
+  -webkit-backdrop-filter:blur(28px) saturate(1.4);
+  border:1px solid var(--glass-border);
+  border-top-color:var(--glass-top);
+  box-shadow:0 1px 0 inset rgba(255,255,255,0.10),0 8px 32px rgba(0,0,0,0.35);
+}
+
+/* ══════════════════════════════════════════════════
+   EXILE ISLAND — exact copy from home.html
+   ══════════════════════════════════════════════════ */
+.exile-island-wrap{
+  position:absolute;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;
+  z-index:210;
+}
+.exile-island{
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  max-width:36px;height:30px;padding:0 9px;
+  position:relative;border-radius:22px;cursor:pointer;user-select:none;
+  background:rgba(255,255,255,0.08);
+  backdrop-filter:blur(20px) saturate(1.8) brightness(1.1);
+  -webkit-backdrop-filter:blur(20px) saturate(1.8) brightness(1.1);
+  border:1px solid rgba(255,255,255,0.22);
+  border-bottom-color:rgba(255,255,255,0.08);
+  box-shadow:0 1px 0 inset rgba(255,255,255,0.35),0 -1px 0 inset rgba(0,0,0,0.15),0 4px 20px rgba(0,0,0,0.28);
+  transition:max-width 0.35s cubic-bezier(0.34,1.15,0.64,1),border-radius 0.35s cubic-bezier(0.34,1.15,0.64,1),box-shadow 0.2s;
+  overflow:hidden;white-space:nowrap;
+}
+.exile-island:active{opacity:0.82;}
+.exile-island.open{
+  max-width:180px;border-radius:14px;
+  box-shadow:0 1px 0 inset rgba(255,255,255,0.35),0 -1px 0 inset rgba(0,0,0,0.15),0 6px 28px rgba(155,89,182,0.22),0 4px 20px rgba(0,0,0,0.28);
+}
+.island-expanded-content{
+  display:flex;align-items:center;gap:6px;opacity:0;
+  transition:opacity 0.15s 0s;white-space:nowrap;overflow:hidden;min-width:0;
+}
+.exile-island.open .island-expanded-content{opacity:1;transition-delay:0.2s;}
+.island-sword-icon{width:15px;height:15px;flex-shrink:0;}
+.island-label{font-size:10.5px;font-weight:700;letter-spacing:0.3px;color:var(--text-pri);overflow:hidden;text-overflow:ellipsis;}
+.island-online-dot{
+  width:5px;height:5px;border-radius:50%;
+  background:var(--green);box-shadow:0 0 5px rgba(34,197,94,0.9);flex-shrink:0;
+}
+.island-unread-pip{
+  position:absolute;top:-4px;right:-3px;
+  width:15px;height:15px;border-radius:50%;
+  background:var(--red);color:#fff;font-size:8px;font-weight:700;
+  display:none;align-items:center;justify-content:center;
+  border:2px solid var(--deep);
+}
+.island-unread-pip.show{display:flex;}
+
+/* Island Drop Panel */
+.island-panel{
+  position:absolute;top:calc(100% + 7px);left:50%;
+  transform:translateX(-50%) translateY(-8px) scale(0.96);
+  transform-origin:top center;z-index:209;width:256px;
+  background:rgba(255,255,255,0.055);
+  backdrop-filter:blur(20px) saturate(1.8) brightness(1.05);
+  -webkit-backdrop-filter:blur(20px) saturate(1.8) brightness(1.05);
+  border:1px solid rgba(255,255,255,0.18);
+  border-bottom-color:rgba(255,255,255,0.07);
+  box-shadow:0 1px 0 inset rgba(255,255,255,0.28),0 12px 40px rgba(0,0,0,0.45);
+  border-radius:18px;padding:0;opacity:0;pointer-events:none;overflow:hidden;
+  transition:opacity 0.2s ease,transform 0.28s cubic-bezier(0.34,1.2,0.64,1);
+}
+.island-panel.open{opacity:1;pointer-events:all;transform:translateX(-50%) translateY(0) scale(1);}
+.cp-page{display:none;flex-direction:column;}
+.cp-page.active{display:flex;}
+.cp-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:9px 12px 7px;border-bottom:1px solid rgba(255,255,255,0.07);
+}
+.cp-title{font-size:10px;font-weight:700;letter-spacing:0.7px;color:var(--text-dim);text-transform:uppercase;}
+.cp-nav-btns{display:flex;gap:3px;}
+.cp-nav-btn{
+  background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.08);
+  color:var(--text-sec);font-size:10px;border-radius:6px;padding:3px 7px;cursor:pointer;transition:background 0.15s;
+}
+.cp-nav-btn:hover{background:rgba(255,255,255,0.13);}
+.cp-nav-btn.active{background:var(--violet-dim);border-color:rgba(155,89,182,0.3);color:var(--violet);}
+.cp-profile-row{display:flex;align-items:center;gap:9px;padding:9px 12px 6px;}
+.cp-avatar{
+  width:34px;height:34px;border-radius:50%;
+  background:linear-gradient(135deg,var(--amber),var(--violet));
+  flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;
+}
+.cp-avatar img{width:100%;height:100%;object-fit:cover;}
+.cp-user-info{min-width:0;flex:1;}
+.cp-name{font-size:12.5px;font-weight:700;color:var(--text-pri);display:flex;align-items:center;gap:4px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.cp-sub{font-size:9.5px;color:var(--text-sec);margin-top:1px;display:flex;align-items:center;gap:4px;}
+.cp-badge-img{width:12px;height:12px;flex-shrink:0;}
+.cp-badge-img.err{display:none;}
+.cp-stats-row{display:grid;grid-template-columns:1fr 1fr 1fr;padding:4px 10px 8px;gap:5px;}
+.cp-stat{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:5px;text-align:center;}
+.cp-stat-val{font-size:12px;font-weight:800;color:var(--text-pri);}
+.cp-stat-lbl{font-size:7.5px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-top:1px;}
+.cp-xp-bar-wrap{padding:0 12px 9px;}
+.cp-xp-label{display:flex;justify-content:space-between;font-size:9.5px;color:var(--text-sec);margin-bottom:4px;}
+.cp-xp-bar{height:3px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;}
+.cp-xp-fill{height:100%;background:linear-gradient(90deg,var(--violet),var(--amber));border-radius:2px;transition:width 0.6s ease;}
+.cp-actions{padding:3px 8px 9px;display:flex;flex-direction:column;gap:1px;}
+.cp-action{
+  display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:9px;cursor:pointer;transition:background 0.15s;
+}
+.cp-action:hover{background:rgba(255,255,255,0.07);}
+.cp-action svg{width:14px;height:14px;flex-shrink:0;opacity:0.6;}
+.cp-action-label{font-size:12px;color:var(--text-pri);flex:1;}
+.cp-action.danger .cp-action-label{color:var(--red);}
+.cp-action.danger svg{opacity:0.7;}
+.cp-divider{height:1px;background:rgba(255,255,255,0.06);margin:0 12px;}
+.cp-notif-list{max-height:220px;overflow-y:auto;padding:5px 8px;}
+.cp-notif-item{
+  display:flex;align-items:center;gap:9px;padding:7px 6px;border-radius:9px;cursor:pointer;
+  transition:background 0.15s;border-bottom:1px solid rgba(255,255,255,0.04);
+}
+.cp-notif-item:last-child{border-bottom:none;}
+.cp-notif-item:hover{background:rgba(255,255,255,0.06);}
+.cp-notif-av{
+  width:30px;height:30px;border-radius:50%;
+  background:linear-gradient(135deg,var(--amber),var(--violet));
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;overflow:hidden;
+}
+.cp-notif-av img{width:100%;height:100%;object-fit:cover;}
+.cp-notif-body{min-width:0;flex:1;}
+.cp-notif-sender{font-size:11.5px;font-weight:600;color:var(--text-pri);}
+.cp-notif-prev{font-size:10.5px;color:var(--text-sec);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cp-notif-time{font-size:9.5px;color:var(--text-dim);flex-shrink:0;}
+.cp-notif-empty{text-align:center;padding:22px 14px;font-size:11.5px;color:var(--text-dim);}
+.cp-setting-row{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;}
+.cp-setting-row .label{font-size:12px;color:var(--text-pri);}
+.toggle-sw{
+  width:36px;height:20px;background:rgba(255,255,255,0.12);
+  border-radius:10px;position:relative;cursor:pointer;border:none;transition:background 0.2s;flex-shrink:0;
+}
+.toggle-sw.on{background:var(--violet);}
+.toggle-sw::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform 0.2s;}
+.toggle-sw.on::after{transform:translateX(16px);}
+
+/* DYNAMIC ISLAND NOTIFICATION */
+.notif-island{
+  position:fixed;top:8px;left:50%;
+  transform:translateX(-50%) scaleX(0.12) scaleY(0.6);
+  z-index:400;background:rgba(255,255,255,0.08);
+  backdrop-filter:blur(20px) saturate(1.8) brightness(1.1);
+  -webkit-backdrop-filter:blur(20px) saturate(1.8) brightness(1.1);
+  border:1px solid rgba(255,255,255,0.22);
+  border-bottom-color:rgba(255,255,255,0.08);
+  border-radius:24px;padding:8px 12px;
+  display:flex;align-items:center;gap:9px;
+  max-width:calc(100vw - 80px);
+  box-shadow:0 1px 0 inset rgba(255,255,255,0.35),0 -1px 0 inset rgba(0,0,0,0.12),0 6px 32px rgba(0,0,0,0.5);
+  cursor:pointer;opacity:0;pointer-events:none;
+  transition:transform 0.5s cubic-bezier(0.34,1.56,0.64,1),opacity 0.28s ease,border-radius 0.4s;
+  will-change:transform,opacity;overflow:hidden;white-space:nowrap;
+}
+.notif-island.show{transform:translateX(-50%) scaleX(1) scaleY(1);opacity:1;pointer-events:all;}
+.notif-island.collapsing{transform:translateX(-50%) scaleX(0.10) scaleY(0.55);opacity:0;pointer-events:none;}
+.ni-avatar{
+  width:32px;height:32px;border-radius:50%;
+  background:linear-gradient(135deg,var(--amber),var(--violet));
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:700;flex-shrink:0;overflow:hidden;
+}
+.ni-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.ni-body{min-width:0;flex:1;}
+.ni-sender{font-size:12.5px;font-weight:700;color:var(--text-pri);}
+.ni-preview{font-size:11.5px;color:var(--text-sec);overflow:hidden;text-overflow:ellipsis;}
+.ni-close{
+  background:transparent;border:none;color:var(--text-dim);cursor:pointer;
+  padding:2px;border-radius:50%;flex-shrink:0;
+}
+
 /* ── Header ── */
 .chat-header{
-  position:sticky;top:0;z-index:100;
+  position:sticky;top:0;z-index:200;
   display:flex;align-items:center;gap:10px;
   padding:0 12px;height:56px;
   background:linear-gradient(180deg,rgba(18,8,18,0.96) 0%,rgba(18,8,18,0.88) 100%);
@@ -284,22 +481,29 @@ body{
 }
 .msg-row.me .bubble-wrap{align-items:flex-end;}
 
-/* ── Sender name above bubble ── */
+/* ── Sender name INSIDE bubble (Telegram style) ── */
 .sender-name{
-  font-size:11.5px;font-weight:600;
-  color:var(--purple-accent);
-  padding:0 2px;margin-bottom:1px;
-  cursor:pointer;
-  display:flex;align-items:center;gap:4px;
+  display:none; /* hidden above bubble, shown inside instead */
 }
-.sender-name:hover{text-decoration:underline;}
-.sender-name .sn-badge{font-size:9px;padding:1px 4px;border-radius:3px;font-weight:700;}
-.sn-admin{background:rgba(155,89,182,0.2);color:var(--purple-accent);}
+/* The in-bubble name tag */
+.bubble-sender-tag{
+  display:block;
+  font-size:11.5px;font-weight:700;
+  color:var(--violet);
+  margin-bottom:3px;
+  cursor:pointer;
+  line-height:1.2;
+}
+.bubble-sender-tag:hover{text-decoration:underline;}
+.bubble-sender-tag .sn-badge{font-size:9px;padding:1px 4px;border-radius:3px;font-weight:700;margin-left:3px;}
+.sn-admin{background:rgba(155,89,182,0.2);color:var(--violet);}
 .sn-owner{background:rgba(201,123,58,0.2);color:var(--amber-light);}
-.sn-premium{width:11px;height:11px;object-fit:contain;}
-.sn-verified{width:11px;height:11px;object-fit:contain;}
-.msg-row.consecutive .sender-name{display:none;}
+.sn-premium{width:11px;height:11px;object-fit:contain;vertical-align:middle;}
+.sn-verified{width:11px;height:11px;object-fit:contain;vertical-align:middle;}
+/* Hide above-bubble name for me rows too */
 .msg-row.me .sender-name{display:none;}
+.msg-row.consecutive .bubble-sender-tag{display:none;}
+.msg-row.me .bubble-sender-tag{display:none;}
 
 /* bubble */
 .bubble{
@@ -921,25 +1125,98 @@ body{
 <div class="bg-base"></div>
 <div class="bg-glow"></div>
 
-<!-- ── Background pattern ── -->
+<!-- ── Background SVG pattern (exact copy from home.html) ── -->
 <div class="bg-pattern" aria-hidden="true">
 <svg viewBox="0 0 390 844" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="gp1" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#9b59b6" stop-opacity="0.18"/>
-      <stop offset="100%" stop-color="#c97b3a" stop-opacity="0.08"/>
+      <stop offset="0%" stop-color="#9b59b6" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#c97b3a" stop-opacity="0.10"/>
     </linearGradient>
     <linearGradient id="gp2" x1="1" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#c97b3a" stop-opacity="0.14"/>
-      <stop offset="100%" stop-color="#9b59b6" stop-opacity="0.06"/>
+      <stop offset="0%" stop-color="#c97b3a" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#9b59b6" stop-opacity="0.08"/>
+    </linearGradient>
+    <linearGradient id="gp3" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#9b59b6" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#e8a85c" stop-opacity="0.06"/>
     </linearGradient>
   </defs>
-  <g opacity="0.6">
-    <circle class="bp-sym" cx="35" cy="90" r="22" fill="url(#gp1)" style="--op-from:0.25;--op-to:0.45;--op-mid:0.3;animation-duration:8s;"/>
-    <circle class="bp-sym" cx="340" cy="200" r="16" fill="url(#gp2)" style="--op-from:0.2;--op-to:0.38;--op-mid:0.28;animation-duration:11s;animation-delay:-3s;"/>
-    <rect class="bp-sym" x="60" y="380" width="30" height="30" rx="8" fill="url(#gp1)" style="--op-from:0.15;--op-to:0.3;--op-mid:0.22;animation-duration:13s;animation-delay:-5s;"/>
-    <circle class="bp-sym" cx="350" cy="620" r="20" fill="url(#gp2)" style="--op-from:0.2;--op-to:0.35;--op-mid:0.25;animation-duration:9s;animation-delay:-2s;"/>
-    <rect class="bp-sym" x="20" y="700" width="24" height="24" rx="6" fill="url(#gp1)" style="--op-from:0.12;--op-to:0.28;--op-mid:0.18;animation-duration:14s;animation-delay:-7s;"/>
+  <!-- Chat bubbles -->
+  <g class="bp-sym" style="--op-from:0.55;--op-to:0.7;--op-mid:0.6;animation-duration:9.2s;animation-delay:-1.1s">
+    <rect x="18" y="48" width="62" height="36" rx="18" ry="18" fill="url(#gp1)" stroke="rgba(155,89,182,0.18)" stroke-width="1"/>
+    <rect x="18" y="48" width="22" height="10" rx="5" fill="rgba(155,89,182,0.12)"/>
+    <circle cx="18" cy="84" r="6" fill="url(#gp1)"/>
+  </g>
+  <g class="bp-sym" style="--op-from:0.35;--op-to:0.5;--op-mid:0.4;animation-duration:12s;animation-delay:-4.5s">
+    <rect x="28" y="102" width="38" height="22" rx="11" ry="11" fill="url(#gp3)" stroke="rgba(201,123,58,0.15)" stroke-width="0.8"/>
+    <circle cx="28" cy="124" r="4" fill="url(#gp3)"/>
+  </g>
+  <g class="bp-sym" style="--op-from:0.45;--op-to:0.6;--op-mid:0.5;animation-duration:10.5s;animation-delay:-2.8s">
+    <rect x="292" y="62" width="76" height="42" rx="21" ry="21" fill="url(#gp2)" stroke="rgba(201,123,58,0.18)" stroke-width="1"/>
+    <rect x="292" y="62" width="76" height="14" rx="7" fill="rgba(201,123,58,0.07)"/>
+    <circle cx="368" cy="104" r="7" fill="url(#gp2)"/>
+  </g>
+  <g class="bp-sym" style="--op-from:0.3;--op-to:0.45;--op-mid:0.35;animation-duration:14.1s;animation-delay:-6s">
+    <rect x="12" y="310" width="54" height="30" rx="15" ry="15" fill="url(#gp1)" stroke="rgba(155,89,182,0.14)" stroke-width="0.8"/>
+    <circle cx="12" cy="340" r="5" fill="url(#gp1)"/>
+  </g>
+  <g class="bp-sym" style="--op-from:0.38;--op-to:0.52;--op-mid:0.44;animation-duration:11.3s;animation-delay:-3.3s">
+    <rect x="300" y="280" width="68" height="38" rx="19" ry="19" fill="url(#gp2)" stroke="rgba(201,123,58,0.16)" stroke-width="0.8"/>
+    <circle cx="368" cy="318" r="6" fill="url(#gp2)"/>
+  </g>
+  <g class="bp-sym" style="--op-from:0.28;--op-to:0.42;--op-mid:0.33;animation-duration:13.7s;animation-delay:-7.2s">
+    <rect x="16" y="640" width="48" height="28" rx="14" ry="14" fill="url(#gp3)" stroke="rgba(155,89,182,0.12)" stroke-width="0.7"/>
+    <circle cx="16" cy="668" r="4.5" fill="url(#gp3)"/>
+  </g>
+  <g class="bp-sym" style="--op-from:0.35;--op-to:0.48;--op-mid:0.4;animation-duration:10.8s;animation-delay:-5.1s">
+    <rect x="298" y="680" width="72" height="38" rx="19" fill="url(#gp2)" stroke="rgba(201,123,58,0.14)" stroke-width="0.8"/>
+    <circle cx="370" cy="718" r="6" fill="url(#gp2)"/>
+  </g>
+  <!-- Paper planes -->
+  <g class="bp-sym" style="--op-from:0.3;--op-to:0.45;--op-mid:0.36;animation-duration:15s;animation-delay:-0.8s">
+    <g transform="translate(175,30) rotate(-35)" fill="none" stroke="rgba(155,89,182,0.28)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="0,-18 16,10 0,4 -16,10" fill="rgba(155,89,182,0.08)"/>
+      <line x1="0" y1="4" x2="0" y2="10"/>
+    </g>
+  </g>
+  <g class="bp-sym" style="--op-from:0.22;--op-to:0.35;--op-mid:0.28;animation-duration:17.4s;animation-delay:-9s">
+    <g transform="translate(362,420) rotate(-25)" fill="none" stroke="rgba(201,123,58,0.22)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="0,-14 12,8 0,3 -12,8" fill="rgba(201,123,58,0.06)"/>
+      <line x1="0" y1="3" x2="0" y2="8"/>
+    </g>
+  </g>
+  <!-- Reaction circles -->
+  <g class="bp-sym" style="--op-from:0.25;--op-to:0.38;--op-mid:0.3;animation-duration:11.8s;animation-delay:-2.2s">
+    <circle cx="85" cy="175" r="13" fill="rgba(155,89,182,0.08)" stroke="rgba(155,89,182,0.2)" stroke-width="0.8"/>
+    <text x="85" y="180" text-anchor="middle" font-size="13" fill="rgba(155,89,182,0.35)">♥</text>
+  </g>
+  <g class="bp-sym" style="--op-from:0.2;--op-to:0.32;--op-mid:0.25;animation-duration:13.5s;animation-delay:-7.8s">
+    <circle cx="320" cy="195" r="11" fill="rgba(201,123,58,0.07)" stroke="rgba(201,123,58,0.18)" stroke-width="0.8"/>
+    <text x="320" y="200" text-anchor="middle" font-size="11" fill="rgba(201,123,58,0.3)">★</text>
+  </g>
+  <!-- Double tick -->
+  <g class="bp-sym" style="--op-from:0.22;--op-to:0.34;--op-mid:0.27;animation-duration:14.6s;animation-delay:-5.5s">
+    <g transform="translate(340,148)" stroke="rgba(155,89,182,0.3)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none">
+      <polyline points="-10,0 -4,6 6,-7"/><polyline points="-4,0 2,6 12,-7"/>
+    </g>
+  </g>
+  <!-- Crown / star -->
+  <g class="bp-sym" style="--op-from:0.2;--op-to:0.3;--op-mid:0.24;animation-duration:19s;animation-delay:-6.7s">
+    <g transform="translate(195,460)" fill="rgba(201,123,58,0.1)" stroke="rgba(201,123,58,0.22)" stroke-width="0.9" stroke-linejoin="round">
+      <polygon points="0,-14 3.5,-5 13,-5 5.5,1.5 8.5,11 0,5.5 -8.5,11 -5.5,1.5 -13,-5 -3.5,-5"/>
+    </g>
+  </g>
+  <!-- Sparkle dots -->
+  <circle cx="142" cy="58" r="2.5" fill="rgba(201,123,58,0.25)"><animate attributeName="opacity" values="0.25;0.55;0.25" dur="4.2s" repeatCount="indefinite" begin="-1.1s"/></circle>
+  <circle cx="258" cy="132" r="2" fill="rgba(155,89,182,0.3)"><animate attributeName="opacity" values="0.3;0.6;0.3" dur="5.8s" repeatCount="indefinite" begin="-2.9s"/></circle>
+  <circle cx="335" cy="478" r="2.2" fill="rgba(201,123,58,0.2)"><animate attributeName="opacity" values="0.2;0.42;0.2" dur="7.1s" repeatCount="indefinite" begin="-0.6s"/></circle>
+  <circle cx="268" cy="750" r="2.5" fill="rgba(201,123,58,0.22)"><animate attributeName="opacity" values="0.22;0.48;0.22" dur="6.7s" repeatCount="indefinite" begin="-1.8s"/></circle>
+  <!-- Cross sparkles -->
+  <g opacity="0.28"><animate attributeName="opacity" values="0.28;0.5;0.28" dur="5s" repeatCount="indefinite" begin="-1.5s"/>
+    <g transform="translate(230,88)" stroke="rgba(201,123,58,0.8)" stroke-width="1.3" stroke-linecap="round">
+      <line x1="-5" y1="0" x2="5" y2="0"/><line x1="0" y1="-5" x2="0" y2="5"/>
+    </g>
   </g>
 </svg>
 </div>
@@ -955,12 +1232,113 @@ body{
     </div>
     <div class="header-text">
       <div class="header-name">
-        <span id="headerNameText" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;">Loading…</span>
+        <span id="headerNameText" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;">Loading…</span>
         <div class="name-badges" id="headerBadges"></div>
       </div>
       <div class="header-sub" id="headerSub">Loading…</div>
     </div>
   </div>
+
+  <!-- ── EXILE ISLAND — centered ── -->
+  <div class="exile-island-wrap">
+    <div class="exile-island" id="exile-island">
+      <svg class="island-sword-icon" viewBox="0 0 24 24" fill="none">
+        <defs>
+          <linearGradient id="swordG" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#e8a85c"/>
+            <stop offset="100%" stop-color="#9b59b6"/>
+          </linearGradient>
+        </defs>
+        <path stroke="url(#swordG)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M14.5 17.5L3 6V3h3l11.5 11.5"/>
+        <path stroke="url(#swordG)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M13 19l6-6"/>
+        <path stroke="url(#swordG)" stroke-width="2" stroke-linecap="round" d="M16 16l4.5 4.5"/>
+        <path stroke="url(#swordG)" stroke-width="2" stroke-linecap="round" d="M7.5 7.5l-2.5 2.5"/>
+      </svg>
+      <div class="island-expanded-content">
+        <span class="island-label" id="island-name-label">EXILE</span>
+        <div class="island-online-dot" id="island-dot"></div>
+      </div>
+      <div class="island-unread-pip" id="island-pip"></div>
+    </div>
+
+    <!-- Drop panel -->
+    <div class="island-panel" id="island-panel">
+      <div class="cp-header">
+        <div class="cp-title" id="cp-page-title">Profile</div>
+        <div class="cp-nav-btns">
+          <button class="cp-nav-btn active" data-page="0">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          </button>
+          <button class="cp-nav-btn" data-page="1">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          </button>
+          <button class="cp-nav-btn" data-page="2">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </button>
+        </div>
+      </div>
+      <!-- Page 0: Profile -->
+      <div class="cp-page active" id="cp-page-0">
+        <div class="cp-profile-row">
+          <div class="cp-avatar" id="cp-avatar">?</div>
+          <div class="cp-user-info">
+            <div class="cp-name" id="cp-name">Loading…</div>
+            <div class="cp-sub">
+              <span id="cp-tag">—</span>
+              <span style="color:var(--text-dim)">·</span>
+              <span id="cp-exiles-val">0</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--amber-light)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6"/></svg>
+            </div>
+          </div>
+        </div>
+        <div class="cp-stats-row">
+          <div class="cp-stat"><div class="cp-stat-val" id="cp-level">—</div><div class="cp-stat-lbl">Level</div></div>
+          <div class="cp-stat"><div class="cp-stat-val" id="cp-streaks">—</div><div class="cp-stat-lbl">Streak</div></div>
+          <div class="cp-stat"><div class="cp-stat-val" id="cp-reputation">—</div><div class="cp-stat-lbl">Rep</div></div>
+        </div>
+        <div class="cp-xp-bar-wrap">
+          <div class="cp-xp-label"><span id="cp-xp-progress">0 XP</span><span id="cp-xp-next">/ 100 XP</span></div>
+          <div class="cp-xp-bar"><div class="cp-xp-fill" id="cp-xp-fill" style="width:0%"></div></div>
+        </div>
+        <div class="cp-divider"></div>
+        <div class="cp-actions">
+          <div class="cp-action" onclick="window.location.href='/Me.html'">
+            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <div class="cp-action-label">View Profile</div>
+          </div>
+          <div class="cp-action" onclick="window.location.href='/settings.html'">
+            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <div class="cp-action-label">Settings</div>
+          </div>
+          <div class="cp-action danger" id="cp-logout">
+            <svg viewBox="0 0 24 24" stroke="var(--red)" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <div class="cp-action-label">Sign Out</div>
+          </div>
+        </div>
+      </div>
+      <!-- Page 1: Notifications -->
+      <div class="cp-page" id="cp-page-1">
+        <div class="cp-notif-list" id="cp-notif-list">
+          <div class="cp-notif-empty">No new notifications</div>
+        </div>
+      </div>
+      <!-- Page 2: Settings -->
+      <div class="cp-page" id="cp-page-2">
+        <div class="cp-setting-row">
+          <div class="label">Push Notifications</div>
+          <button class="toggle-sw on" id="notif-toggle"></button>
+        </div>
+        <div class="cp-divider"></div>
+        <div class="cp-actions">
+          <div class="cp-action" onclick="window.location.href='/settings.html'">
+            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <div class="cp-action-label">All Settings</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="header-actions">
     <button class="icon-btn" onclick="openSearch()" title="Search">
       <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -970,6 +1348,18 @@ body{
     </button>
   </div>
 </header>
+
+<!-- ── DYNAMIC ISLAND NOTIFICATION ── -->
+<div class="notif-island" id="notif-island">
+  <div class="ni-avatar" id="ni-avatar">?</div>
+  <div class="ni-body">
+    <div class="ni-sender" id="ni-sender">Someone</div>
+    <div class="ni-preview" id="ni-preview">New message</div>
+  </div>
+  <button class="ni-close" id="ni-close">
+    <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="1" y1="1" x2="11" y2="11"/><line x1="11" y1="1" x2="1" y2="11"/></svg>
+  </button>
+</div>
 
 <!-- ── Pinned message bar ── -->
 <div class="pinned-bar hidden" id="pinnedBar" onclick="scrollToPinned()">
@@ -1732,7 +2122,7 @@ function buildMessageRow(msg) {
   const wrap = document.createElement('div');
   wrap.className = 'bubble-wrap';
 
-  // Sender name above bubble (for non-me, non-consecutive)
+  // Sender name above bubble — keep element for structure but we'll use in-bubble tag
   const nameEl = document.createElement('div');
   nameEl.className = 'sender-name';
   nameEl.dataset.senderNameFor = msg.messageId;
@@ -1751,7 +2141,6 @@ function buildMessageRow(msg) {
     const b = document.createElement('span'); b.className = 'sn-badge sn-admin'; b.textContent = 'Admin';
     nameEl.appendChild(b);
   }
-  // Premium / verified micro-badges
   if (msg.senderPremium) { const i=document.createElement('img');i.src='/premium.png';i.className='sn-premium';nameEl.appendChild(i); }
   if (msg.senderVerified){ const i=document.createElement('img');i.src='/verified.png';i.className='sn-verified';nameEl.appendChild(i); }
 
@@ -1777,6 +2166,34 @@ function buildBubble(msg, isMe) {
     bubble.classList.add('deleted');
     bubble.textContent = isMe ? 'You deleted this message' : 'This message was deleted';
     return bubble;
+  }
+
+  // ── Telegram-style: sender name INSIDE bubble at the top (not for me, not for consecutive) ──
+  if (!isMe && msg.senderName) {
+    const tag = document.createElement('span');
+    tag.className = 'bubble-sender-tag';
+    tag.dataset.senderTagFor = msg.messageId;
+    tag.onclick = (e) => { e.stopPropagation(); openMemberSheet(msg.senderId); };
+
+    // Color by position
+    const pos = msg.senderPosition;
+    if (pos === 'owner') tag.style.color = 'var(--amber-light)';
+    else if (pos === 'admin') tag.style.color = 'var(--violet)';
+    else {
+      // Hash-based color for variety (Telegram style)
+      const hue = (msg.senderId || '').split('').reduce((a,c)=>a+c.charCodeAt(0),0) % 360;
+      tag.style.color = `hsl(${hue},65%,72%)`;
+    }
+
+    tag.textContent = msg.senderName;
+
+    // Badges inline
+    if (pos === 'owner') { const b=document.createElement('span');b.className='sn-badge sn-owner';b.textContent='Owner';tag.appendChild(b); }
+    else if (pos === 'admin') { const b=document.createElement('span');b.className='sn-badge sn-admin';b.textContent='Admin';tag.appendChild(b); }
+    if (msg.senderVerified) { const i=document.createElement('img');i.src='/verified.png';i.className='sn-verified';tag.appendChild(i); }
+    if (msg.senderPremium)  { const i=document.createElement('img');i.src='/premium.png';i.className='sn-premium';tag.appendChild(i); }
+
+    bubble.appendChild(tag);
   }
 
   // Reply preview
@@ -1885,6 +2302,9 @@ function applyConsecutiveClasses() {
     const sid = row.dataset.senderId, sat = row.dataset.sentAt;
     const consecutive = sid && sid === prevSender && sat && prevTime && (new Date(sat) - new Date(prevTime)) < 90000;
     row.classList.toggle('consecutive', !!consecutive);
+    // Hide in-bubble sender tag for consecutive messages
+    const tag = row.querySelector('.bubble-sender-tag');
+    if (tag) tag.style.display = consecutive ? 'none' : '';
     prevSender = sid; prevTime = sat;
   });
 }
@@ -2870,8 +3290,251 @@ window.addEventListener('focus', () => {
 });
 
 
+// ════════════════════════════════════════════════════════════════
+//  CONTROL PANEL — exact copy from home.html
+// ════════════════════════════════════════════════════════════════
+let cpWs = null;
+let notificationsEnabled = true;
+let notifTimer = null;
+let pendingNotif = null;
+
+// ── CP Socket ──────────────────────────────────────────────────
+function connectCPSocket() {
+  if (typeof io === 'undefined') { setTimeout(connectCPSocket, 200); return; }
+  cpWs = io('/controlpanel', { withCredentials: true });
+  cpWs.on('connect', () => console.log('CP socket connected'));
+  cpWs.on('message', msg => handleCPMsg(msg));
+  cpWs.on('disconnect', () => console.log('CP socket disconnected'));
+}
+
+function handleCPMsg(msg) {
+  switch (msg.type) {
+    case 'init':
+    case 'profile': {
+      updateCPProfile(msg);
+      if (msg.unreadPreviews?.length) renderCPNotifs(msg.unreadPreviews);
+      break;
+    }
+    case 'xpUpdate': {
+      document.getElementById('cp-level').textContent = msg.level || msg.levelInfo?.level || '—';
+      if (msg.xp !== undefined) updateXPBar(msg.xp, msg.nextLevelXp, msg.progressXp, msg.neededXp, msg.progressPct);
+      break;
+    }
+    case 'exilesUpdate': {
+      const el = document.getElementById('cp-exiles-val');
+      if (el) el.textContent = msg.exiles !== undefined ? msg.exiles : el.textContent;
+      break;
+    }
+    case 'notification': {
+      if (!notificationsEnabled) return;
+      addCPNotif(msg);
+      showNotification({
+        name: msg.sender?.name || 'Someone',
+        avatar: msg.sender?.profilePicture || null,
+        preview: msg.preview,
+        chatId: msg.conversationId,
+        chatType: 'dm',
+        partnerId: msg.sender?.userId,
+      });
+      break;
+    }
+    case 'ping': cpWs.emit('pong'); break;
+  }
+}
+
+function cpInitials(name) { return (name||'?').split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase(); }
+function cpEsc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function cpFmtTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso), now = new Date(), diff = (now - d) / 1000;
+  if (diff < 60) return 'now';
+  if (diff < 3600) return Math.floor(diff/60) + 'm';
+  if (diff < 86400) return d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  return d.toLocaleDateString([],{weekday:'short'});
+}
+function cpAvatarColor(id) {
+  const h = (id||'').split('').reduce((a,c)=>a+c.charCodeAt(0),0) % 360;
+  return `hsl(${h},28%,26%)`;
+}
+
+function updateCPProfile(data) {
+  const nameEl = document.getElementById('cp-name');
+  nameEl.innerHTML = '';
+  if (data.verified) { const img=document.createElement('img');img.src='/verified.png';img.className='cp-badge-img';img.alt='';img.onerror=()=>img.classList.add('err');nameEl.appendChild(img); }
+  const ns = document.createElement('span'); ns.textContent = data.name || 'Unknown'; nameEl.appendChild(ns);
+  if (data.premium) { const img=document.createElement('img');img.src='/premium.png';img.className='cp-badge-img';img.alt='';img.onerror=()=>img.classList.add('err');nameEl.appendChild(img); }
+  document.getElementById('cp-tag').textContent = data.username ? `@${data.username}` : '—';
+  document.getElementById('cp-exiles-val').textContent = data.exiles || 0;
+  document.getElementById('cp-level').textContent = data.levelInfo?.level || data.level || '—';
+  document.getElementById('cp-streaks').textContent = data.streaks || 0;
+  document.getElementById('cp-reputation').textContent = data.reputation || 0;
+  const islandLbl = document.getElementById('island-name-label');
+  if (islandLbl && data.name) islandLbl.textContent = data.name.split(' ')[0];
+  const avEl = document.getElementById('cp-avatar');
+  if (data.profilePicture) { avEl.innerHTML = `<img src="${cpEsc(data.profilePicture)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`; }
+  else { avEl.textContent = cpInitials(data.name); }
+  if (data.levelInfo) updateXPBar(data.xp, data.levelInfo.nextLevelXp, data.levelInfo.progressXp, data.levelInfo.neededXp, data.levelInfo.progressPct);
+}
+
+function updateXPBar(xp, nextXp, progressXp, neededXp, pct) {
+  document.getElementById('cp-xp-progress').textContent = `${progressXp||0}`;
+  document.getElementById('cp-xp-next').textContent = `/ ${neededXp||0} XP`;
+  document.getElementById('cp-xp-fill').style.width = (pct||0) + '%';
+}
+
+function renderCPNotifs(previews) {
+  const list = document.getElementById('cp-notif-list');
+  list.innerHTML = '';
+  if (!previews?.length) { list.innerHTML = '<div class="cp-notif-empty">No new notifications</div>'; return; }
+  previews.slice(0,10).forEach(n => {
+    const sender = n.sender || {};
+    const item = document.createElement('div'); item.className = 'cp-notif-item';
+    item.innerHTML = `
+      <div class="cp-notif-av" style="background:${cpAvatarColor(sender.userId||'')}">
+        ${sender.profilePicture ? `<img src="${cpEsc(sender.profilePicture)}" alt="">` : cpInitials(sender.name||'?')}
+      </div>
+      <div class="cp-notif-body">
+        <div class="cp-notif-sender">${cpEsc(sender.name||'Someone')}</div>
+        <div class="cp-notif-prev">${cpEsc(n.preview||'')}</div>
+      </div>
+      <div class="cp-notif-time">${cpFmtTime(n.sentAt)}</div>
+    `;
+    item.addEventListener('click', () => {
+      if (n.conversationId) { const [a,b]=n.conversationId.split('_'); const meId=ME?.userId; const partnerId=a===meId?b:a; window.location.href=`/chat/${partnerId}`; }
+      closeCPPanel();
+    });
+    list.appendChild(item);
+  });
+}
+
+function addCPNotif(msg) {
+  const list = document.getElementById('cp-notif-list');
+  const empty = list.querySelector('.cp-notif-empty'); if (empty) empty.remove();
+  const sender = msg.sender || {};
+  const item = document.createElement('div'); item.className = 'cp-notif-item';
+  item.innerHTML = `
+    <div class="cp-notif-av" style="background:${cpAvatarColor(sender.userId||'')}">
+      ${sender.profilePicture ? `<img src="${cpEsc(sender.profilePicture)}" alt="">` : cpInitials(sender.name||'?')}
+    </div>
+    <div class="cp-notif-body">
+      <div class="cp-notif-sender">${cpEsc(sender.name||'Someone')}</div>
+      <div class="cp-notif-prev">${cpEsc(msg.preview||'')}</div>
+    </div>
+    <div class="cp-notif-time">now</div>
+  `;
+  item.addEventListener('click', () => {
+    if (msg.conversationId) { const [a,b]=msg.conversationId.split('_'); const meId=ME?.userId; const partnerId=a===meId?b:a; window.location.href=`/chat/${partnerId}`; }
+    closeCPPanel();
+  });
+  list.insertBefore(item, list.firstChild);
+}
+
+// ── Notification Island ────────────────────────────────────────
+function showNotification({ name, avatar, preview, chatId, chatType, partnerId }) {
+  if (!notificationsEnabled) return;
+  const island = document.getElementById('notif-island');
+  const avEl = document.getElementById('ni-avatar');
+  avEl.innerHTML = '';
+  if (avatar) { const img=document.createElement('img');img.src=avatar;img.alt='';img.onerror=()=>{avEl.textContent=(name||'?')[0].toUpperCase();};avEl.appendChild(img); }
+  else { avEl.textContent = (name||'?')[0].toUpperCase(); }
+  document.getElementById('ni-sender').textContent = name;
+  document.getElementById('ni-preview').textContent = preview;
+  pendingNotif = { chatId, chatType, partnerId };
+  island.onclick = e => {
+    if (e.target.closest('.ni-close')) return;
+    collapseNotif();
+    if (pendingNotif) {
+      if (pendingNotif.chatType === 'dm' && pendingNotif.partnerId) window.location.href = `/chat/${pendingNotif.partnerId}`;
+      else if (pendingNotif.chatId) window.location.href = `/${pendingNotif.chatType}/${pendingNotif.chatId}`;
+    }
+  };
+  if (notifTimer) clearTimeout(notifTimer);
+  island.classList.remove('collapsing'); island.classList.add('show');
+  notifTimer = setTimeout(() => collapseNotif(), 4500);
+}
+
+function collapseNotif() {
+  const island = document.getElementById('notif-island');
+  island.classList.remove('show'); island.classList.add('collapsing');
+  setTimeout(() => island.classList.remove('collapsing'), 500);
+  if (notifTimer) { clearTimeout(notifTimer); notifTimer = null; }
+}
+document.getElementById('ni-close').addEventListener('click', e => { e.stopPropagation(); collapseNotif(); });
+
+// ── Exile Island Panel ─────────────────────────────────────────
+const islandBtn = document.getElementById('exile-island');
+const panelEl = document.getElementById('island-panel');
+const cpPageTitles = ['Profile', 'Notifications', 'Settings'];
+let islandOpen = false;
+
+function closeCPPanel() {
+  if (!islandOpen) return;
+  islandOpen = false;
+  islandBtn.classList.remove('open');
+  panelEl.classList.remove('open');
+}
+
+islandBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  if (islandOpen) { closeCPPanel(); }
+  else {
+    islandOpen = true;
+    islandBtn.classList.add('open');
+    setTimeout(() => { panelEl.classList.add('open'); }, 160);
+  }
+});
+
+document.addEventListener('click', e => {
+  if (!panelEl.contains(e.target) && !islandBtn.contains(e.target)) closeCPPanel();
+});
+
+document.querySelectorAll('.cp-nav-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const idx = parseInt(btn.dataset.page);
+    document.querySelectorAll('.cp-page').forEach((p,i) => p.classList.toggle('active', i===idx));
+    document.querySelectorAll('.cp-nav-btn').forEach((b,i) => b.classList.toggle('active', i===idx));
+    document.getElementById('cp-page-title').textContent = cpPageTitles[idx];
+  });
+});
+
+document.getElementById('cp-logout').addEventListener('click', async () => {
+  await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
+  window.location.replace('/login');
+});
+
+document.getElementById('notif-toggle').addEventListener('click', function() {
+  notificationsEnabled = !notificationsEnabled;
+  this.classList.toggle('on', notificationsEnabled);
+  localStorage.setItem('notificationsEnabled', notificationsEnabled ? '1' : '0');
+});
+
+// Restore notif setting
+(function() {
+  if (localStorage.getItem('notificationsEnabled') === '0') {
+    notificationsEnabled = false;
+    const tog = document.getElementById('notif-toggle');
+    if (tog) tog.classList.remove('on');
+  }
+})();
+
+// Connect CP socket after init
+function tryConnectCP() {
+  if (window.io) connectCPSocket();
+  else setTimeout(tryConnectCP, 200);
+}
+tryConnectCP();
+
 // ── Boot ──────────────────────────────────────────────────────────────
 init();
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js")
+      .then(reg => console.log("SW registered"))
+      .catch(err => console.log("SW failed", err));
+  });
+}
 </script>
 </body>
 </html>
