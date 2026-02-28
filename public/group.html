@@ -743,6 +743,10 @@ async function loadMessages(before = null) {
     oldestId = msgs[0].messageId;
     newestId = msgs[msgs.length - 1].messageId;
     scrollToBottom(false);
+    // Mark messages read via WS
+    if (ws && ws.connected && newestId) {
+      ws.emit('groupRead', { groupId: GROUP_ID, upToMessageId: newestId });
+    }
   }
 }
 
@@ -762,8 +766,9 @@ function buildRow(m, allMsgs) {
 
   const row = document.createElement('div');
   row.className = `msg-row ${fromMe ? 'me' : 'them'}${consecutive ? ' consecutive' : ''}`;
-  row.dataset.msgId = m.messageId;
-  row.dataset.sentAt = m.sentAt;
+  row.dataset.msgId    = m.messageId;
+  row.dataset.sentAt   = m.sentAt;
+  row.dataset.senderId = m.senderId;
 
   if (m.deleted) {
     const bw = document.createElement('div');
@@ -780,13 +785,15 @@ function buildRow(m, allMsgs) {
   const av = document.createElement('div');
   av.className = 'msg-avatar';
   if (!fromMe) {
-    if (m.senderAvatar) {
+    const picUrl = m.senderPic || m.senderAvatar || m.sender?.profilePicture || null;
+    const displayName = m.senderName || m.senderUsername || '?';
+    if (picUrl) {
       const img = document.createElement('img');
-      img.src = m.senderAvatar; img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
-      img.onerror = () => { av.textContent = (m.senderName||'?')[0].toUpperCase(); };
+      img.src = picUrl; img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+      img.onerror = () => { av.textContent = displayName[0].toUpperCase(); };
       av.appendChild(img);
     } else {
-      av.textContent = (m.senderName||'?')[0].toUpperCase();
+      av.textContent = displayName[0].toUpperCase();
     }
     av.onclick = (e) => { e.stopPropagation(); openMemberSheet(m.senderId); };
   }
@@ -801,18 +808,19 @@ function buildRow(m, allMsgs) {
     sn.className = 'sender-name';
     sn.innerHTML = escHtml(m.senderName || m.senderUsername || '');
     sn.onclick = (e) => { e.stopPropagation(); openMemberSheet(m.senderId); };
-    // Add badges
+    // Resolve badges: prefer embedded WS fields, fallback to groupData members list
     const mem = (groupData?.members || []).find(x => x.userId === m.senderId);
-    if (mem || m.senderPosition) {
-      const pos = m.senderPosition || (mem?.isOwner ? 'owner' : mem?.isAdmin ? 'admin' : '');
-      const snb = document.createElement('span');
-      snb.className = 'sn-badges';
-      if (pos === 'owner') snb.innerHTML += '<span class="sn-owner">owner</span>';
-      else if (pos === 'admin') snb.innerHTML += '<span class="sn-admin">admin</span>';
-      if (m.senderPremium) snb.innerHTML += '<span class="sn-premium">⭐</span>';
-      if (m.senderVerified) snb.innerHTML += '<span class="sn-verified">✓</span>';
-      if (snb.innerHTML) sn.appendChild(snb);
-    }
+    const isOwnerFlag  = m.senderIsOwner  ?? mem?.isOwner  ?? false;
+    const isAdminFlag  = m.senderIsAdmin  ?? mem?.isAdmin  ?? false;
+    const isPremium    = m.senderPremium  ?? mem?.premium  ?? false;
+    const isVerified   = m.senderVerified ?? mem?.verified ?? false;
+    const snb = document.createElement('span');
+    snb.className = 'sn-badges';
+    if (isOwnerFlag)       snb.innerHTML += '<span class="sn-owner">owner</span>';
+    else if (isAdminFlag)  snb.innerHTML += '<span class="sn-admin">admin</span>';
+    if (isPremium)         snb.innerHTML += '<span class="sn-premium">⭐</span>';
+    if (isVerified)        snb.innerHTML += '<span class="sn-verified">✓</span>';
+    if (snb.innerHTML) sn.appendChild(snb);
     bw.appendChild(sn);
   }
 
@@ -930,54 +938,81 @@ function setupSocket() {
   ws = io('/', { withCredentials: true, transports: ['websocket', 'polling'] });
 
   ws.on('connect', () => {
+    // Joins socket.io room `group:<id>` on server for room-based broadcasts
     ws.emit('joinGroup', { groupId: GROUP_ID, groupType: GROUP_TYPE });
   });
 
+  ws.on('connect_error', (err) => {
+    console.warn('[socket] connect error:', err.message);
+  });
+
   ws.on('message', (data) => {
+    // Helper: does this event belong to our group?
+    const isOurs = data.groupId === GROUP_ID
+      || data.spaceId === GROUP_ID
+      || data.feedId  === GROUP_ID
+      || data.message?.groupId === GROUP_ID
+      || data.chat?.chatId === GROUP_ID;
+
     switch (data.type) {
-      case 'newGroupMessage':
-        if (data.groupId === GROUP_ID || data.message?.groupId === GROUP_ID) {
-          handleNewMessage(data.message);
+      case 'newGroupMessage': {
+        if (!isOurs) break;
+        // Server sends sender info in data.from, not embedded in the message.
+        // Merge it in so buildRow can display name/avatar/badges.
+        const msg = { ...(data.message || {}) };
+        if (data.from) {
+          msg.senderName     = msg.senderName     || data.from.name;
+          msg.senderUsername = msg.senderUsername || data.from.username;
+          msg.senderPic      = msg.senderPic      || data.from.profilePicture;
+          msg.senderPremium  = msg.senderPremium  ?? data.from.premium;
+          msg.senderVerified = msg.senderVerified ?? data.from.verified;
+          msg.senderIsAdmin  = msg.senderIsAdmin  ?? data.from.isAdmin;
+          msg.senderIsOwner  = msg.senderIsOwner  ?? data.from.isOwner;
         }
+        handleNewMessage(msg);
         break;
+      }
       case 'groupMessageDeleted':
-        if (data.groupId === GROUP_ID) handleMsgDeleted(data.messageId);
+        if (isOurs) handleMsgDeleted(data.messageId);
         break;
       case 'groupMessageEdited':
-        if (data.groupId === GROUP_ID) handleMsgEdited(data);
+        if (isOurs) handleMsgEdited(data);
         break;
       case 'groupMessageReaction':
-        if (data.groupId === GROUP_ID) handleReaction(data);
+        if (isOurs) handleReaction(data);
         break;
       case 'groupTyping':
-        if (data.groupId === GROUP_ID) handleTyping(data);
+        if (isOurs) handleTyping(data);
         break;
       case 'memberJoined':
-        if (data.spaceId === GROUP_ID || data.feedId === GROUP_ID) handleMemberJoined(data.member);
+        if (isOurs) handleMemberJoined(data.member);
         break;
       case 'memberLeft':
-        if (data.spaceId === GROUP_ID || data.feedId === GROUP_ID) handleMemberLeft(data.userId);
+        if (isOurs) handleMemberLeft(data.userId);
         break;
       case 'memberBanned':
+      case 'memberUnbanned':
       case 'memberMuted':
       case 'memberPromoted':
       case 'memberDemoted':
-        if (data.groupId === GROUP_ID) reloadGroupSilent();
+        if (isOurs) reloadGroupSilent();
         break;
       case 'messagePinned':
-        if (data.groupId === GROUP_ID) handlePinnedUpdate(data.messageId);
+        if (isOurs) handlePinnedUpdate(data.messageId);
         break;
       case 'groupUpdated':
-        if (data.spaceId === GROUP_ID || data.feedId === GROUP_ID || data.groupId === GROUP_ID) {
-          if (groupData) { Object.assign(groupData, data.updates); updateHeader(); }
+        if (isOurs) {
+          if (groupData) { Object.assign(groupData, data.updates || {}); updateHeader(); }
         }
         break;
       case 'groupDeleted':
-        showToast('This group has been deleted.');
-        setTimeout(() => history.back(), 2000);
+        if (isOurs) {
+          showToast('This group has been deleted.');
+          setTimeout(() => history.back(), 2000);
+        }
         break;
       case 'allUserMessagesDeleted':
-        if (data.groupId === GROUP_ID) {
+        if (isOurs) {
           document.querySelectorAll('.msg-row').forEach(r => {
             if (r.dataset.senderId === data.userId) {
               r.querySelector('.bubble')?.classList.add('deleted');
@@ -1100,8 +1135,8 @@ function handlePinnedUpdate(messageId) {
     renderPinnedBar();
     return;
   }
-  // Fetch the message
-  fetch(`/api/${GROUP_TYPE}/${GROUP_ID}/messages`, { credentials: 'include' })
+  // Fetch latest messages to get the updated pinnedMessage from the response
+  fetch(`/api/${GROUP_TYPE}/${GROUP_ID}/messages?limit=1`, { credentials: 'include' })
     .then(r => r.json()).then(d => {
       pinnedMessage = d.pinnedMessage || null;
       renderPinnedBar();
@@ -1170,11 +1205,12 @@ function handleFileSelect(input) {
 
 // ── Typing ─────────────────────────────────────────────────────
 function onTyping() {
-  if (!ws || !canPost) return;
-  ws.emit('groupTyping', { groupId: GROUP_ID, groupType: GROUP_TYPE });
+  if (!ws || !ws.connected || !canPost) return;
+  // Server: socket.on("groupTyping", ({ groupId, isTyping }) => ...)
+  ws.emit('groupTyping', { groupId: GROUP_ID, groupType: GROUP_TYPE, isTyping: true });
   clearTimeout(typingTimer);
   typingTimer = setTimeout(() => {
-    ws.emit('groupStopTyping', { groupId: GROUP_ID });
+    if (ws?.connected) ws.emit('groupTyping', { groupId: GROUP_ID, groupType: GROUP_TYPE, isTyping: false });
   }, 2500);
 }
 
@@ -1184,6 +1220,9 @@ function scrollToBottom(smooth) {
   list.scrollTo({ top: list.scrollHeight, behavior: smooth ? 'smooth' : 'instant' });
   unreadBelow = 0;
   updateJumpBadge();
+  if (ws && ws.connected && newestId) {
+    ws.emit('groupRead', { groupId: GROUP_ID, upToMessageId: newestId });
+  }
 }
 function scrollToMsg(messageId) {
   const el = document.querySelector(`[data-msg-id="${messageId}"]`);
@@ -1924,7 +1963,12 @@ function showToast(msg) {
 let bgTimer = null;
 document.addEventListener('visibilitychange', () => {
   if (document.hidden || IS_JOIN_PAGE) return;
-  if (ws && !ws.connected) ws.connect();
+  if (ws && !ws.connected) {
+    ws.connect();
+    ws.once('connect', () => {
+      ws.emit('joinGroup', { groupId: GROUP_ID, groupType: GROUP_TYPE });
+    });
+  }
   clearTimeout(bgTimer);
   bgTimer = setTimeout(async () => {
     if (!newestId || !GROUP_ID) return;
@@ -1936,15 +1980,23 @@ document.addEventListener('visibilitychange', () => {
       if (msgs.length === 0) return;
       const list = document.getElementById('msgList');
       const typing = document.getElementById('typingRow');
+      let added = 0;
       for (const m of msgs) {
         if (document.querySelector(`[data-msg-id="${m.messageId}"]`)) continue;
         list.insertBefore(buildRow(m, null), typing);
+        added++;
       }
-      newestId = msgs[msgs.length - 1].messageId;
-      const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
-      if (atBottom) scrollToBottom(true);
-      else { unreadBelow += msgs.length; updateJumpBadge(); }
-    } catch {}
+      if (added > 0) {
+        newestId = msgs[msgs.length - 1].messageId;
+        const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
+        if (atBottom) {
+          scrollToBottom(true);
+        } else {
+          unreadBelow += added;
+          updateJumpBadge();
+        }
+      }
+    } catch (e) { console.warn('bg refresh error:', e); }
   }, 300);
 });
 
