@@ -181,6 +181,93 @@ body{
   animation:spin 0.8s linear infinite;
 }
 @keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── Chat skeleton loader ── */
+.chat-skeleton{
+  display:flex;flex-direction:column;gap:10px;
+  padding:16px 14px;animation:skFadeIn 0.25s ease;
+}
+@keyframes skFadeIn{from{opacity:0}to{opacity:1}}
+.sk-row{display:flex;align-items:flex-end;gap:8px;}
+.sk-row.me{flex-direction:row-reverse;}
+.sk-avatar{
+  width:26px;height:26px;border-radius:50%;flex-shrink:0;
+  background:rgba(155,89,182,0.12);animation:shimmer 1.4s ease-in-out infinite;
+}
+.sk-bubble{
+  border-radius:16px;height:36px;
+  background:rgba(155,89,182,0.08);
+  animation:shimmer 1.4s ease-in-out infinite;
+}
+.sk-row.them .sk-bubble{border-bottom-left-radius:4px;}
+.sk-row.me  .sk-bubble{border-bottom-right-radius:4px;background:rgba(155,89,182,0.14);}
+@keyframes shimmer{
+  0%,100%{opacity:0.45}
+  50%{opacity:1}
+}
+
+/* ── No messages yet empty state ── */
+.empty-state{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:48px 24px;flex:1;gap:0;animation:skFadeIn 0.4s ease;
+}
+.empty-state-svg{width:120px;height:120px;margin-bottom:16px;opacity:0.7;}
+.empty-state-title{
+  font-size:16px;font-weight:700;color:var(--text-primary);
+  margin-bottom:6px;text-align:center;
+}
+.empty-state-sub{
+  font-size:13.5px;color:var(--text-dim);text-align:center;line-height:1.5;
+}
+
+/* ── Inline message formatting ── */
+.msg-bold{font-weight:700;}
+.msg-italic{font-style:italic;}
+.msg-code-inline{
+  font-family:'SF Mono',ui-monospace,monospace;
+  font-size:0.875em;
+  background:rgba(0,0,0,0.25);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:4px;padding:1px 5px;
+}
+.msg-code-block{
+  display:block;margin:6px 0 2px;
+  background:rgba(0,0,0,0.35);
+  border:1px solid rgba(255,255,255,0.07);
+  border-radius:8px;overflow:hidden;
+}
+.msg-code-lang{
+  display:block;
+  font-family:'SF Mono',ui-monospace,monospace;
+  font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;
+  color:var(--amber-light);
+  padding:5px 10px 4px;
+  border-bottom:1px solid rgba(255,255,255,0.06);
+  background:rgba(0,0,0,0.2);
+}
+.msg-code-pre{
+  display:block;
+  font-family:'SF Mono',ui-monospace,monospace;
+  font-size:12.5px;white-space:pre-wrap;word-break:break-all;
+  color:rgba(255,255,255,0.85);
+  padding:8px 10px;margin:0;
+  line-height:1.55;
+}
+.msg-quote{
+  display:block;margin:4px 0 2px;
+  border-left:3px solid var(--amber);
+  background:rgba(201,123,58,0.07);
+  border-radius:0 6px 6px 0;
+  padding:5px 10px;
+  color:var(--text-sec);
+  font-style:italic;font-size:13.5px;
+}
+.msg-link{
+  color:var(--amber-light);text-decoration:none;
+  border-bottom:1px solid rgba(232,168,92,0.35);
+  transition:border-color 0.15s;
+}
+.msg-link:hover{border-color:var(--amber-light);}
 .date-sep{
   display:flex;align-items:center;gap:10px;
   padding:8px 16px;color:var(--text-dim);font-size:11.5px;
@@ -1064,7 +1151,7 @@ body{
 
 <!-- Header -->
 <header class="chat-header">
-  <button class="btn-back" onclick="goBack()" title="Back">
+  <button class="btn-back" onclick="history.back()" title="Back">
     <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
   </button>
   <div class="recipient-info" id="recipientInfo" onclick="openProfile()">
@@ -1090,7 +1177,7 @@ body{
 <!-- Bot banner -->
 <div class="bot-banner" id="botBanner" style="display:none">
   <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><line x1="12" y1="7" x2="12" y2="11"/></svg>
-  This is a bot. It can only reply after you send a message to start the chat.
+  This is a bot. It can only reply after you send a message first.
 </div>
 
 <!-- Message list -->
@@ -1099,6 +1186,21 @@ body{
   <div class="load-spinner" id="topLoader" style="display:none">
     <div class="spin"></div> Loading older messages…
   </div>
+
+  <!-- Initial skeleton shown while messages load -->
+  <div class="chat-skeleton" id="chatSkeleton">
+    <div class="sk-row them"><div class="sk-avatar"></div><div class="sk-bubble" style="width:52%;animation-delay:0s"></div></div>
+    <div class="sk-row me"><div class="sk-bubble" style="width:38%;animation-delay:0.1s"></div></div>
+    <div class="sk-row them"><div class="sk-avatar"></div><div class="sk-bubble" style="width:65%;animation-delay:0.2s"></div></div>
+    <div class="sk-row them"><div class="sk-avatar" style="opacity:0;pointer-events:none"></div><div class="sk-bubble" style="width:44%;height:28px;animation-delay:0.3s"></div></div>
+    <div class="sk-row me"><div class="sk-bubble" style="width:55%;animation-delay:0.15s"></div></div>
+    <div class="sk-row me"><div class="sk-bubble" style="width:30%;height:28px;animation-delay:0.25s"></div></div>
+    <div class="sk-row them"><div class="sk-avatar"></div><div class="sk-bubble" style="width:70%;animation-delay:0.35s"></div></div>
+    <div class="sk-row me"><div class="sk-bubble" style="width:48%;animation-delay:0.05s"></div></div>
+    <div class="sk-row them"><div class="sk-avatar"></div><div class="sk-bubble" style="width:36%;height:28px;animation-delay:0.4s"></div></div>
+    <div class="sk-row me"><div class="sk-bubble" style="width:60%;animation-delay:0.2s"></div></div>
+  </div>
+
   <div class="typing-bubble" id="typingBubble" style="display:none">
     <div class="avatar-initials" id="typingAvatar" style="width:26px;height:26px;font-size:10px;flex-shrink:0;"></div>
     <div class="typing-dots">
@@ -1555,6 +1657,7 @@ async function loadMessages(direction = 'initial') {
 
   } catch(e) {
     console.error('loadMessages error:', e);
+    document.getElementById('chatSkeleton')?.remove();
   } finally {
     loadingOlder = false;
     document.getElementById('topLoader').style.display = 'none';
@@ -1579,7 +1682,11 @@ function prependMessages(msgs) {
 function appendMessages(msgs, isInitial) {
   const list    = document.getElementById('msgList');
   const typing  = document.getElementById('typingBubble');
-  const bottom  = document.getElementById('bottomSentinel');
+
+  // Remove skeleton on first load
+  if (isInitial) {
+    document.getElementById('chatSkeleton')?.remove();
+  }
 
   msgs.forEach(m => {
     if (messages[m.messageId]) return;
@@ -1594,7 +1701,46 @@ function appendMessages(msgs, isInitial) {
   if (messageOrder.length === 0 && isInitial) {
     const empty = document.createElement('div');
     empty.className = 'empty-state'; empty.id = 'emptyState';
-    empty.innerHTML = `<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg><p>No messages yet.<br>Say hello!</p>`;
+    empty.innerHTML = `
+      <svg class="empty-state-svg" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="eg1" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="rgba(155,89,182,0.5)"/>
+            <stop offset="100%" stop-color="rgba(201,123,58,0.3)"/>
+          </linearGradient>
+        </defs>
+        <!-- Large bubble -->
+        <rect x="12" y="22" width="68" height="42" rx="21" fill="url(#eg1)" opacity="0.6"/>
+        <!-- Tail left -->
+        <path d="M12 64 L4 76 L22 67" fill="url(#eg1)" opacity="0.5"/>
+        <!-- Dots inside bubble -->
+        <circle cx="32" cy="43" r="4.5" fill="rgba(255,255,255,0.55)"/>
+        <circle cx="46" cy="43" r="4.5" fill="rgba(255,255,255,0.55)"/>
+        <circle cx="60" cy="43" r="4.5" fill="rgba(255,255,255,0.55)"/>
+        <!-- Small bubble right -->
+        <rect x="44" y="72" width="60" height="32" rx="16" fill="rgba(201,123,58,0.3)" opacity="0.7"/>
+        <!-- Tail right -->
+        <path d="M104 104 L114 112 L100 108" fill="rgba(201,123,58,0.3)" opacity="0.6"/>
+        <!-- Dots inside small bubble -->
+        <circle cx="62" cy="88" r="3.5" fill="rgba(255,255,255,0.4)"/>
+        <circle cx="74" cy="88" r="3.5" fill="rgba(255,255,255,0.4)"/>
+        <circle cx="86" cy="88" r="3.5" fill="rgba(255,255,255,0.4)"/>
+        <!-- Sparkle top right -->
+        <g opacity="0.5" stroke="rgba(232,168,92,0.8)" stroke-width="1.5" stroke-linecap="round">
+          <line x1="100" y1="18" x2="100" y2="26"/>
+          <line x1="96" y1="22" x2="104" y2="22"/>
+          <line x1="97.2" y1="19.2" x2="102.8" y2="24.8"/>
+          <line x1="102.8" y1="19.2" x2="97.2" y2="24.8"/>
+        </g>
+        <!-- Sparkle left -->
+        <g opacity="0.35" stroke="rgba(155,89,182,0.8)" stroke-width="1.3" stroke-linecap="round">
+          <line x1="18" y1="10" x2="18" y2="16"/>
+          <line x1="15" y1="13" x2="21" y2="13"/>
+        </g>
+      </svg>
+      <div class="empty-state-title">No messages yet</div>
+      <div class="empty-state-sub">Say something — break the silence 👋</div>
+    `;
     list.insertBefore(empty, typing);
   }
 }
@@ -2000,17 +2146,6 @@ function insertDateSeparators() {
   });
 }
 
-function goBack() {
-  const ref = document.referrer;
-  if (ref) {
-    // Navigate to referrer with a cache-busting param, then replace history
-    const url = new URL(ref);
-    url.searchParams.set('_r', Date.now());
-    window.location.replace(url.toString());
-  } else {
-    window.history.back();
-  }
-}
 // ─── WEBSOCKET ────────────────────────────────
 function convId() {
   return [ME.userId, RECIPIENT_ID].sort().join('_');
@@ -2921,22 +3056,206 @@ document.addEventListener('click',e=>{
 // ─── UTIL ─────────────────────────────────────
 function initials(name){if(!name)return'?';return name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();}
 function esc(s){if(!s)return'';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function makeTextContent(text){
-  const div=document.createElement('div');
-  div.style.cssText='white-space:pre-wrap;word-break:break-word;';
-  const urlRe=/(https?:\/\/[^\s]+)/g;
-  const parts=text.split(urlRe);
-  let isUrl=false;
-  parts.forEach(p=>{
-    if(isUrl){
-      const a=document.createElement('a');a.href=p;a.textContent=p;a.target='_blank';a.rel='noopener noreferrer';
-      a.style.cssText='color:var(--amber-light);text-decoration:none;';
-      a.onmouseenter=()=>a.style.textDecoration='underline';a.onmouseleave=()=>a.style.textDecoration='none';
-      div.appendChild(a);
-    } else { div.appendChild(document.createTextNode(p)); }
-    isUrl=!isUrl;
-  });
-  return div;
+// ─── TEXT FORMATTER ─────────────────────────────────────────────────────────
+// Supports:
+//   *text*          → bold
+//   _text_          → italic
+//   "text"          → quote block (any " " pair)
+//   `code`          → inline code
+//   ```lang\ncode``` → fenced code block with language label
+//   https://...     → clickable link
+//   All other chars → plain text (no crash on fancy unicode/symbols)
+//
+// Strategy: scan line-by-line for block-level elements (fenced code, quotes),
+// then parse remaining text inline for bold/italic/code/links.
+// Uses a char-by-char state machine — no regex on the full text, so
+// fancy unicode / emoji / symbols never cause issues.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function makeTextContent(rawText) {
+  const root = document.createElement('div');
+  root.style.cssText = 'white-space:pre-wrap;word-break:break-word;';
+
+  // Safely escape HTML for textContent (we build DOM nodes, but use this for safety)
+  function escT(s) { return document.createTextNode(s); }
+
+  // Build a clickable link node
+  function linkNode(href, label) {
+    const a = document.createElement('a');
+    a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    a.className = 'msg-link';
+    a.textContent = label || href;
+    a.onclick = e => e.stopPropagation();
+    return a;
+  }
+
+  // ── INLINE PARSER ──────────────────────────────────────────────────────
+  // Takes a plain string, appends styled child nodes to `parent`.
+  // Handles: *bold*, _italic_, `code`, https:// links
+  // Robust: unknown/unmatched markers are output as plain text.
+  function parseInline(str, parent) {
+    if (!str) return;
+
+    // Split on URLs first — they must never be processed as markdown inside
+    const URL_RE = /(https?:\/\/[^\s​-‍﻿<>"]+)/g;
+    const segments = str.split(URL_RE);
+
+    for (let si = 0; si < segments.length; si++) {
+      const seg = segments[si];
+      if (!seg) continue;
+
+      // Odd indices are URLs
+      if (si % 2 === 1) {
+        parent.appendChild(linkNode(seg));
+        continue;
+      }
+
+      // Parse inline markdown on this segment
+      let i = 0;
+      const len = seg.length;
+
+      while (i < len) {
+        const ch = seg[i];
+
+        // *bold* — requires matching closing * not preceded by space
+        if (ch === '*') {
+          const end = seg.indexOf('*', i + 1);
+          if (end > i + 1 && seg[i+1] !== ' ') {
+            const inner = seg.slice(i + 1, end);
+            if (inner.trim()) {
+              const b = document.createElement('strong');
+              b.className = 'msg-bold';
+              parseInline(inner, b);  // allow links inside bold
+              parent.appendChild(b);
+              i = end + 1;
+              continue;
+            }
+          }
+          parent.appendChild(escT('*'));
+          i++; continue;
+        }
+
+        // _italic_ — single underscore pair, not matched if surrounded by word chars on both sides
+        if (ch === '_') {
+          const end = seg.indexOf('_', i + 1);
+          if (end > i + 1 && seg[i+1] !== ' ' && seg[end-1] !== ' ') {
+            const inner = seg.slice(i + 1, end);
+            if (inner.trim()) {
+              try {
+                // Wrap in <em> — safe for plain ASCII/Latin; for fancy fonts just show as plain
+                const em = document.createElement('em');
+                em.className = 'msg-italic';
+                parseInline(inner, em);
+                parent.appendChild(em);
+              } catch {
+                // Fancy font / unusual chars — fall back gracefully
+                parent.appendChild(escT('_' + inner + '_'));
+              }
+              i = end + 1;
+              continue;
+            }
+          }
+          parent.appendChild(escT('_'));
+          i++; continue;
+        }
+
+        // `inline code` — single backtick
+        if (ch === '\`' && seg[i+1] !== '\`') {
+          const end = seg.indexOf('\`', i + 1);
+          if (end > i + 1) {
+            const inner = seg.slice(i + 1, end);
+            const code = document.createElement('code');
+            code.className = 'msg-code-inline';
+            code.textContent = inner;
+            parent.appendChild(code);
+            i = end + 1;
+            continue;
+          }
+          parent.appendChild(escT('\`'));
+          i++; continue;
+        }
+
+        // Collect run of plain characters
+        let plain = '';
+        while (i < len) {
+          const c = seg[i];
+          if (c === '*' || c === '_' || c === '\`') break;
+          plain += c;
+          i++;
+        }
+        if (plain) parent.appendChild(escT(plain));
+      }
+    }
+  }
+
+  // ── BLOCK PARSER ──────────────────────────────────────────────────────
+  // Process text line-by-line looking for:
+  //   ``` fenced code blocks
+  //   "quoted line"  quote blocks
+  // Everything else goes to parseInline.
+
+  const lines = rawText.split('\n');
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // ── Fenced code block: ```lang or just ```
+    if (line.trimStart().startsWith('\`\`\`')) {
+      const lang = line.trimStart().slice(3).trim();
+      const codeLines = [];
+      i++;
+      while (i < lines.length && !lines[i].trimStart().startsWith('\`\`\`')) {
+        codeLines.push(lines[i]);
+        i++;
+      }
+      i++; // consume closing ```
+
+      const block = document.createElement('div');
+      block.className = 'msg-code-block';
+
+      if (lang) {
+        const langEl = document.createElement('span');
+        langEl.className = 'msg-code-lang';
+        langEl.textContent = lang;
+        block.appendChild(langEl);
+      }
+
+      const pre = document.createElement('pre');
+      pre.className = 'msg-code-pre';
+      pre.textContent = codeLines.join('\n');
+      block.appendChild(pre);
+      root.appendChild(block);
+      continue;
+    }
+
+    // ── "Quoted line" — line starts AND ends with straight or curly double quote
+    // Matches: "text", \u201Ctext\u201D, or just starts with "
+    const trimmed = line.trim();
+    const OPEN_Q  = ['"', '\u201C', '\u201E'];
+    const CLOSE_Q = ['"', '\u201D'];
+    const startsQ = OPEN_Q.some(q => trimmed.startsWith(q));
+    const endsQ   = CLOSE_Q.some(q => trimmed.endsWith(q)) || trimmed.endsWith('"');
+
+    if (startsQ && trimmed.length > 2) {
+      // Strip outer quotes
+      const inner = trimmed.slice(1, endsQ && trimmed.length > 2 ? -1 : undefined).trim();
+      const q = document.createElement('div');
+      q.className = 'msg-quote';
+      parseInline(inner, q);
+      root.appendChild(q);
+      i++; continue;
+    }
+
+    // ── Regular line — parse inline
+    if (i > 0 || line !== lines[0]) {
+      root.appendChild(document.createTextNode('\n'));
+    }
+    parseInline(line, root);
+    i++;
+  }
+
+  return root;
 }
 function formatTime(iso){if(!iso)return'';return new Date(iso).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});}
 function formatDate(date){
