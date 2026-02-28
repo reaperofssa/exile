@@ -3072,190 +3072,115 @@ function esc(s){if(!s)return'';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;
 // fancy unicode / emoji / symbols never cause issues.
 // ─────────────────────────────────────────────────────────────────────────────
 
-function makeTextContent(rawText) {
+function makeTextContent(text) {
   const root = document.createElement('div');
   root.style.cssText = 'white-space:pre-wrap;word-break:break-word;';
+  if (!text) return root;
 
-  // Safely escape HTML for textContent (we build DOM nodes, but use this for safety)
-  function escT(s) { return document.createTextNode(s); }
-
-  // Build a clickable link node
-  function linkNode(href, label) {
-    const a = document.createElement('a');
-    a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer';
-    a.className = 'msg-link';
-    a.textContent = label || href;
-    a.onclick = e => e.stopPropagation();
-    return a;
-  }
-
-  // ── INLINE PARSER ──────────────────────────────────────────────────────
-  // Takes a plain string, appends styled child nodes to `parent`.
-  // Handles: *bold*, _italic_, `code`, https:// links
-  // Robust: unknown/unmatched markers are output as plain text.
-  function parseInline(str, parent) {
-    if (!str) return;
-
-    // Split on URLs first — they must never be processed as markdown inside
-    const URL_RE = /(https?:\/\/[^\s​-‍﻿<>"]+)/g;
-    const segments = str.split(URL_RE);
-
-    for (let si = 0; si < segments.length; si++) {
-      const seg = segments[si];
-      if (!seg) continue;
-
-      // Odd indices are URLs
-      if (si % 2 === 1) {
-        parent.appendChild(linkNode(seg));
-        continue;
-      }
-
-      // Parse inline markdown on this segment
-      let i = 0;
-      const len = seg.length;
-
-      while (i < len) {
-        const ch = seg[i];
-
-        // *bold* — requires matching closing * not preceded by space
-        if (ch === '*') {
-          const end = seg.indexOf('*', i + 1);
-          if (end > i + 1 && seg[i+1] !== ' ') {
-            const inner = seg.slice(i + 1, end);
-            if (inner.trim()) {
-              const b = document.createElement('strong');
-              b.className = 'msg-bold';
-              parseInline(inner, b);  // allow links inside bold
-              parent.appendChild(b);
-              i = end + 1;
-              continue;
-            }
-          }
-          parent.appendChild(escT('*'));
-          i++; continue;
-        }
-
-        // _italic_ — single underscore pair, not matched if surrounded by word chars on both sides
-        if (ch === '_') {
-          const end = seg.indexOf('_', i + 1);
-          if (end > i + 1 && seg[i+1] !== ' ' && seg[end-1] !== ' ') {
-            const inner = seg.slice(i + 1, end);
-            if (inner.trim()) {
-              try {
-                // Wrap in <em> — safe for plain ASCII/Latin; for fancy fonts just show as plain
-                const em = document.createElement('em');
-                em.className = 'msg-italic';
-                parseInline(inner, em);
-                parent.appendChild(em);
-              } catch {
-                // Fancy font / unusual chars — fall back gracefully
-                parent.appendChild(escT('_' + inner + '_'));
-              }
-              i = end + 1;
-              continue;
-            }
-          }
-          parent.appendChild(escT('_'));
-          i++; continue;
-        }
-
-        // `inline code` — single backtick
-        if (ch === '\`' && seg[i+1] !== '\`') {
-          const end = seg.indexOf('\`', i + 1);
-          if (end > i + 1) {
-            const inner = seg.slice(i + 1, end);
-            const code = document.createElement('code');
-            code.className = 'msg-code-inline';
-            code.textContent = inner;
-            parent.appendChild(code);
-            i = end + 1;
-            continue;
-          }
-          parent.appendChild(escT('\`'));
-          i++; continue;
-        }
-
-        // Collect run of plain characters
-        let plain = '';
-        while (i < len) {
-          const c = seg[i];
-          if (c === '*' || c === '_' || c === '\`') break;
-          plain += c;
-          i++;
-        }
-        if (plain) parent.appendChild(escT(plain));
-      }
+  // Step 1: split on fenced code blocks ONLY using indexOf — no regex, no backtracking
+  const parts = []; // [{type:'text'|'code', lang:'', src:''}]
+  let pos = 0;
+  while (pos < text.length) {
+    const fence = text.indexOf('```', pos);
+    if (fence === -1) { parts.push({type:'text', src: text.slice(pos)}); break; }
+    if (fence > pos) parts.push({type:'text', src: text.slice(pos, fence)});
+    // Read lang (rest of line after ```)
+    const nl = text.indexOf('\n', fence + 3);
+    if (nl === -1) { parts.push({type:'text', src: text.slice(fence)}); break; }
+    const lang = text.slice(fence + 3, nl).trim();
+    // Find closing ``` — must be at start of a line (or just ``` anywhere)
+    const closeSearch = nl + 1;
+    const close = text.indexOf('\n```', closeSearch);
+    if (close === -1) {
+      // No closing fence — treat rest as plain text
+      parts.push({type:'text', src: text.slice(fence)});
+      break;
     }
+    const code = text.slice(nl + 1, close);
+    parts.push({type:'code', lang, src: code});
+    pos = close + 4; // skip \n```
+    // Skip optional newline after closing fence
+    if (text[pos] === '\n') pos++;
   }
 
-  // ── BLOCK PARSER ──────────────────────────────────────────────────────
-  // Process text line-by-line looking for:
-  //   ``` fenced code blocks
-  //   "quoted line"  quote blocks
-  // Everything else goes to parseInline.
-
-  const lines = rawText.split('\n');
-  let i = 0;
-
-  while (i < lines.length) {
-    const line = lines[i];
-
-    // ── Fenced code block: ```lang or just ```
-    if (line.trimStart().startsWith('\`\`\`')) {
-      const lang = line.trimStart().slice(3).trim();
-      const codeLines = [];
-      i++;
-      while (i < lines.length && !lines[i].trimStart().startsWith('\`\`\`')) {
-        codeLines.push(lines[i]);
-        i++;
-      }
-      i++; // consume closing ```
-
+  // Step 2: render each part
+  for (const part of parts) {
+    if (part.type === 'code') {
       const block = document.createElement('div');
       block.className = 'msg-code-block';
-
-      if (lang) {
-        const langEl = document.createElement('span');
-        langEl.className = 'msg-code-lang';
-        langEl.textContent = lang;
-        block.appendChild(langEl);
+      if (part.lang) {
+        const lbl = document.createElement('span');
+        lbl.className = 'msg-code-lang';
+        lbl.textContent = part.lang;
+        block.appendChild(lbl);
       }
-
       const pre = document.createElement('pre');
       pre.className = 'msg-code-pre';
-      pre.textContent = codeLines.join('\n');
+      pre.textContent = part.src;
       block.appendChild(pre);
       root.appendChild(block);
-      continue;
+    } else {
+      // Render text with inline formatting line by line
+      const lines = part.src.split('\n');
+      for (let li = 0; li < lines.length; li++) {
+        if (li > 0) root.appendChild(document.createTextNode('\n'));
+        renderInline(lines[li], root);
+      }
     }
+  }
+  return root;
+}
 
-    // ── "Quoted line" — line starts AND ends with straight or curly double quote
-    // Matches: "text", \u201Ctext\u201D, or just starts with "
-    const trimmed = line.trim();
-    const OPEN_Q  = ['"', '\u201C', '\u201E'];
-    const CLOSE_Q = ['"', '\u201D'];
-    const startsQ = OPEN_Q.some(q => trimmed.startsWith(q));
-    const endsQ   = CLOSE_Q.some(q => trimmed.endsWith(q)) || trimmed.endsWith('"');
+// renderInline: one regex pass, NO recursion, safe on mobile
+// *bold*  _italic_  `code`  https://...  — unmatched markers render as literal text
+function renderInline(str, parent) {
+  if (!str) return;
 
-    if (startsQ && trimmed.length > 2) {
-      // Strip outer quotes
-      const inner = trimmed.slice(1, endsQ && trimmed.length > 2 ? -1 : undefined).trim();
-      const q = document.createElement('div');
-      q.className = 'msg-quote';
-      parseInline(inner, q);
-      root.appendChild(q);
-      i++; continue;
-    }
-
-    // ── Regular line — parse inline
-    if (i > 0 || line !== lines[0]) {
-      root.appendChild(document.createTextNode('\n'));
-    }
-    parseInline(line, root);
-    i++;
+  // Quote block: line starts with " or curly quote → render as styled block
+  const fc = str.trimStart()[0];
+  if (fc === '"' || fc === '\u201C' || fc === '\u201E') {
+    let inner = str.trimStart().slice(1);
+    if (inner.endsWith('"') || inner.endsWith('\u201D')) inner = inner.slice(0, -1);
+    const q = document.createElement('span');
+    q.className = 'msg-quote';
+    q.textContent = inner.trim();
+    parent.appendChild(q);
+    return;
   }
 
-  return root;
+  // Single-pass regex: URLs first (greedy), then inline markers
+  // Groups: 1=url  2=*bold*  3=bold-inner  4=_italic_  5=italic-inner  6=`code`  7=code-inner  8=stray-marker
+  const RE = /(https?:\/\/[^\s<>"'`*_]+)|(\*([^*
+]{1,300})\*)|(_([^_
+]{1,300})_)|(`([^`
+]{1,300})`)|([*_`])/g;
+  let last = 0, m;
+  while ((m = RE.exec(str)) !== null) {
+    if (m.index > last) parent.appendChild(document.createTextNode(str.slice(last, m.index)));
+    last = m.index + m[0].length;
+    if (m[1]) {
+      const a = document.createElement('a');
+      a.href = m[1]; a.target = '_blank'; a.rel = 'noopener noreferrer';
+      a.className = 'msg-link'; a.textContent = m[1];
+      a.addEventListener('click', e => e.stopPropagation());
+      parent.appendChild(a);
+    } else if (m[2]) {
+      const b = document.createElement('strong');
+      b.className = 'msg-bold'; b.textContent = m[3];
+      parent.appendChild(b);
+    } else if (m[4]) {
+      const em = document.createElement('em');
+      em.className = 'msg-italic'; em.textContent = m[5];
+      parent.appendChild(em);
+    } else if (m[6]) {
+      const code = document.createElement('code');
+      code.className = 'msg-code-inline'; code.textContent = m[7];
+      parent.appendChild(code);
+    } else {
+      parent.appendChild(document.createTextNode(m[8])); // stray * _ `
+    }
+  }
+  if (last < str.length) parent.appendChild(document.createTextNode(str.slice(last)));
 }
 function formatTime(iso){if(!iso)return'';return new Date(iso).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});}
 function formatDate(date){
