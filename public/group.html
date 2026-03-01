@@ -1223,6 +1223,148 @@ body{
 .modal-btn.confirm-red{background:linear-gradient(135deg,#ef4444,#b91c1c);color:#fff;}
 
 #file-input{display:none;}
+
+/* ── Sticker button ── */
+.sticker-btn{
+  display:flex;align-items:center;justify-content:center;
+  width:38px;height:38px;border-radius:50%;
+  background:transparent;border:none;color:var(--text-sec);cursor:pointer;
+  transition:background 0.15s,color 0.15s;flex-shrink:0;
+  font-size:20px;line-height:1;
+}
+.sticker-btn:hover{background:rgba(255,255,255,0.07);color:var(--text-primary);}
+.sticker-btn.active{color:var(--violet);}
+
+/* ── Sticker sheet ── */
+.sticker-sheet{
+  position:absolute;bottom:calc(100% + 8px);left:0;right:0;
+  background:linear-gradient(180deg,#1e1428,#160e20);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:var(--r-lg);
+  box-shadow:0 -4px 32px rgba(0,0,0,0.6);
+  overflow:hidden;
+  display:none;z-index:250;
+  animation:ctxIn 0.15s ease;
+  max-height:320px;
+}
+.sticker-sheet.show{display:flex;flex-direction:column;}
+.ss-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px 8px;
+  border-bottom:1px solid rgba(255,255,255,0.07);
+  flex-shrink:0;
+}
+.ss-title{font-size:12px;font-weight:700;color:var(--text-sec);letter-spacing:0.5px;text-transform:uppercase;}
+.ss-actions{display:flex;gap:6px;align-items:center;}
+.ss-create-btn{
+  display:flex;align-items:center;gap:5px;
+  background:rgba(155,89,182,0.15);border:1px solid rgba(155,89,182,0.3);
+  color:var(--violet);font-size:11.5px;font-weight:600;
+  padding:4px 10px;border-radius:12px;cursor:pointer;
+  transition:background 0.15s;white-space:nowrap;
+}
+.ss-create-btn:hover{background:rgba(155,89,182,0.28);}
+.ss-create-btn svg{width:12px;height:12px;flex-shrink:0;}
+.ss-close{
+  background:transparent;border:none;color:var(--text-dim);cursor:pointer;
+  font-size:16px;line-height:1;padding:2px 4px;
+}
+.ss-grid{
+  display:grid;grid-template-columns:repeat(5,1fr);gap:4px;
+  padding:10px;overflow-y:auto;flex:1;
+}
+.ss-grid::-webkit-scrollbar{width:3px;}
+.ss-grid::-webkit-scrollbar-thumb{background:rgba(155,89,182,0.3);}
+.ss-item{
+  aspect-ratio:1;border-radius:var(--r-sm);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;overflow:hidden;
+  background:rgba(255,255,255,0.04);
+  transition:background 0.12s,transform 0.1s;
+  border:1px solid transparent;
+  position:relative;
+}
+.ss-item:hover{background:rgba(155,89,182,0.15);border-color:rgba(155,89,182,0.3);transform:scale(1.06);}
+.ss-item:active{transform:scale(0.96);}
+.ss-item img{width:100%;height:100%;object-fit:contain;padding:4px;}
+.ss-item .ss-spinner{
+  width:18px;height:18px;border:2px solid rgba(155,89,182,0.2);
+  border-top-color:var(--violet);border-radius:50%;
+  animation:spin 0.7s linear infinite;
+}
+.ss-empty{
+  padding:32px 16px;text-align:center;
+  color:var(--text-dim);font-size:13px;line-height:1.6;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+}
+.ss-empty svg{width:32px;height:32px;opacity:0.3;}
+
+/* ── Sticker create modal ── */
+.sticker-modal{
+  position:fixed;inset:0;z-index:1100;
+  background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);
+  display:none;align-items:center;justify-content:center;padding:20px;
+}
+.sticker-modal.show{display:flex;}
+.sm-inner{
+  width:100%;max-width:340px;
+  background:linear-gradient(180deg,#1e1428,#120812);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:var(--r-lg);padding:20px;
+  animation:ctxIn 0.15s ease;
+}
+.sm-title{font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:14px;}
+.sm-drop{
+  border:2px dashed rgba(155,89,182,0.35);
+  border-radius:var(--r-md);padding:20px 14px;
+  text-align:center;cursor:pointer;
+  transition:border-color 0.15s,background 0.15s;
+  margin-bottom:12px;
+  position:relative;
+}
+.sm-drop:hover,.sm-drop.dragover{border-color:rgba(155,89,182,0.7);background:rgba(155,89,182,0.06);}
+.sm-drop-icon{font-size:32px;margin-bottom:8px;}
+.sm-drop-text{font-size:13px;color:var(--text-sec);}
+.sm-drop-hint{font-size:11px;color:var(--text-dim);margin-top:4px;}
+.sm-drop input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.sm-preview{
+  display:none;flex-direction:column;align-items:center;gap:8px;
+  margin-bottom:12px;
+}
+.sm-preview.show{display:flex;}
+.sm-preview img{width:120px;height:120px;object-fit:contain;border-radius:var(--r-sm);background:rgba(255,255,255,0.04);}
+.sm-preview-info{font-size:11.5px;color:var(--text-dim);text-align:center;}
+.sm-warn{font-size:11.5px;color:rgba(239,68,68,0.9);margin-bottom:10px;display:none;}
+.sm-warn.show{display:block;}
+.sm-btns{display:flex;gap:8px;}
+.sm-btn{
+  flex:1;padding:10px;border-radius:var(--r-sm);border:none;
+  font-size:13.5px;font-weight:600;cursor:pointer;transition:opacity 0.15s;
+}
+.sm-btn:hover{opacity:0.85;}
+.sm-btn.cancel{background:rgba(255,255,255,0.07);color:var(--text-primary);}
+.sm-btn.upload{background:linear-gradient(135deg,var(--violet),#6a2e9e);color:#fff;}
+.sm-btn.upload:disabled{opacity:0.45;cursor:not-allowed;}
+.sm-btn.upload.loading::after{
+  content:'';display:inline-block;
+  width:12px;height:12px;border:2px solid rgba(255,255,255,0.3);
+  border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;
+  margin-left:6px;vertical-align:middle;
+}
+
+/* ── Add-to-stickers button (on their sticker bubbles) ── */
+.sticker-add-btn{
+  display:flex;align-items:center;gap:4px;
+  margin-top:4px;
+  background:rgba(155,89,182,0.12);border:1px solid rgba(155,89,182,0.25);
+  color:var(--violet);font-size:11px;font-weight:600;
+  padding:3px 9px;border-radius:10px;cursor:pointer;
+  transition:background 0.15s;width:fit-content;
+  align-self:flex-start;
+}
+.sticker-add-btn:hover{background:rgba(155,89,182,0.28);}
+.sticker-add-btn svg{width:11px;height:11px;flex-shrink:0;}
+.sticker-add-btn.added{color:var(--green);border-color:rgba(34,197,94,0.3);background:rgba(34,197,94,0.08);}
 </style>
 <script src="/socket.io/socket.io.js"></script>
 </head>
@@ -1541,9 +1683,24 @@ body{
         onblur="setTimeout(closeAtSuggest, 150)"></textarea>
       <button class="emoji-toggle" onclick="toggleEmojiPicker(event)">😊</button>
     </div>
+    <button class="sticker-btn" id="stickerBtn" title="Stickers" onclick="toggleStickerSheet(event)">🎭</button>
     <button class="send-btn voice-mode" id="sendBtn" onclick="sendOrRecord()">
       <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"/></svg>
     </button>
+  </div>
+  <!-- Sticker sheet (anchored to input-area, appears above) -->
+  <div class="sticker-sheet" id="stickerSheet">
+    <div class="ss-header">
+      <span class="ss-title">My Stickers</span>
+      <div class="ss-actions">
+        <button class="ss-create-btn" onclick="openStickerCreate()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New
+        </button>
+        <button class="ss-close" onclick="closeStickerSheet()">✕</button>
+      </div>
+    </div>
+    <div class="ss-grid" id="stickerGrid"></div>
   </div>
   <div class="emoji-picker" id="emojiPicker">
     <div class="emoji-grid" id="emojiGrid"></div>
@@ -3932,8 +4089,431 @@ tryConnectCP();
 // ── Boot ──────────────────────────────────────────────────────────────
 init();
 </script>
+<!-- ── Sticker create modal ── -->
+<div class="sticker-modal" id="stickerModal">
+  <div class="sm-inner">
+    <div class="sm-title">Create Sticker</div>
+    <div class="sm-drop" id="smDrop">
+      <div class="sm-drop-icon">🖼️</div>
+      <div class="sm-drop-text">Tap to choose an image</div>
+      <div class="sm-drop-hint">512×512 px · max 512 KB · PNG/WebP/GIF</div>
+      <input type="file" id="smFileInput" accept="image/*,.webp" onchange="smHandleFile(event)">
+    </div>
+    <div class="sm-preview" id="smPreview">
+      <img id="smPreviewImg" src="" alt="">
+      <div class="sm-preview-info" id="smPreviewInfo"></div>
+    </div>
+    <div class="sm-warn" id="smWarn"></div>
+    <div class="sm-btns">
+      <button class="sm-btn cancel" onclick="closeStickerCreate()">Cancel</button>
+      <button class="sm-btn upload" id="smUploadBtn" onclick="uploadSticker()" disabled>Upload</button>
+    </div>
+  </div>
+</div>
+
 <script>
-if ("serviceWorker" in navigator) {
+// ════════════════════════════════════════════════════════════════
+//  STICKER SYSTEM
+// ════════════════════════════════════════════════════════════════
+
+// ── IndexedDB cache ──────────────────────────────────────────
+const STICKER_DB_NAME    = 'exile-stickers';
+const STICKER_DB_VERSION = 1;
+const STICKER_STORE      = 'blobs';
+const STICKER_META_STORE = 'meta';
+
+let stickerDB = null;
+async function openStickerDB() {
+  if (stickerDB) return stickerDB;
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(STICKER_DB_NAME, STICKER_DB_VERSION);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STICKER_STORE))      db.createObjectStore(STICKER_STORE);
+      if (!db.objectStoreNames.contains(STICKER_META_STORE)) db.createObjectStore(STICKER_META_STORE);
+    };
+    req.onsuccess = e => { stickerDB = e.target.result; res(stickerDB); };
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+
+async function idbGet(store, key) {
+  const db = await openStickerDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readonly');
+    const req = tx.objectStore(store).get(key);
+    req.onsuccess = () => res(req.result);
+    req.onerror   = () => res(null);
+  });
+}
+async function idbSet(store, key, value) {
+  const db = await openStickerDB();
+  return new Promise((res, rej) => {
+    const tx  = db.transaction(store, 'readwrite');
+    tx.objectStore(store).put(value, key);
+    tx.oncomplete = () => res();
+    tx.onerror    = () => rej();
+  });
+}
+async function idbDelete(store, key) {
+  const db = await openStickerDB();
+  return new Promise((res) => {
+    const tx = db.transaction(store, 'readwrite');
+    tx.objectStore(store).delete(key);
+    tx.oncomplete = () => res();
+    tx.onerror    = () => res();
+  });
+}
+
+// Cache a sticker URL → blob URL (objectURL from blob stored in IDB)
+const stickerBlobCache = {}; // url → objectURL (in-memory for session)
+
+async function getStickerBlobURL(url) {
+  if (stickerBlobCache[url]) return stickerBlobCache[url];
+  // Try IDB
+  const blob = await idbGet(STICKER_STORE, url);
+  if (blob) {
+    const objUrl = URL.createObjectURL(blob);
+    stickerBlobCache[url] = objUrl;
+    return objUrl;
+  }
+  // Fetch & cache
+  try {
+    const resp = await fetch(url);
+    const b    = await resp.blob();
+    await idbSet(STICKER_STORE, url, b);
+    const objUrl = URL.createObjectURL(b);
+    stickerBlobCache[url] = objUrl;
+    return objUrl;
+  } catch {
+    return url; // fallback to direct URL
+  }
+}
+
+// ── State ─────────────────────────────────────────────────────
+let myStickers     = [];       // array of URLs
+let stickerSheetOpen = false;
+let smSelectedFile = null;
+
+// ── Load stickers from server + update cache list ─────────────
+async function loadMyStickers() {
+  try {
+    const r = await fetch('/api/stickers', { credentials: 'include' });
+    if (!r.ok) return;
+    const d = await r.json();
+    myStickers = d.urls || [];
+    // Persist list to meta store for quick offline render
+    await idbSet(STICKER_META_STORE, 'myList', myStickers);
+  } catch {
+    // offline: try IDB
+    const cached = await idbGet(STICKER_META_STORE, 'myList');
+    if (cached) myStickers = cached;
+  }
+}
+
+// ── Sheet open/close ──────────────────────────────────────────
+function toggleStickerSheet(e) {
+  e.stopPropagation();
+  if (stickerSheetOpen) { closeStickerSheet(); return; }
+  openStickerSheet();
+}
+
+function openStickerSheet() {
+  stickerSheetOpen = true;
+  const sheet = document.getElementById('stickerSheet');
+  sheet.classList.add('show');
+  document.getElementById('stickerBtn').classList.add('active');
+  // Close emoji picker if open
+  document.getElementById('emojiPicker')?.classList.remove('show');
+  renderStickerGrid();
+  // Lazy-load / refresh in background
+  loadMyStickers().then(renderStickerGrid);
+}
+
+function closeStickerSheet() {
+  stickerSheetOpen = false;
+  document.getElementById('stickerSheet').classList.remove('show');
+  document.getElementById('stickerBtn').classList.remove('active');
+}
+
+document.addEventListener('click', e => {
+  if (!stickerSheetOpen) return;
+  const sheet = document.getElementById('stickerSheet');
+  const btn   = document.getElementById('stickerBtn');
+  if (!sheet.contains(e.target) && !btn.contains(e.target)) closeStickerSheet();
+});
+
+// ── Grid rendering ────────────────────────────────────────────
+async function renderStickerGrid() {
+  const grid = document.getElementById('stickerGrid');
+  grid.innerHTML = '';
+
+  if (!myStickers.length) {
+    grid.innerHTML = `
+      <div class="ss-empty" style="grid-column:1/-1">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/>
+        </svg>
+        No stickers yet.<br>Create one to get started!
+      </div>`;
+    return;
+  }
+
+  for (const url of myStickers) {
+    const item = document.createElement('div');
+    item.className = 'ss-item';
+    item.dataset.stickerUrl = url;
+
+    // Spinner while loading
+    const spinner = document.createElement('div');
+    spinner.className = 'ss-spinner';
+    item.appendChild(spinner);
+
+    item.onclick = () => sendSticker(url);
+    grid.appendChild(item);
+
+    // Async load blob
+    getStickerBlobURL(url).then(blobUrl => {
+      const img = document.createElement('img');
+      img.src   = blobUrl;
+      img.alt   = 'Sticker';
+      item.innerHTML = '';
+      item.appendChild(img);
+    });
+  }
+}
+
+// ── Send a sticker ────────────────────────────────────────────
+async function sendSticker(url) {
+  if (!CAN_SEND) { showToast('You cannot send messages here'); return; }
+  closeStickerSheet();
+
+  const savedReply = replyTo;
+  cancelReply();
+
+  const fd = new FormData();
+  fd.append('type', 'sticker');
+  fd.append('stickerUrl', url);
+  if (savedReply) fd.append('replyToMessageId', savedReply.messageId);
+
+  try {
+    const res  = await fetch(`/api/${GROUP_TYPE}/${GROUP_ID}/messages`, { method:'POST', credentials:'include', body: fd });
+    const data = await res.json();
+    if (!res.ok) {
+      showToast(data.error || 'Send failed');
+    } else if (data.message && !messages[data.message.messageId]) {
+      messages[data.message.messageId] = data.message;
+      const list   = document.getElementById('msgList');
+      const typing = document.getElementById('typingBubble');
+      list.insertBefore(buildMessageRow(data.message), typing);
+      applyConsecutiveClasses(); insertDateSeparators();
+      newestId = data.message.messageId;
+      scrollToBottom(true);
+    }
+  } catch { showToast('Network error'); }
+}
+
+// ── "Add to my stickers" on received sticker bubbles ─────────
+function buildStickerAddButton(url) {
+  // Already mine?
+  const alreadyMine = myStickers.includes(url);
+  const btn = document.createElement('button');
+  btn.className = 'sticker-add-btn' + (alreadyMine ? ' added' : '');
+  btn.dataset.stickerAddUrl = url;
+  btn.innerHTML = alreadyMine
+    ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Saved`
+    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add sticker`;
+
+  if (!alreadyMine) {
+    btn.onclick = async (e) => {
+      e.stopPropagation();
+      btn.disabled = true;
+      try {
+        const r = await fetch('/api/stickers/add', {
+          method: 'POST', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url }),
+        });
+        const d = await r.json();
+        if (r.ok) {
+          myStickers.push(url);
+          await idbSet(STICKER_META_STORE, 'myList', myStickers);
+          btn.className = 'sticker-add-btn added';
+          btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Saved`;
+          showToast('Sticker added!');
+        } else {
+          showToast(d.error || 'Failed to add');
+          btn.disabled = false;
+        }
+      } catch { showToast('Network error'); btn.disabled = false; }
+    };
+  }
+  return btn;
+}
+
+// ── Patch buildBubble to inject add-sticker button for "them" stickers ──
+// We hook into the makeMediaImg for stickers
+const _origMakeMediaImg = makeMediaImg;
+
+// Override: wrap sticker rendering to add the button
+// We inject the button in buildBubble for sticker type from "them"
+// This is done by patching the bubble section after the fact in buildBubble.
+// We'll do it via a post-process: modify buildBubble inline below.
+
+// ── Create sticker modal ──────────────────────────────────────
+function openStickerCreate() {
+  closeStickerSheet();
+  document.getElementById('stickerModal').classList.add('show');
+  smReset();
+}
+function closeStickerCreate() {
+  document.getElementById('stickerModal').classList.remove('show');
+  smReset();
+}
+
+function smReset() {
+  smSelectedFile = null;
+  document.getElementById('smDrop').style.display = '';
+  document.getElementById('smPreview').classList.remove('show');
+  document.getElementById('smWarn').classList.remove('show');
+  document.getElementById('smWarn').textContent = '';
+  document.getElementById('smUploadBtn').disabled = true;
+  document.getElementById('smUploadBtn').classList.remove('loading');
+  document.getElementById('smFileInput').value = '';
+}
+
+function smHandleFile(e) {
+  const file = e.target.files[0]; if (!file) return;
+  smValidateAndPreview(file);
+}
+
+// Drag and drop
+const smDrop = document.getElementById('smDrop');
+smDrop.addEventListener('dragover', e => { e.preventDefault(); smDrop.classList.add('dragover'); });
+smDrop.addEventListener('dragleave', () => smDrop.classList.remove('dragover'));
+smDrop.addEventListener('drop', e => {
+  e.preventDefault(); smDrop.classList.remove('dragover');
+  const file = e.dataTransfer.files[0]; if (file) smValidateAndPreview(file);
+});
+
+async function smValidateAndPreview(file) {
+  const warn = document.getElementById('smWarn');
+  warn.classList.remove('show'); warn.textContent = '';
+
+  if (!file.type.startsWith('image/')) {
+    warn.textContent = 'Only image files are accepted.'; warn.classList.add('show'); return;
+  }
+  if (file.size > 512 * 1024) {
+    warn.textContent = `File too large: ${(file.size/1024).toFixed(1)} KB (max 512 KB).`; warn.classList.add('show'); return;
+  }
+
+  smSelectedFile = file;
+
+  // Preview
+  const objUrl = URL.createObjectURL(file);
+  document.getElementById('smPreviewImg').src = objUrl;
+  document.getElementById('smPreviewInfo').textContent = `${file.name} · ${(file.size/1024).toFixed(1)} KB`;
+  document.getElementById('smDrop').style.display = 'none';
+  document.getElementById('smPreview').classList.add('show');
+
+  // Check dimensions
+  const img = new Image();
+  img.onload = () => {
+    if (img.width !== 512 || img.height !== 512) {
+      warn.textContent = `Image must be 512×512 px (yours is ${img.width}×${img.height}).`;
+      warn.classList.add('show');
+      document.getElementById('smUploadBtn').disabled = true;
+    } else {
+      document.getElementById('smUploadBtn').disabled = false;
+    }
+  };
+  img.onerror = () => { document.getElementById('smUploadBtn').disabled = false; };
+  img.src = objUrl;
+}
+
+async function uploadSticker() {
+  if (!smSelectedFile) return;
+  const btn = document.getElementById('smUploadBtn');
+  btn.disabled = true; btn.classList.add('loading');
+
+  const fd = new FormData();
+  fd.append('file', smSelectedFile);
+
+  try {
+    const r = await fetch('/api/stickers/create', { method:'POST', credentials:'include', body: fd });
+    const d = await r.json();
+    if (!r.ok) {
+      const warn = document.getElementById('smWarn');
+      warn.textContent = d.error || 'Upload failed'; warn.classList.add('show');
+      btn.disabled = false; btn.classList.remove('loading');
+    } else {
+      myStickers.push(d.url);
+      await idbSet(STICKER_META_STORE, 'myList', myStickers);
+      // Cache the blob immediately
+      await idbSet(STICKER_STORE, d.url, smSelectedFile);
+      closeStickerCreate();
+      showToast('Sticker created! 🎉');
+      openStickerSheet();
+    }
+  } catch {
+    const warn = document.getElementById('smWarn');
+    warn.textContent = 'Network error'; warn.classList.add('show');
+    btn.disabled = false; btn.classList.remove('loading');
+  }
+}
+
+// ── Patch buildBubble to add "Add sticker" button for received stickers ──
+// We override the sticker branch in buildBubble
+(function patchBuildBubble() {
+  // We need to intercept after the fact.
+  // The sticker add button lives in bubble-wrap, below the bubble, not inside it.
+  // We'll patch buildMessageRow to inject it after bubble for "them" sticker messages.
+  const originalBuildMessageRow = buildMessageRow;
+  window.buildMessageRow = function(msg) {
+    const row = originalBuildMessageRow(msg);
+    const isMe = msg.senderId === ME?.userId;
+    if (msg.type === 'sticker' && !isMe && !msg.deleted && msg.content?.mediaUrl) {
+      const wrap = row.querySelector('.bubble-wrap');
+      if (wrap) {
+        const addBtn = buildStickerAddButton(msg.content.mediaUrl);
+        // Insert after the bubble (before reactions row / meta)
+        const bubble = wrap.querySelector('.bubble');
+        const reactRow = wrap.querySelector('[data-react-for]');
+        const meta     = wrap.querySelector('[data-meta-for]');
+        if (reactRow) wrap.insertBefore(addBtn, reactRow);
+        else if (meta) wrap.insertBefore(addBtn, meta);
+        else wrap.appendChild(addBtn);
+      }
+    }
+    return row;
+  };
+})();
+
+// ── Also patch makeMediaImg to load sticker images from IDB cache ──
+(function patchMakeMediaImgForCache() {
+  const orig = makeMediaImg;
+  window.makeMediaImg = function(url, isSticker) {
+    const img = orig(url, isSticker);
+    if (isSticker && url) {
+      // Replace src with blob URL asynchronously once loaded
+      getStickerBlobURL(url).then(blobUrl => {
+        if (blobUrl && blobUrl !== url) img.src = blobUrl;
+      }).catch(() => {});
+    }
+    return img;
+  };
+})();
+
+// ── Boot: load stickers on page load ──────────────────────────
+// We hook into the existing init() — load stickers right after
+document.addEventListener('DOMContentLoaded', () => {
+  // Load cached list immediately, then refresh from server
+  idbGet(STICKER_META_STORE, 'myList').then(cached => {
+    if (cached) myStickers = cached;
+  });
+  loadMyStickers();
+});
+</script>
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("/sw.js")
       .then(reg => console.log("SW registered"))
