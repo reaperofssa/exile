@@ -874,6 +874,103 @@ body{
 .msg-row.me.highlight .bubble{animation:highlightPulseMe 2s ease forwards;}
 @keyframes highlightPulseMe{0%,100%{background:var(--bubble-me);}25%,75%{background:rgba(155,89,182,0.45);}}
 
+/* ── @mention in bubble text ── */
+.mention-chip{
+  display:inline;color:var(--violet);font-weight:600;
+  cursor:pointer;border-radius:3px;padding:0 1px;
+  transition:background 0.12s;
+}
+.mention-chip:hover{background:rgba(155,89,182,0.18);}
+.mention-chip.me-mention{
+  color:var(--amber-light);background:rgba(201,123,58,0.12);
+  border-radius:4px;padding:0 3px;
+}
+
+/* ── Mention floater ── */
+.mention-floater{
+  position:fixed;
+  bottom:calc(72px + env(safe-area-inset-bottom));
+  left:50%;transform:translateX(-50%) translateY(6px);
+  z-index:300;
+  display:flex;align-items:center;gap:0;
+  background:rgba(18,8,18,0.92);
+  border:1px solid rgba(155,89,182,0.45);
+  border-radius:22px;
+  box-shadow:0 4px 20px rgba(155,89,182,0.25),0 2px 8px rgba(0,0,0,0.5);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  opacity:0;pointer-events:none;
+  transition:opacity 0.22s,transform 0.22s cubic-bezier(0.34,1.2,0.64,1);
+  white-space:nowrap;overflow:hidden;
+}
+.mention-floater.show{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0);}
+.mf-badge{
+  background:linear-gradient(135deg,var(--violet),#6a2e9e);
+  color:#fff;font-size:11px;font-weight:800;
+  padding:6px 10px 6px 12px;
+  display:flex;align-items:center;gap:5px;
+  border-radius:22px 0 0 22px;
+}
+.mf-badge svg{width:13px;height:13px;flex-shrink:0;}
+.mf-nav{display:flex;align-items:center;gap:0;}
+.mf-nav-btn{
+  background:transparent;border:none;
+  color:rgba(255,255,255,0.7);cursor:pointer;
+  padding:6px 8px;font-size:13px;line-height:1;
+  transition:color 0.12s,background 0.12s;
+}
+.mf-nav-btn:hover{color:#fff;background:rgba(255,255,255,0.08);}
+.mf-nav-btn:disabled{opacity:0.28;cursor:default;}
+.mf-pos{font-size:11px;color:rgba(255,255,255,0.5);padding:0 2px;min-width:28px;text-align:center;}
+.mf-goto{
+  background:rgba(155,89,182,0.2);border:none;border-left:1px solid rgba(155,89,182,0.3);
+  color:var(--violet);font-size:11px;font-weight:700;cursor:pointer;
+  padding:6px 11px 6px 9px;border-radius:0 22px 22px 0;
+  transition:background 0.12s;white-space:nowrap;
+}
+.mf-goto:hover{background:rgba(155,89,182,0.35);}
+.mf-dismiss{
+  background:transparent;border:none;border-left:1px solid rgba(255,255,255,0.07);
+  color:var(--text-dim);cursor:pointer;padding:6px 10px 6px 8px;
+  font-size:15px;line-height:1;border-radius:0 22px 22px 0;
+  transition:color 0.12s;
+}
+.mf-dismiss:hover{color:var(--text-sec);}
+
+/* ── @ autocomplete dropdown ── */
+.at-suggest{
+  position:absolute;bottom:calc(100% + 6px);left:0;right:0;
+  background:linear-gradient(180deg,#1e1428,#160e20);
+  border:1px solid rgba(155,89,182,0.25);
+  border-radius:var(--r-md);
+  box-shadow:0 -4px 24px rgba(0,0,0,0.5);
+  overflow:hidden;
+  display:none;z-index:250;
+  max-height:220px;overflow-y:auto;
+}
+.at-suggest.show{display:block;animation:ctxIn 0.12s ease;}
+.at-suggest-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 12px;cursor:pointer;
+  transition:background 0.1s;
+  border-bottom:1px solid rgba(255,255,255,0.04);
+}
+.at-suggest-item:last-child{border-bottom:none;}
+.at-suggest-item:hover,.at-suggest-item.active{background:rgba(155,89,182,0.15);}
+.at-suggest-avatar{
+  width:30px;height:30px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,var(--purple-accent),var(--amber));
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;color:#fff;overflow:hidden;
+}
+.at-suggest-avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover;}
+.at-suggest-info{min-width:0;flex:1;}
+.at-suggest-name{font-size:13px;font-weight:600;color:var(--text-pri);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.at-suggest-handle{font-size:11px;color:var(--text-sec);}
+.at-suggest-badge{font-size:9px;padding:1px 5px;border-radius:3px;font-weight:700;flex-shrink:0;}
+.at-sb-admin{background:rgba(155,89,182,0.2);color:var(--violet);}
+.at-sb-owner{background:rgba(201,123,58,0.2);color:var(--amber-light);}
+.at-suggest-empty{padding:12px 16px;font-size:13px;color:var(--text-dim);text-align:center;}
+
 /* ── Group info sheet ── */
 .group-sheet{
   position:fixed;inset:0;z-index:900;
@@ -1403,7 +1500,10 @@ body{
 
 <!-- ── Input area ── -->
 <div class="input-area" id="inputArea">
-  <div class="reply-strip" id="replyStrip">
+  <!-- @ autocomplete dropdown -->
+<div class="at-suggest" id="atSuggest"></div>
+
+<div class="reply-strip" id="replyStrip">
     <div class="strip-content">
       <div class="strip-label">Reply to <span id="replyStripName"></span></div>
       <div class="strip-preview" id="replyStripPreview"></div>
@@ -1437,7 +1537,8 @@ body{
     <input type="file" id="file-input" accept="image/*,audio/*,video/*,.webp" onchange="handleFileSelect(event)">
     <div class="msg-input-wrap">
       <textarea class="msg-textarea" id="msgTextarea" placeholder="Message…" rows="1"
-        oninput="handleInput()" onkeydown="handleKeyDown(event)"></textarea>
+        oninput="handleInput()" onkeydown="handleKeyDown(event)"
+        onblur="setTimeout(closeAtSuggest, 150)"></textarea>
       <button class="emoji-toggle" onclick="toggleEmojiPicker(event)">😊</button>
     </div>
     <button class="send-btn voice-mode" id="sendBtn" onclick="sendOrRecord()">
@@ -1587,6 +1688,21 @@ body{
   </div>
 </div>
 
+<!-- ── Mention floater ── -->
+<div class="mention-floater" id="mentionFloater">
+  <div class="mf-badge">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 006 0v-1a10 10 0 10-3.92 7.94"/></svg>
+    <span id="mfCount">0</span>
+  </div>
+  <div class="mf-nav">
+    <button class="mf-nav-btn" id="mfPrev" title="Previous mention">▲</button>
+    <span class="mf-pos"><span id="mfIdx">1</span></span>
+    <button class="mf-nav-btn" id="mfNext" title="Next mention">▼</button>
+  </div>
+  <button class="mf-goto" id="mfGoto">Go to ↗</button>
+  <button class="mf-dismiss" id="mfDismiss" title="Clear all">✕</button>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -1679,6 +1795,7 @@ async function init() {
     renderPinnedBar();
     await loadMessages();
     connectWS();
+    loadUnseenMentions(); // fetch pending @tags
 
     if (URL_MSG_ID) {
       setTimeout(()=>scrollToMessage(URL_MSG_ID, true), 400);
@@ -2590,6 +2707,7 @@ function ctxAction(action) {
 // ── Input handlers ────────────────────────────────────────────────────
 function handleInput() {
   autoGrow(); updateSendBtn();
+  handleAtInput(document.getElementById('msgTextarea'));
   if (!wsReady || !CAN_SEND) return;
   if (!isTyping) {
     isTyping = true;
@@ -2603,6 +2721,8 @@ function handleInput() {
 }
 
 function handleKeyDown(e) {
+  // Let @ suggest intercept arrow/enter/tab/esc
+  if (atSuggestKeyDown(e)) return;
   if (e.key === 'Enter' && !e.shiftKey && window.innerWidth > 768) {
     e.preventDefault(); sendOrRecord();
   }
@@ -2691,9 +2811,33 @@ function scrollToBottom(smooth) {
   const list = document.getElementById('msgList');
   list.scrollTo({top: list.scrollHeight, behavior: smooth ? 'smooth' : 'instant'});
 }
-function scrollToMessage(msgId, highlight) {
-  const row = document.querySelector(`.msg-row[data-msg-id="${msgId}"]`);
-  if (!row) { showToast('Message not in view'); return; }
+async function scrollToMessage(msgId, highlight) {
+  let row = document.querySelector(`.msg-row[data-msg-id="${msgId}"]`);
+  if (!row) {
+    // Message not loaded — fetch around it, then scroll
+    try {
+      const res  = await fetch(`/api/${GROUP_TYPE}/${GROUP_ID}/messages?around=${msgId}&limit=40`, {credentials:'include'});
+      const data = await res.json();
+      const msgs = data.messages || [];
+      if (!msgs.length) { showToast('Message not found'); return; }
+      const list   = document.getElementById('msgList');
+      const typing = document.getElementById('typingBubble');
+      // Clear current messages and re-render around context
+      list.querySelectorAll('.msg-row,.date-sep').forEach(e=>e.remove());
+      msgs.forEach(m => {
+        messages[m.messageId] = m;
+        if (!msgOrder.includes(m.messageId)) msgOrder.push(m.messageId);
+        const r = buildMessageRow(m);
+        list.insertBefore(r, typing);
+      });
+      applyConsecutiveClasses(); insertDateSeparators();
+      oldestId = data.pagination?.oldestMessageId || msgs[0]?.messageId;
+      newestId = data.pagination?.newestMessageId || msgs[msgs.length-1]?.messageId;
+      allLoaded = !data.pagination?.hasMoreAbove;
+      row = document.querySelector(`.msg-row[data-msg-id="${msgId}"]`);
+    } catch { showToast('Failed to load message'); return; }
+  }
+  if (!row) { showToast('Message not found'); return; }
   row.scrollIntoView({behavior:'smooth', block:'center'});
   if (highlight) { row.classList.add('highlight'); setTimeout(() => row.classList.remove('highlight'), 2500); }
 }
@@ -2720,6 +2864,213 @@ function updateJumpBadge() {
   const badge = document.getElementById('jumpBadge');
   if (unreadBelowCount > 0) { badge.style.display = 'flex'; badge.textContent = unreadBelowCount > 99 ? '99+' : unreadBelowCount; }
   else badge.style.display = 'none';
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  MENTION FLOATER
+// ══════════════════════════════════════════════════════════════════
+let unseenMentions    = [];   // [{messageId, sentAt, ...}] sorted oldest→newest
+let mentionFloaterIdx = 0;    // index of currently focused mention
+
+async function loadUnseenMentions() {
+  if (!ME || !GROUP_ID) return;
+  try {
+    const res  = await fetch(`/api/${GROUP_TYPE}/${GROUP_ID}/mentions/unseen`, {credentials:'include'});
+    const data = await res.json();
+    unseenMentions = data.unseen || [];
+    renderMentionFloater();
+  } catch {}
+}
+
+function renderMentionFloater() {
+  const fl = document.getElementById('mentionFloater');
+  if (!unseenMentions.length) { fl.classList.remove('show'); return; }
+  document.getElementById('mfCount').textContent = unseenMentions.length;
+  mentionFloaterIdx = Math.min(mentionFloaterIdx, unseenMentions.length - 1);
+  updateMentionFloaterNav();
+  fl.classList.add('show');
+}
+
+function updateMentionFloaterNav() {
+  const total = unseenMentions.length;
+  document.getElementById('mfIdx').textContent  = total ? (mentionFloaterIdx + 1) + '/' + total : '0';
+  document.getElementById('mfPrev').disabled    = mentionFloaterIdx <= 0;
+  document.getElementById('mfNext').disabled    = mentionFloaterIdx >= total - 1;
+}
+
+document.getElementById('mfPrev').addEventListener('click', () => {
+  if (mentionFloaterIdx > 0) { mentionFloaterIdx--; updateMentionFloaterNav(); }
+});
+document.getElementById('mfNext').addEventListener('click', () => {
+  if (mentionFloaterIdx < unseenMentions.length - 1) { mentionFloaterIdx++; updateMentionFloaterNav(); }
+});
+
+document.getElementById('mfGoto').addEventListener('click', async () => {
+  const m = unseenMentions[mentionFloaterIdx];
+  if (!m) return;
+  await scrollToMessage(m.messageId, true);
+  // Mark this mention as seen
+  markMentionSeen(m.messageId);
+});
+
+document.getElementById('mfDismiss').addEventListener('click', async () => {
+  // Mark all seen
+  try {
+    await fetch(`/api/${GROUP_TYPE}/${GROUP_ID}/mentions/seen-all`, {method:'POST', credentials:'include'});
+  } catch {}
+  unseenMentions = [];
+  renderMentionFloater();
+});
+
+async function markMentionSeen(messageId) {
+  try {
+    await fetch(`/api/${GROUP_TYPE}/${GROUP_ID}/messages/${messageId}/seen-mention`, {method:'POST', credentials:'include'});
+  } catch {}
+  unseenMentions = unseenMentions.filter(m => m.messageId !== messageId);
+  if (mentionFloaterIdx >= unseenMentions.length) mentionFloaterIdx = Math.max(0, unseenMentions.length - 1);
+  renderMentionFloater();
+}
+
+// Called from CP socket when a new mention arrives
+function addIncomingMention(mention) {
+  // Avoid duplicates
+  if (unseenMentions.find(m => m.messageId === mention.messageId)) return;
+  unseenMentions.push({
+    messageId:      mention.messageId,
+    sentAt:         mention.sentAt,
+    senderId:       mention.senderId,
+    senderName:     mention.senderName,
+    senderUsername: mention.senderUsername,
+    content:        mention.content,
+    type:           mention.msgType || 'text',
+  });
+  mentionFloaterIdx = unseenMentions.length - 1; // jump to newest
+  renderMentionFloater();
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  @ AUTOCOMPLETE
+// ══════════════════════════════════════════════════════════════════
+let atQuery        = null;   // current partial username being typed (null = inactive)
+let atQueryStart   = -1;     // cursor position where @ started
+let atSuggestItems = [];
+let atSelectedIdx  = -1;
+let atFetchTimer   = null;
+
+function handleAtInput(ta) {
+  const val = ta.value;
+  const pos = ta.selectionStart;
+
+  // Find if cursor is inside an @mention
+  let start = pos - 1;
+  while (start >= 0 && /[a-zA-Z0-9_]/.test(val[start])) start--;
+  if (val[start] === '@') {
+    const partial = val.slice(start + 1, pos);
+    atQuery      = partial;
+    atQueryStart = start;
+    scheduleAtFetch(partial);
+  } else {
+    closeAtSuggest();
+  }
+}
+
+function scheduleAtFetch(q) {
+  clearTimeout(atFetchTimer);
+  atFetchTimer = setTimeout(() => fetchAtSuggestions(q), 180);
+}
+
+async function fetchAtSuggestions(q) {
+  if (atQuery === null) return;
+  try {
+    const url = `/api/${GROUP_TYPE}/${GROUP_ID}/members/search?q=${encodeURIComponent(q)}&limit=8`;
+    const res  = await fetch(url, {credentials:'include'});
+    const data = await res.json();
+    renderAtSuggest(data.members || []);
+  } catch { closeAtSuggest(); }
+}
+
+function renderAtSuggest(members) {
+  const box = document.getElementById('atSuggest');
+  atSuggestItems = members;
+  atSelectedIdx  = -1;
+  box.innerHTML  = '';
+  if (!members.length) {
+    box.innerHTML = '<div class="at-suggest-empty">No members found</div>';
+    box.classList.add('show');
+    return;
+  }
+  members.forEach((m, i) => {
+    const item = document.createElement('div');
+    item.className = 'at-suggest-item';
+    item.dataset.idx = i;
+    const av = document.createElement('div'); av.className = 'at-suggest-avatar';
+    if (m.profilePicture) {
+      const img = document.createElement('img'); img.src = m.profilePicture; img.alt = '';
+      av.appendChild(img);
+    } else { av.textContent = initials(m.name || m.username || '?'); }
+    const info = document.createElement('div'); info.className = 'at-suggest-info';
+    info.innerHTML = `<div class="at-suggest-name">${esc(m.name||m.username||'User')}</div><div class="at-suggest-handle">@${esc(m.username||'')}</div>`;
+    item.appendChild(av); item.appendChild(info);
+    if (m.isOwner) { const b=document.createElement('span');b.className='at-suggest-badge at-sb-owner';b.textContent='Owner';item.appendChild(b); }
+    else if (m.isAdmin) { const b=document.createElement('span');b.className='at-suggest-badge at-sb-admin';b.textContent='Admin';item.appendChild(b); }
+    item.addEventListener('mousedown', e => { e.preventDefault(); applyAtSuggest(m.username); });
+    item.addEventListener('touchstart', e => { e.preventDefault(); applyAtSuggest(m.username); }, {passive:false});
+    box.appendChild(item);
+  });
+  box.classList.add('show');
+}
+
+function applyAtSuggest(username) {
+  const ta  = document.getElementById('msgTextarea');
+  const val = ta.value;
+  const pos = ta.selectionStart;
+  // Replace @partial with @username followed by space
+  const before = val.slice(0, atQueryStart + 1); // includes the @
+  const after  = val.slice(pos);
+  ta.value = before + username + ' ' + after;
+  const newPos = atQueryStart + 1 + username.length + 1;
+  ta.setSelectionRange(newPos, newPos);
+  ta.focus();
+  closeAtSuggest();
+  autoGrow(); updateSendBtn();
+}
+
+function closeAtSuggest() {
+  atQuery = null; atQueryStart = -1; atSelectedIdx = -1;
+  const box = document.getElementById('atSuggest');
+  box.classList.remove('show');
+  box.innerHTML = '';
+}
+
+function atSuggestKeyDown(e) {
+  const box = document.getElementById('atSuggest');
+  if (!box.classList.contains('show') || !atSuggestItems.length) return false;
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    atSelectedIdx = Math.min(atSelectedIdx + 1, atSuggestItems.length - 1);
+    updateAtSelection(); return true;
+  }
+  if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    atSelectedIdx = Math.max(atSelectedIdx - 1, 0);
+    updateAtSelection(); return true;
+  }
+  if (e.key === 'Enter' || e.key === 'Tab') {
+    if (atSelectedIdx >= 0 && atSuggestItems[atSelectedIdx]) {
+      e.preventDefault();
+      applyAtSuggest(atSuggestItems[atSelectedIdx].username);
+      return true;
+    }
+  }
+  if (e.key === 'Escape') { closeAtSuggest(); return true; }
+  return false;
+}
+
+function updateAtSelection() {
+  document.querySelectorAll('#atSuggest .at-suggest-item').forEach((el, i) => {
+    el.classList.toggle('active', i === atSelectedIdx);
+    if (i === atSelectedIdx) el.scrollIntoView({block:'nearest'});
+  });
 }
 
 // ── Group info sheet ──────────────────────────────────────────────────
@@ -2916,11 +3267,10 @@ function buildMemberRow(m) {
   return item;
 }
 
-// ── Member action sheet ───────────────────────────────────────────────
+// Open member sheet by userId
 async function openMemberSheet(userId) {
   const m = getMember(userId);
   if (!m) {
-    // Try fetching basic user info
     try {
       const res = await fetch(`/api/users/${userId}`, {credentials:'include'});
       if (res.ok) { const d = await res.json(); showSimpleMemberSheet(d.user); }
@@ -2930,6 +3280,24 @@ async function openMemberSheet(userId) {
   activeMemberTarget = m;
   renderMemberSheet(m);
   document.getElementById('memberSheet').classList.add('show');
+}
+
+// Open member sheet by @username (for clicking @chips in messages)
+async function openMemberSheetByUsername(username) {
+  const lower = username.toLowerCase();
+  // Check local members first
+  const local = (GROUP?.members || []).find(m => (m.username||'').toLowerCase() === lower);
+  if (local) { openMemberSheet(local.userId); return; }
+  // Fall back to server
+  try {
+    const res = await fetch(`/api/checkuser/${encodeURIComponent(username)}`, {credentials:'include'});
+    if (res.ok) {
+      const d = await res.json();
+      const u = d.user;
+      if (u) { showSimpleMemberSheet(u); return; }
+    }
+  } catch {}
+  showToast(`@${username} not found`);
 }
 
 function closeMemberSheet() { document.getElementById('memberSheet').classList.remove('show'); activeMemberTarget = null; }
@@ -3242,16 +3610,26 @@ function renderInline(str, parent) {
     if(inner.endsWith('"')||inner.endsWith('\u201D'))inner=inner.slice(0,-1);
     const q=document.createElement('span');q.className='msg-quote';q.textContent=inner.trim();parent.appendChild(q);return;
   }
-  const RE=/(https?:\/\/[^\s<>"'`*_]+)|(\*([^*]{1,300})\*)|(_((?!\s)[^_]{1,300}(?<!\s))_)|(`([^`]{1,300})`)|([*_`])/g;
+  // Extended RE: adds @mention group
+  const RE=/(https?:\/\/[^\s<>"'`*_]+)|(@([a-zA-Z0-9_]+))|(\*([^*]{1,300})\*)|(_((?!\s)[^_]{1,300}(?<!\s))_)|(`([^`]{1,300})`)|([ *_`])/g;
   let last=0,m;
   while((m=RE.exec(str))!==null){
     if(m.index>last)parent.appendChild(document.createTextNode(str.slice(last,m.index)));
     last=m.index+m[0].length;
     if(m[1]){const a=document.createElement('a');a.href=m[1];a.target='_blank';a.rel='noopener noreferrer';a.className='msg-link';a.textContent=m[1];a.addEventListener('click',e=>e.stopPropagation());parent.appendChild(a);}
-    else if(m[2]){const b=document.createElement('strong');b.className='msg-bold';b.textContent=m[3];parent.appendChild(b);}
-    else if(m[4]){const em=document.createElement('em');em.className='msg-italic';em.textContent=m[5];parent.appendChild(em);}
-    else if(m[6]){const code=document.createElement('code');code.className='msg-code-inline';code.textContent=m[7];parent.appendChild(code);}
-    else{parent.appendChild(document.createTextNode(m[8]));}
+    else if(m[2]){
+      // @mention chip
+      const handle=m[3];
+      const chip=document.createElement('span');
+      chip.className='mention-chip'+(ME?.username?.toLowerCase()===handle.toLowerCase()?' me-mention':'');
+      chip.textContent='@'+handle;
+      chip.addEventListener('click',e=>{e.stopPropagation();openMemberSheetByUsername(handle);});
+      parent.appendChild(chip);
+    }
+    else if(m[4]){const b=document.createElement('strong');b.className='msg-bold';b.textContent=m[5];parent.appendChild(b);}
+    else if(m[6]){const em=document.createElement('em');em.className='msg-italic';em.textContent=m[7];parent.appendChild(em);}
+    else if(m[8]){const code=document.createElement('code');code.className='msg-code-inline';code.textContent=m[9];parent.appendChild(code);}
+    else{parent.appendChild(document.createTextNode(m[10]));}
   }
   if(last<str.length)parent.appendChild(document.createTextNode(str.slice(last)));
 }
@@ -3347,6 +3725,22 @@ function handleCPMsg(msg) {
         chatType: 'dm',
         partnerId: msg.sender?.userId,
       });
+      break;
+    }
+    case 'mention': {
+      // Only handle if it's for this group
+      if (msg.groupId === GROUP_ID) {
+        addIncomingMention(msg);
+        if (notificationsEnabled) {
+          showNotification({
+            name: msg.senderName || 'Someone',
+            avatar: msg.senderAvatar || null,
+            preview: `@${ME?.username || 'you'}: ${msg.preview || ''}`,
+            chatId: msg.groupId,
+            chatType: msg.groupType,
+          });
+        }
+      }
       break;
     }
     case 'ping': cpWs.emit('pong'); break;
