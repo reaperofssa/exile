@@ -7431,7 +7431,69 @@ app.get("/api/explore", async (req, res) => {
   res.json({ ...result, sort, page, limit });
 });
 
+// ════════════════════════════════════════════════════════════════════════════
+//  EXPLORE — BOTS  (public bot directory)
+// ════════════════════════════════════════════════════════════════════════════
 
+/**
+ * GET /api/explore/bots?q=&page=1&limit=20
+ *
+ * Public bot directory — no auth required.
+ * Returns all non-disabled bots, optionally filtered by name / username /
+ * description.  Sorted by name (alphabetical, stable across pages).
+ *
+ * Response: { bots: BotStub[], page, limit, total }
+ */
+app.get("/api/explore/bots", async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+    const page  = Math.max(parseInt(req.query.page)  || 1,  1);
+    const skip  = (page - 1) * limit;
+    const q     = req.query.q?.trim();
+
+    const filter = { disabled: { $ne: true } };
+    if (q) {
+      const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      filter.$or = [
+        { name:          { $regex: rx } },
+        { usernameLower: { $regex: q.toLowerCase() } },
+        { description:   { $regex: rx } },
+      ];
+    }
+
+    const [bots, total] = await Promise.all([
+      db.collection("bots")
+        .find(filter, { projection: {
+          botId: 1, name: 1, username: 1, tag: 1,
+          description: 1, profilePicture: 1,
+          isBot: 1, status: 1, createdAt: 1,
+        }})
+        .sort({ name: 1 })
+        .skip(skip)
+        .limit(limit)
+        .toArray(),
+      db.collection("bots").countDocuments(filter),
+    ]);
+
+    res.json({
+      bots: bots.map(b => ({
+        botId:          b.botId,
+        name:           b.name,
+        username:       b.username,
+        tag:            b.tag,
+        description:    b.description || "",
+        profilePicture: b.profilePicture || null,
+        isBot:          true,
+        status:         b.status || "offline",
+        createdAt:      b.createdAt,
+      })),
+      page, limit, total,
+    });
+  } catch (err) {
+    console.error("explore/bots error:", err);
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
 
 // ════════════════════════════════════════════════════════════════════════════
 //  STICKERS
