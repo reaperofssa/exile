@@ -1857,6 +1857,25 @@ app.patch("/api/settings",
 
     await users.updateOne({ userId }, { $set: allUpdates });
     const updated = await users.findOne({ userId });
+
+    // Push a 'profile' update to all open Control Panel sockets for this user
+    // so the CP header (name, avatar, tag) stays in sync after settings changes.
+    const levelInfo_ = buildLevelInfo(updated.xp || 0);
+    broadcastCP(userId, {
+      type:           "profile",
+      name:           updated.name,
+      username:       updated.username,
+      tag:            updated.tag,
+      profilePicture: updated.profilePicture || null,
+      premium:        updated.premium        || false,
+      verified:       updated.verified       || false,
+      exiles:         updated.exiles         || 0,
+      xp:             updated.xp             || 0,
+      streaks:        updated.streaks        || 0,
+      reputation:     updated.reputation     || 0,
+      levelInfo:      levelInfo_,
+    });
+
     res.json({ message: "Settings updated.", user: sanitizeUser(updated, userId) });
   }
 );
