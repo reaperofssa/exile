@@ -2371,18 +2371,34 @@ function handleWsMessage(msg) {
   }
 
   if (msg.type === 'messageSent') {
-    // echo of own send — already in optimistic render, just ensure it's stored
+    // echo of own send — if there's a matching optimistic temp row, replace it;
+    // otherwise render fresh (covers voice messages and any non-optimistic send path)
     const m = msg.message;
     if (!m) return;
-    // Accept if it's for this conversation (covers both user-to-user and user-to-bot)
     const expectedConvId = convId();
     const matchesConv = m.conversationId === expectedConvId || m.chatId === expectedConvId;
     const matchesPair = (m.senderId === ME.userId && m.recipientId === RECIPIENT_ID) ||
                         (m.senderId === ME.userId && IS_BOT);
     if (!matchesConv && !matchesPair) return;
-    if (m.messageId && !messages[m.messageId]) {
+    if (!m.messageId) return;
+
+    // Find any temp row that might match (optimistic sends use temp_ prefix)
+    const tempRow = document.querySelector('.msg-row[data-msg-id^="temp_"]');
+    if (tempRow && !messages[m.messageId]) {
+      // Replace the optimistic temp row with the real message
+      replaceOptimistic(tempRow.dataset.msgId, m);
+    } else if (!messages[m.messageId]) {
+      // No optimistic row exists — render fresh (e.g. voice messages)
       messages[m.messageId] = m;
+      messageOrder.push(m.messageId);
+      const list   = document.getElementById('msgList');
+      const typing = document.getElementById('typingBubble');
+      list.insertBefore(buildMessageRow(m), typing);
+      applyConsecutiveClasses();
+      insertDateSeparators();
+      scrollToBottom(true);
     }
+    newestId = m.messageId;
     return;
   }
 
@@ -2838,6 +2854,15 @@ async function startVoiceRecording() {
       clearInterval(recInterval);
       document.getElementById('recordingBar').classList.remove('show');
       mediaRecorder=null; stream.getTracks().forEach(t=>t.stop());
+      // Optimistic render for voice — show a placeholder immediately
+      const tempId = 'temp_' + Date.now();
+      const tempMsg = {
+        messageId: tempId, conversationId: convId(),
+        senderId: ME.userId, recipientId: RECIPIENT_ID,
+        type: 'voice', content: { mediaUrl: URL.createObjectURL(blob) },
+        sentAt: new Date().toISOString(), readAt: null, deleted: false, reactions: {}, _temp: true,
+      };
+      addOptimistic(tempMsg);
       // Send voice
       const fd=new FormData(); fd.append('type','voice'); fd.append('media',file);
       try {
@@ -2846,8 +2871,17 @@ async function startVoiceRecording() {
           : `/api/messages?to=${RECIPIENT_ID}`;
         const res=await fetch(voiceEndpoint,{method:'POST',credentials:'include',body:fd});
         const d=await res.json();
-        if(res.ok&&d.message) addOptimistic(d.message); else showToast(d.error||'Send failed');
-      } catch { showToast('Network error'); }
+        if(res.ok&&d.message) {
+          replaceOptimistic(tempId, d.message);
+          newestId = d.message.messageId;
+        } else {
+          removeOptimistic(tempId);
+          showToast(d.error||'Send failed');
+        }
+      } catch {
+        removeOptimistic(tempId);
+        showToast('Network error');
+      }
     };
     mediaRecorder.start();
     document.getElementById('recordingBar').classList.add('show');
@@ -3636,6 +3670,17 @@ async function sendSticker(url) {
   const savedReply = replyTo;
   cancelReply();
 
+  // Optimistic render — show the sticker instantly before server confirms
+  const tempId = 'temp_' + Date.now();
+  const tempMsg = {
+    messageId: tempId, conversationId: convId(),
+    senderId: ME.userId, recipientId: RECIPIENT_ID,
+    type: 'sticker', content: { mediaUrl: url },
+    replyTo: savedReply ? { ...savedReply } : null,
+    sentAt: new Date().toISOString(), readAt: null, deleted: false, reactions: {}, _temp: true,
+  };
+  addOptimistic(tempMsg);
+
   const fd = new FormData();
   fd.append('type', 'sticker');
   fd.append('stickerUrl', url);
@@ -3648,19 +3693,17 @@ async function sendSticker(url) {
     const res  = await fetch(endpoint, { method: 'POST', credentials: 'include', body: fd });
     const data = await res.json();
     if (!res.ok) {
+      removeOptimistic(tempId);
       showToast(data.error || 'Send failed');
-    } else if (data.message && !messages[data.message.messageId]) {
-      messages[data.message.messageId] = data.message;
-      messageOrder.push(data.message.messageId);
-      const list   = document.getElementById('msgList');
-      const typing = document.getElementById('typingBubble');
-      list.insertBefore(buildMessageRow(data.message), typing);
-      applyConsecutiveClasses(); insertDateSeparators();
+    } else if (data.message) {
+      replaceOptimistic(tempId, data.message);
       newestId = data.message.messageId;
-      scrollToBottom(true);
       sendWS({ type: 'read', conversationId: convId(), upToMessageId: newestId });
     }
-  } catch { showToast('Network error'); }
+  } catch {
+    removeOptimistic(tempId);
+    showToast('Network error');
+  }
 }
 
 // ── "Add to my stickers" button on received stickers ──
