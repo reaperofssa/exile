@@ -19,7 +19,7 @@ const geoip        = require("geoip-lite");
 const { MongoClient, ObjectId } = require("mongodb");
 const { v4: uuidv4 } = require("uuid");
 
-// ─── Config ───────────────────────────────────────────────────────────────────
+// ─── Configuration ───────────────────────────────────────────────────────────────────
 
 const JWT_SECRET   = process.env.JWT_SECRET  || "change_this_secret_in_production";
 const MONGO_URI    = process.env.MONGO_URI   || "mongodb://127.0.0.1:27017";
