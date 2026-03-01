@@ -2086,13 +2086,35 @@ app.delete("/api/contacts/:targetId", requireAuth, async (req, res) => {
 });
 
 /** Get my contacts list */
+/**
+ * GET /api/contacts?limit=50&page=1&q=<search>
+ * Returns paginated contacts list. Optional ?q= filters by name or username.
+ */
 app.get("/api/contacts", requireAuth, async (req, res) => {
   const users  = db.collection("users");
   const me     = await users.findOne({ userId: req.user.userId });
   if (!me) return res.status(404).json({ error: "User not found." });
 
-  const contacts = await users.find({ userId: { $in: me.contactsList || [] } }).toArray();
-  res.json({ contacts: contacts.map(u => userStub(u)) });
+  const limit = Math.min(parseInt(req.query.limit) || 50, 100);
+  const page  = Math.max(parseInt(req.query.page)  || 1,  1);
+  const skip  = (page - 1) * limit;
+  const q     = req.query.q?.trim();
+
+  const contactIds = me.contactsList || [];
+  if (contactIds.length === 0) return res.json({ contacts: [], total: 0, page, limit });
+
+  const filter = { userId: { $in: contactIds } };
+  if (q) {
+    const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+    filter.$or = [{ name: { $regex: rx } }, { usernameLower: { $regex: q.toLowerCase() } }];
+  }
+
+  const [contacts, total] = await Promise.all([
+    users.find(filter).skip(skip).limit(limit).toArray(),
+    users.countDocuments(filter),
+  ]);
+
+  res.json({ contacts: contacts.map(u => userStub(u)), total, page, limit });
 });
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -5731,12 +5753,21 @@ for (const socketId of senderSockets) {
       }).toArray();
       for (const mu of mentionedUsers) {
         broadcastCP(mu.userId, {
-          type:      "mention",
+          type:           "mention",
           groupId,
           groupType,
+          chatName:       group.name,
           messageId,
-          preview:   (content.text || "").slice(0, 80),
-          sender:    userStub(user),
+          sentAt:         now,
+          senderId:       user.userId,
+          senderName:     user.name,
+          senderUsername: user.username,
+          senderAvatar:   user.profilePicture,
+          senderPremium:  user.premium,
+          content:        content,
+          msgType:        type,
+          replyTo:        replyTo || null,
+          preview:        (content.text || "").slice(0, 80),
         });
       }
     }
@@ -5747,45 +5778,97 @@ for (const socketId of senderSockets) {
 
 /**
  * GET /api/:groupType/:groupId/messages
- * Telegram-style cursor pagination.
- * Query: ?limit=30&before=<messageId>&after=<messageId>
+ * Cursor pagination with three modes:
+ *   ?before=<messageId>        — load older messages (scroll up)
+ *   ?after=<messageId>         — load newer messages (scroll down)
+ *   ?around=<messageId>&limit= — center on a specific message (jump-to)
+ *                                returns floor(limit/2) before + anchor + rest after
+ *                                includes hasMoreAbove + hasMoreBelow for both scroll dirs
  */
 app.get("/api/:groupType/:groupId/messages", requireAuth, async (req, res) => {
   const { groupType, groupId } = req.params;
-  const userId  = req.user.userId;
-  const limit   = Math.min(parseInt(req.query.limit) || 30, 100);
+  const userId   = req.user.userId;
+  const limit    = Math.min(parseInt(req.query.limit) || 30, 100);
   const beforeId = req.query.before;
   const afterId  = req.query.after;
+  const aroundId = req.query.around;
   const col      = groupType === "space" ? "spaces" : "feeds";
   const idField  = groupType === "space" ? "spaceId" : "feedId";
 
-  const group  = await db.collection(col).findOne({ [idField]: groupId });
+  const group = await db.collection(col).findOne({ [idField]: groupId });
   if (!group) return res.status(404).json({ error: "Group not found." });
   if (group.banned) return res.json({ banned: true });
 
   const member = getMember(group, userId);
   if (!member || member.isBanned) return res.status(403).json({ error: "Access denied." });
 
-  const query = { groupId, deleted: false };
-  const gmsgs = db.collection("groupMessages");
+  const gmsgs     = db.collection("groupMessages");
+  const baseQuery = { groupId, deleted: false };
 
-  if (beforeId) {
-    const cursor = await gmsgs.findOne({ messageId: beforeId });
-    if (cursor) query.sentAt = { $lt: cursor.sentAt };
-  } else if (afterId) {
-    const cursor = await gmsgs.findOne({ messageId: afterId });
-    if (cursor) query.sentAt = { $gt: cursor.sentAt };
+  // Apply clearedAt filter (per-user clear chat)
+  const clearedAt = member.clearedAt;
+  if (clearedAt) baseQuery.sentAt = { $gt: clearedAt };
+
+  let sorted;
+  let hasMoreAbove = false;
+  let hasMoreBelow = false;
+
+  if (aroundId) {
+    // ── AROUND MODE ──────────────────────────────────────────────────────────
+    const anchor = await gmsgs.findOne({ messageId: aroundId, groupId });
+    if (!anchor) return res.status(404).json({ error: "Message not found." });
+
+    const half   = Math.floor(limit / 2);
+    const aboveN = half;
+    const belowN = limit - half - 1; // remaining slots after anchor
+
+    const aboveQuery = { ...baseQuery, sentAt: { ...(baseQuery.sentAt || {}), $lt: anchor.sentAt } };
+    const belowQuery = { ...baseQuery, sentAt: { ...(baseQuery.sentAt || {}), $gt: anchor.sentAt } };
+
+    const [aboveDocs, belowDocs] = await Promise.all([
+      gmsgs.find(aboveQuery).sort({ sentAt: -1 }).limit(aboveN + 1).toArray(), // +1 to detect hasMore
+      gmsgs.find(belowQuery).sort({ sentAt:  1 }).limit(belowN + 1).toArray(),
+    ]);
+
+    hasMoreAbove = aboveDocs.length > aboveN;
+    hasMoreBelow = belowDocs.length > belowN;
+
+    const above = aboveDocs.slice(0, aboveN).reverse(); // trim extra, then put in asc order
+    const below = belowDocs.slice(0, belowN);
+
+    sorted = [...above, anchor, ...below];
+
+  } else {
+    // ── BEFORE / AFTER MODE ──────────────────────────────────────────────────
+    const query = { ...baseQuery };
+
+    if (beforeId) {
+      const cursor = await gmsgs.findOne({ messageId: beforeId });
+      if (cursor) {
+        const existing = query.sentAt || {};
+        query.sentAt = { ...existing, $lt: cursor.sentAt };
+      }
+    } else if (afterId) {
+      const cursor = await gmsgs.findOne({ messageId: afterId });
+      if (cursor) {
+        const existing = query.sentAt || {};
+        query.sentAt = { ...existing, $gt: cursor.sentAt };
+      }
+    }
+
+    const sortDir = afterId ? 1 : -1;
+    const docs    = await gmsgs.find(query).sort({ sentAt: sortDir }).limit(limit + 1).toArray();
+
+    const hasMore = docs.length > limit;
+    const trimmed = docs.slice(0, limit);
+    sorted        = sortDir === -1 ? trimmed.reverse() : trimmed;
+
+    hasMoreAbove  = afterId  ? true  : hasMore;  // when going up, hasMore = more above
+    hasMoreBelow  = afterId  ? hasMore : false;   // when going down, hasMore = more below
   }
 
-  const sortDir = afterId ? 1 : -1;
-  const docs    = await gmsgs.find(query).sort({ sentAt: sortDir }).limit(limit).toArray();
-  const sorted  = sortDir === -1 ? docs.reverse() : docs;
-
-  // Mark as read (update readBy in background)
-  const unreadIds = sorted
-    .filter(m => !m.readBy?.includes(userId))
-    .map(m => m.messageId);
-
+  // Mark as read (background)
+  const unreadIds = sorted.filter(m => !m.readBy?.includes(userId)).map(m => m.messageId);
   if (unreadIds.length > 0) {
     gmsgs.updateMany(
       { messageId: { $in: unreadIds } },
@@ -5793,7 +5876,7 @@ app.get("/api/:groupType/:groupId/messages", requireAuth, async (req, res) => {
     ).catch(() => {});
   }
 
-  // Attach pinned message if exists
+  // Pinned message
   let pinnedMessage = null;
   if (group.pinnedMessageId) {
     pinnedMessage = await gmsgs.findOne({ messageId: group.pinnedMessageId });
@@ -5804,10 +5887,13 @@ app.get("/api/:groupType/:groupId/messages", requireAuth, async (req, res) => {
     messages: sorted,
     pinnedMessage,
     pagination: {
-      count:   sorted.length,
-      hasMore: sorted.length === limit,
-      oldestMessageId: sorted[0]?.messageId || null,
-      newestMessageId: sorted[sorted.length - 1]?.messageId || null,
+      count:           sorted.length,
+      hasMoreAbove,
+      hasMoreBelow,
+      hasMore:         hasMoreAbove || hasMoreBelow, // legacy compat
+      oldestMessageId: sorted[0]?.messageId                   || null,
+      newestMessageId: sorted[sorted.length - 1]?.messageId   || null,
+      anchorMessageId: aroundId || null,
     },
   });
 });
@@ -6012,7 +6098,100 @@ app.get("/api/:groupType/:groupId/messages/:messageId/readers", requireAuth, asy
   });
 });
 
-// ── Mark mention as seen ──────────────────────────────────────────────────────
+// ── Get unseen mentions (for tag floater) ────────────────────────────────────
+/**
+ * GET /api/:groupType/:groupId/mentions/unseen
+ * Returns all messages in this group where the user was @mentioned but hasn't
+ * dismissed yet. Sorted oldest→newest so frontend can navigate in order.
+ * Includes full message + reply context so the floater can render a preview.
+ *
+ * Also supports:
+ *   GET /api/mentions/unseen         — across ALL groups the user is in
+ */
+app.get("/api/:groupType/:groupId/mentions/unseen", requireAuth, async (req, res) => {
+  const { groupId } = req.params;
+  const userId   = req.user.userId;
+  const me = await db.collection("users").findOne({ userId }, { projection: { username: 1 } });
+  if (!me) return res.status(404).json({ error: "User not found." });
+
+  const username = me.username?.toLowerCase();
+
+  const msgs = await db.collection("groupMessages").find({
+    groupId,
+    deleted:      { $ne: true },
+    mentions:     username,
+    seenMentions: { $ne: userId },
+  })
+  .sort({ sentAt: 1 })   // oldest first → navigate forward naturally
+  .toArray();
+
+  res.json({
+    groupId,
+    count: msgs.length,
+    unseen: msgs.map(m => ({
+      messageId:      m.messageId,
+      sentAt:         m.sentAt,
+      senderId:       m.senderId,
+      senderName:     m.senderName,
+      senderUsername: m.senderUsername,
+      senderAvatar:   m.senderAvatar,
+      senderPremium:  m.senderPremium,
+      content:        m.content,
+      type:           m.type,
+      replyTo:        m.replyTo || null,   // full replyTo so frontend can show "↩ replying to X"
+    })),
+  });
+});
+
+/**
+ * GET /api/mentions/unseen
+ * Cross-group: all unseen @mentions across every group the user belongs to.
+ * Useful for a global notification badge or a global mentions panel.
+ */
+app.get("/api/mentions/unseen", requireAuth, async (req, res) => {
+  const userId = req.user.userId;
+  const me = await db.collection("users").findOne({ userId }, { projection: { username: 1 } });
+  if (!me) return res.status(404).json({ error: "User not found." });
+
+  const username = me.username?.toLowerCase();
+
+  const msgs = await db.collection("groupMessages").find({
+    deleted:      { $ne: true },
+    mentions:     username,
+    seenMentions: { $ne: userId },
+  })
+  .sort({ sentAt: 1 })
+  .toArray();
+
+  // Group by chatId so frontend can show per-group counts
+  const byGroup = {};
+  for (const m of msgs) {
+    if (!byGroup[m.groupId]) byGroup[m.groupId] = { groupId: m.groupId, chatType: m.chatType, chatName: m.chatName, count: 0, messages: [] };
+    byGroup[m.groupId].count++;
+    byGroup[m.groupId].messages.push({
+      messageId:      m.messageId,
+      sentAt:         m.sentAt,
+      senderId:       m.senderId,
+      senderName:     m.senderName,
+      senderUsername: m.senderUsername,
+      senderAvatar:   m.senderAvatar,
+      content:        m.content,
+      type:           m.type,
+      replyTo:        m.replyTo || null,
+    });
+  }
+
+  res.json({
+    totalCount: msgs.length,
+    groups: Object.values(byGroup),
+  });
+});
+
+// ── Mark a single mention as seen ────────────────────────────────────────────
+/**
+ * POST /api/:groupType/:groupId/messages/:messageId/seen-mention
+ * Dismiss one specific @mention (user clicked through / navigated past it).
+ */
 app.post("/api/:groupType/:groupId/messages/:messageId/seen-mention", requireAuth, async (req, res) => {
   const { messageId } = req.params;
   const userId = req.user.userId;
@@ -6020,32 +6199,100 @@ app.post("/api/:groupType/:groupId/messages/:messageId/seen-mention", requireAut
     { messageId },
     { $addToSet: { seenMentions: userId } }
   );
-  res.json({ message: "Mention marked as seen." });
+  res.json({ ok: true, messageId });
 });
 
-// ── Get unseen mentions for a user in a group ─────────────────────────────────
-app.get("/api/:groupType/:groupId/mentions/unseen", requireAuth, async (req, res) => {
+// ── Mark all mentions in a group as seen ─────────────────────────────────────
+/**
+ * POST /api/:groupType/:groupId/mentions/seen-all
+ * Dismiss every pending @mention in this group at once (e.g. user left the chat).
+ */
+app.post("/api/:groupType/:groupId/mentions/seen-all", requireAuth, async (req, res) => {
   const { groupId } = req.params;
-  const userId   = req.user.userId;
-  const username = (await db.collection("users").findOne({ userId }))?.username?.toLowerCase();
+  const userId = req.user.userId;
+  const me = await db.collection("users").findOne({ userId }, { projection: { username: 1 } });
+  const username = me?.username?.toLowerCase();
 
-  const msgs = await db.collection("groupMessages").find({
-    groupId,
-    deleted:  false,
-    mentions: username,
-    seenMentions: { $ne: userId },
-  })
-  .sort({ sentAt: -1 })
-  .toArray();
+  const result = await db.collection("groupMessages").updateMany(
+    { groupId, mentions: username, seenMentions: { $ne: userId } },
+    { $addToSet: { seenMentions: userId } }
+  );
+  res.json({ ok: true, cleared: result.modifiedCount });
+});
+
+// ── Mark ALL mentions everywhere as seen ─────────────────────────────────────
+/**
+ * POST /api/mentions/seen-all
+ * Nuke every pending mention across all groups (e.g. "mark all read" button).
+ */
+app.post("/api/mentions/seen-all", requireAuth, async (req, res) => {
+  const userId = req.user.userId;
+  const me = await db.collection("users").findOne({ userId }, { projection: { username: 1 } });
+  const username = me?.username?.toLowerCase();
+
+  const result = await db.collection("groupMessages").updateMany(
+    { mentions: username, seenMentions: { $ne: userId } },
+    { $addToSet: { seenMentions: userId } }
+  );
+  res.json({ ok: true, cleared: result.modifiedCount });
+});
+
+// ── @mention member search ────────────────────────────────────────────────────
+/**
+ * GET /api/:groupType/:groupId/members/search?q=jo&limit=10
+ * Fuzzy search members of a group by username or name.
+ * Used when user types "@" in the input — returns matching members
+ * so the frontend can show a pick-list and autocomplete the full @username.
+ *
+ * Returns: [{ userId, name, username, tag, profilePicture, premium, verified, isAdmin, isOwner }]
+ */
+app.get("/api/:groupType/:groupId/members/search", requireAuth, async (req, res) => {
+  const { groupType, groupId } = req.params;
+  const q     = (req.query.q || "").trim();
+  const limit = Math.min(parseInt(req.query.limit) || 10, 20);
+
+  const col     = groupType === "space" ? "spaces" : "feeds";
+  const idField = groupType === "space" ? "spaceId" : "feedId";
+
+  const group = await db.collection(col).findOne({ [idField]: groupId });
+  if (!group) return res.status(404).json({ error: "Group not found." });
+
+  // Collect active (non-banned) member userIds
+  const memberIds = (group.members || [])
+    .filter(m => !m.isBanned)
+    .map(m => m.userId);
+
+  if (memberIds.length === 0) return res.json({ members: [] });
+
+  const filter = { userId: { $in: memberIds } };
+  if (q) {
+    const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    filter.$or = [
+      { usernameLower: { $regex: escaped.toLowerCase() } },
+      { name:          { $regex: new RegExp(escaped, "i") } },
+    ];
+  }
+
+  const users = await db.collection("users")
+    .find(filter)
+    .limit(limit)
+    .project({ userId: 1, name: 1, username: 1, tag: 1, profilePicture: 1, premium: 1, verified: 1 })
+    .toArray();
+
+  // Build a quick lookup for admin/owner status
+  const memberMeta = Object.fromEntries((group.members || []).map(m => [m.userId, m]));
 
   res.json({
-    unseen: msgs.map(m => ({
-      messageId: m.messageId,
-      senderId:  m.senderId,
-      senderName: m.senderName,
-      senderUsername: m.senderUsername,
-      preview:   (m.content?.text || "").slice(0, 80) + ((m.content?.text || "").length > 80 ? "…" : ""),
-      sentAt:    m.sentAt,
+    members: users.map(u => ({
+      userId:         u.userId,
+      name:           u.name,
+      username:       u.username,
+      tag:            u.tag,
+      profilePicture: u.profilePicture,
+      premium:        u.premium  || false,
+      verified:       u.verified || false,
+      isAdmin:        memberMeta[u.userId]?.isAdmin || group.ownerId === u.userId,
+      isOwner:        group.ownerId === u.userId,
     })),
   });
 });
