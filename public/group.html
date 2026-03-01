@@ -1084,6 +1084,42 @@ body{
 .member-sub{font-size:12px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .member-ban-badge{font-size:10px;padding:2px 6px;border-radius:3px;background:rgba(239,68,68,0.15);color:#ef4444;flex-shrink:0;}
 
+
+/* ── Avatar edit (admin only) ── */
+.gs-avatar-wrap{position:relative;display:flex;justify-content:center;margin-bottom:12px;}
+.gs-avatar-edit-overlay{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  border-radius:50%;cursor:pointer;opacity:0;
+  background:rgba(0,0,0,0.55);transition:opacity 0.15s;
+  width:80px;height:80px;margin:auto;
+}
+.gs-avatar-edit-overlay svg{width:22px;height:22px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.gs-avatar-wrap:hover .gs-avatar-edit-overlay{opacity:1;}
+
+/* ── PFP preview row in edit modal ── */
+.edit-pfp-row{
+  display:flex;align-items:center;gap:12px;
+  margin-bottom:12px;padding:10px 12px;
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:var(--r-sm);cursor:pointer;
+  transition:background 0.15s;
+}
+.edit-pfp-row:hover{background:rgba(255,255,255,0.08);}
+.edit-pfp-thumb{
+  width:52px;height:52px;border-radius:50%;object-fit:cover;
+  background:linear-gradient(135deg,var(--purple-accent),var(--amber));
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden;
+}
+.edit-pfp-thumb img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.edit-pfp-label{flex:1;min-width:0;}
+.edit-pfp-title{font-size:13px;font-weight:600;color:var(--text-primary);}
+.edit-pfp-hint{font-size:11.5px;color:var(--text-dim);margin-top:2px;}
+.edit-pfp-change{font-size:11.5px;color:var(--purple-accent);font-weight:600;margin-top:4px;}
+.edit-pfp-chevron{color:var(--text-dim);}
+.edit-pfp-chevron svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;}
+
 /* ── Member action sheet ── */
 .member-action-sheet{
   position:fixed;inset:0;z-index:950;
@@ -1845,6 +1881,17 @@ body{
 <div class="modal-overlay" id="editModal">
   <div class="modal-box">
     <div class="modal-title">Edit Group</div>
+    <!-- PFP row -->
+    <div class="edit-pfp-row" onclick="document.getElementById('editPfpInput').click()">
+      <div class="edit-pfp-thumb" id="editPfpThumb"></div>
+      <div class="edit-pfp-label">
+        <div class="edit-pfp-title">Profile Picture</div>
+        <div class="edit-pfp-hint" id="editPfpHint">Tap to change</div>
+        <div class="edit-pfp-change" id="editPfpChange" style="display:none">Image selected ✓</div>
+      </div>
+      <div class="edit-pfp-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+    </div>
+    <input type="file" id="editPfpInput" accept="image/*" style="display:none" onchange="handleEditPfpSelect(event)">
     <input class="modal-input" type="text" id="editNameInput" placeholder="Group name" maxlength="60">
     <textarea class="modal-input" id="editBioInput" placeholder="Bio / description" maxlength="300" rows="3" style="resize:vertical;"></textarea>
     <div class="modal-actions">
@@ -3269,6 +3316,15 @@ function renderGsInfo() {
     const av = document.createElement('div'); av.className = 'gs-avatar-initials'; av.textContent = initials(g.name);
     wrap.appendChild(av);
   }
+  // Admin: show camera overlay on avatar to quick-edit pfp
+  if (IS_ADMIN || IS_OWNER) {
+    const overlay = document.createElement('div');
+    overlay.className = 'gs-avatar-edit-overlay';
+    overlay.title = 'Change profile picture';
+    overlay.innerHTML = '<svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>';
+    overlay.onclick = (e) => { e.stopPropagation(); closeGroupSheet(); openEditModal(); };
+    wrap.appendChild(overlay);
+  }
 
   const nameEl = document.getElementById('gsName');
   nameEl.innerHTML = `<span>${esc(g.name||'Group')}</span>`;
@@ -3349,11 +3405,33 @@ async function reportGroup() {
   } catch { showToast('Network error'); }
 }
 
+let editSelectedPfpFile = null;
+
 function openEditModal() {
   closeGroupSheet();
+  editSelectedPfpFile = null;
   document.getElementById('editNameInput').value = GROUP.name || '';
   document.getElementById('editBioInput').value  = GROUP.bio  || '';
+  document.getElementById('editPfpInput').value  = '';
+  document.getElementById('editPfpChange').style.display = 'none';
+  document.getElementById('editPfpHint').style.display   = '';
+  // Populate thumbnail
+  const thumb = document.getElementById('editPfpThumb');
+  if (GROUP.profileImage) {
+    thumb.innerHTML = `<img src="${GROUP.profileImage}" alt="">`;
+  } else {
+    thumb.textContent = initials(GROUP.name || 'G');
+  }
   document.getElementById('editModal').classList.add('show');
+}
+
+function handleEditPfpSelect(e) {
+  const file = e.target.files[0]; if (!file) return;
+  editSelectedPfpFile = file;
+  const thumb = document.getElementById('editPfpThumb');
+  thumb.innerHTML = `<img src="${URL.createObjectURL(file)}" alt="">`;
+  document.getElementById('editPfpChange').style.display = '';
+  document.getElementById('editPfpHint').style.display   = 'none';
 }
 
 async function doEditGroup() {
@@ -3365,10 +3443,18 @@ async function doEditGroup() {
     const fd = new FormData();
     fd.append('name', name);
     fd.append('bio',  bio);
+    if (editSelectedPfpFile) fd.append('profileImage', editSelectedPfpFile);
     const res = await fetch(`/api/${GROUP_TYPE}s/${GROUP_ID}`, {method:'PATCH', credentials:'include', body: fd});
     const d   = await res.json();
-    if (res.ok) { GROUP.name = name; GROUP.bio = bio; renderHeader(); showToast('Group updated'); }
-    else showToast(d.error || 'Update failed');
+    if (res.ok) {
+      GROUP.name = name;
+      GROUP.bio  = bio;
+      if (d.space?.profileImage) GROUP.profileImage = d.space.profileImage;
+      if (d.feed?.profileImage)  GROUP.profileImage = d.feed.profileImage;
+      editSelectedPfpFile = null;
+      renderHeader();
+      showToast('Group updated ✓');
+    } else showToast(d.error || 'Update failed');
   } catch { showToast('Network error'); }
 }
 
