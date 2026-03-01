@@ -138,6 +138,11 @@ async function connectDB() {
   // ── spam tracking (rate-limit only, no auto-ban) ──
   await db.collection("spamLog").createIndex({ userId: 1, windowStart: 1 });
 
+  // ── stickers ──
+  const stickers = db.collection("stickers");
+  await stickers.createIndex({ userId: 1 }, { unique: true });
+  await stickers.createIndex({ "urls": 1 });
+
   console.log(`✓ MongoDB connected — database: "${DB_NAME}"`);
 }
 
@@ -2245,14 +2250,23 @@ app.post("/api/messages",
     // ── media types ──
     const needsMedia = ["image", "image_caption", "video", "video_caption", "sticker", "audio", "voice"];
     if (needsMedia.includes(type)) {
-      const file = req.files?.media?.[0];
-      if (!file) return res.status(400).json({ error: "media file is required." });
-
-      try { content.mediaUrl = await uploadMedia(file.buffer, file.originalname || "media"); }
-      catch (e) { return res.status(500).json({ error: "Media upload failed: " + e.message }); }
-
-      content.mediaSize     = file.size;
-      content.mediaMimeType = file.mimetype;
+      // Stickers may be sent by URL instead of a file upload
+      if (type === "sticker" && req.body.stickerUrl) {
+        const stickerUrl = req.body.stickerUrl.trim();
+        if (!/^https?:\/\/.+/.test(stickerUrl))
+          return res.status(400).json({ error: "stickerUrl must be a valid http(s) URL." });
+        const owned = await db.collection("stickers").countDocuments({ urls: stickerUrl });
+        if (owned === 0)
+          return res.status(400).json({ error: "stickerUrl is not a recognised sticker." });
+        content.mediaUrl = stickerUrl;
+      } else {
+        const file = req.files?.media?.[0];
+        if (!file) return res.status(400).json({ error: "media file is required." });
+        try { content.mediaUrl = await uploadMedia(file.buffer, file.originalname || "media"); }
+        catch (e) { return res.status(500).json({ error: "Media upload failed: " + e.message }); }
+        content.mediaSize     = file.size;
+        content.mediaMimeType = file.mimetype;
+      }
     }
 
     // ── caption ──
@@ -5600,12 +5614,23 @@ app.post("/api/:groupType/:groupId/messages",
 
     const needsMedia = ["image", "image_caption", "sticker", "audio", "voice"];
     if (needsMedia.includes(type)) {
-      const file = req.files?.media?.[0];
-      if (!file) return res.status(400).json({ error: "media file is required." });
-      try { content.mediaUrl = await uploadMedia(file.buffer, file.originalname || "media"); }
-      catch (e) { return res.status(500).json({ error: "Upload failed: " + e.message }); }
-      content.mediaSize     = file.size;
-      content.mediaMimeType = file.mimetype;
+      // Stickers may be sent by URL instead of a file upload
+      if (type === "sticker" && req.body.stickerUrl) {
+        const stickerUrl = req.body.stickerUrl.trim();
+        if (!/^https?:\/\/.+/.test(stickerUrl))
+          return res.status(400).json({ error: "stickerUrl must be a valid http(s) URL." });
+        const owned = await db.collection("stickers").countDocuments({ urls: stickerUrl });
+        if (owned === 0)
+          return res.status(400).json({ error: "stickerUrl is not a recognised sticker." });
+        content.mediaUrl = stickerUrl;
+      } else {
+        const file = req.files?.media?.[0];
+        if (!file) return res.status(400).json({ error: "media file is required." });
+        try { content.mediaUrl = await uploadMedia(file.buffer, file.originalname || "media"); }
+        catch (e) { return res.status(500).json({ error: "Upload failed: " + e.message }); }
+        content.mediaSize     = file.size;
+        content.mediaMimeType = file.mimetype;
+      }
     }
     if (["image_caption"].includes(type)) {
       if (caption && caption.length > GROUP_CAPTION_MAX)
@@ -7388,6 +7413,221 @@ app.get("/api/explore", async (req, res) => {
 });
 
 
+
+// ════════════════════════════════════════════════════════════════════════════
+//  STICKERS
+// ════════════════════════════════════════════════════════════════════════════
+
+const STICKER_MAX_BYTES  = 512 * 1024;   // 512 KB
+const STICKER_MAX_COUNT  = 20;
+const STICKER_DIMENSION  = 512;          // must be exactly 512×512
+
+const stickerUpload = multer({
+  storage: multer.memoryStorage(),
+  limits:  { fileSize: STICKER_MAX_BYTES },
+  fileFilter: (_req, file, cb) => {
+    if (!file.mimetype.startsWith("image/"))
+      return cb(new Error("Only image files are accepted for stickers."));
+    cb(null, true);
+  },
+});
+
+/**
+ * Helper – fetch a remote URL into a buffer and return { buffer, contentType, contentLength }.
+ * Rejects if the response is > 512 KB.
+ */
+async function fetchRemoteSticker(url) {
+  const response = await axios.get(url, {
+    responseType: "arraybuffer",
+    maxContentLength: STICKER_MAX_BYTES,
+    timeout: 15000,
+  });
+  const contentType = response.headers["content-type"] || "";
+  if (!contentType.startsWith("image/"))
+    throw new Error("URL does not point to an image.");
+  const buffer = Buffer.from(response.data);
+  if (buffer.byteLength > STICKER_MAX_BYTES)
+    throw new Error(`Sticker exceeds 512 KB (got ${(buffer.byteLength / 1024).toFixed(1)} KB).`);
+  return { buffer, contentType };
+}
+
+/**
+ * Helper – validate image dimensions using sharp (if available) or skip silently.
+ * Returns true when dimensions are exactly 512×512, false otherwise.
+ */
+async function validateStickerDimensions(buffer) {
+  try {
+    const sharp = require("sharp");
+    const meta  = await sharp(buffer).metadata();
+    return meta.width === STICKER_DIMENSION && meta.height === STICKER_DIMENSION;
+  } catch {
+    // sharp not installed – skip dimension check
+    return true;
+  }
+}
+
+// ─── POST /api/stickers/create ───────────────────────────────────────────────
+/**
+ * Upload a new sticker image (multipart file upload).
+ * The image is uploaded to Catbox/touch.io and its URL is stored under your userId.
+ *
+ * Body (multipart/form-data):
+ *   file  – the sticker image (≤512 KB, 512×512 px)
+ *
+ * Returns: { url }
+ */
+app.post("/api/stickers/create", requireAuth, stickerUpload.single("file"), async (req, res) => {
+  try {
+    if (!req.file)
+      return res.status(400).json({ error: "No file uploaded." });
+
+    const buffer = req.file.buffer;
+
+    // Size guard (multer already rejects > 512 KB but double-check)
+    if (buffer.byteLength > STICKER_MAX_BYTES)
+      return res.status(400).json({ error: "Sticker exceeds 512 KB." });
+
+    // Dimension check
+    const dimsOk = await validateStickerDimensions(buffer);
+    if (!dimsOk)
+      return res.status(400).json({ error: "Sticker must be exactly 512×512 pixels." });
+
+    // Check current count
+    const col    = db.collection("stickers");
+    const record = await col.findOne({ userId: req.user.userId });
+    if (record && (record.urls || []).length >= STICKER_MAX_COUNT)
+      return res.status(400).json({ error: `Sticker limit reached (max ${STICKER_MAX_COUNT}).` });
+
+    // Upload
+    const ext      = req.file.originalname.split(".").pop() || "png";
+    const filename = `sticker_${req.user.userId}_${Date.now()}.${ext}`;
+    const url      = await uploadMedia(buffer, filename);
+
+    // Persist
+    await col.updateOne(
+      { userId: req.user.userId },
+      { $push: { urls: url }, $setOnInsert: { userId: req.user.userId, createdAt: new Date() } },
+      { upsert: true },
+    );
+
+    return res.status(201).json({ url });
+  } catch (err) {
+    console.error("stickers/create error:", err);
+    return res.status(500).json({ error: err.message || "Failed to create sticker." });
+  }
+});
+
+// ─── POST /api/stickers/add ───────────────────────────────────────────────────
+/**
+ * Add an existing sticker URL to your collection.
+ * The URL must already be saved by at least one other user, and you must not already own it.
+ *
+ * Body (JSON): { url }
+ */
+app.post("/api/stickers/add", requireAuth, async (req, res) => {
+  try {
+    const { url } = req.body;
+    if (!url || typeof url !== "string")
+      return res.status(400).json({ error: "url is required." });
+
+    const col = db.collection("stickers");
+
+    // Must be owned by at least one user
+    const ownerCount = await col.countDocuments({ urls: url });
+    if (ownerCount === 0)
+      return res.status(400).json({ error: "This sticker URL is not owned by any user." });
+
+    // Must not already own it
+    const alreadyOwned = await col.findOne({ userId: req.user.userId, urls: url });
+    if (alreadyOwned)
+      return res.status(409).json({ error: "You already have this sticker." });
+
+    // Limit check
+    const record = await col.findOne({ userId: req.user.userId });
+    if (record && (record.urls || []).length >= STICKER_MAX_COUNT)
+      return res.status(400).json({ error: `Sticker limit reached (max ${STICKER_MAX_COUNT}).` });
+
+    await col.updateOne(
+      { userId: req.user.userId },
+      { $push: { urls: url }, $setOnInsert: { userId: req.user.userId, createdAt: new Date() } },
+      { upsert: true },
+    );
+
+    return res.json({ message: "Sticker added.", url });
+  } catch (err) {
+    console.error("stickers/add error:", err);
+    return res.status(500).json({ error: err.message || "Failed to add sticker." });
+  }
+});
+
+// ─── DELETE /api/stickers/remove ─────────────────────────────────────────────
+/**
+ * Remove a single sticker URL from your collection.
+ *
+ * Body (JSON): { url }
+ */
+app.delete("/api/stickers/remove", requireAuth, async (req, res) => {
+  try {
+    const { url } = req.body;
+    if (!url || typeof url !== "string")
+      return res.status(400).json({ error: "url is required." });
+
+    const col    = db.collection("stickers");
+    const result = await col.updateOne(
+      { userId: req.user.userId },
+      { $pull: { urls: url } },
+    );
+
+    if (result.matchedCount === 0)
+      return res.status(404).json({ error: "No sticker collection found for your account." });
+
+    return res.json({ message: "Sticker removed.", url });
+  } catch (err) {
+    console.error("stickers/remove error:", err);
+    return res.status(500).json({ error: err.message || "Failed to remove sticker." });
+  }
+});
+
+// ─── GET /api/stickers ────────────────────────────────────────────────────────
+/**
+ * Return all sticker URLs in your collection.
+ *
+ * Response: { urls: string[], count: number }
+ */
+app.get("/api/stickers", requireAuth, async (req, res) => {
+  try {
+    const col    = db.collection("stickers");
+    const record = await col.findOne({ userId: req.user.userId });
+    const urls   = record?.urls || [];
+    return res.json({ urls, count: urls.length });
+  } catch (err) {
+    console.error("stickers GET error:", err);
+    return res.status(500).json({ error: err.message || "Failed to fetch stickers." });
+  }
+});
+
+// ─── DELETE /api/stickers/all ─────────────────────────────────────────────────
+/**
+ * Delete your entire sticker collection.
+ *
+ * Response: { message, deleted: number }
+ */
+app.delete("/api/stickers/all", requireAuth, async (req, res) => {
+  try {
+    const col    = db.collection("stickers");
+    const record = await col.findOne({ userId: req.user.userId });
+    const count  = record?.urls?.length || 0;
+
+    await col.deleteOne({ userId: req.user.userId });
+
+    return res.json({ message: "All stickers deleted.", deleted: count });
+  } catch (err) {
+    console.error("stickers/all DELETE error:", err);
+    return res.status(500).json({ error: err.message || "Failed to delete stickers." });
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
 
 connectDB()
   .then(() => {
