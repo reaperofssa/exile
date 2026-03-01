@@ -132,6 +132,9 @@ async function connectDB() {
   await users.createIndex({ streaks: -1 });
   await users.createIndex({ daysOnline: -1 });
 
+  // ── rank snapshots (for trend arrows) ──
+  await db.collection("rankSnapshots").createIndex({ userId: 1, type: 1 }, { unique: true });
+
   // ── spam tracking (rate-limit only, no auto-ban) ──
   await db.collection("spamLog").createIndex({ userId: 1, windowStart: 1 });
 
@@ -180,6 +183,40 @@ async function uploadToCatbox(buffer, filename) {
   const url = res.data.trim();
   if (!url.startsWith("http")) throw new Error("Catbox upload failed: " + url);
   return url;
+}
+
+/**
+ * Upload to touch.io (fallback CDN).
+ * Returns the public URL of the uploaded file.
+ */
+async function uploadToTouchIO(buffer, filename) {
+  const form = new FormData();
+  form.append("file", buffer, { filename });
+  const res = await axios.post("https://touchio.vercel.app/api/upload", form, {
+    headers: form.getHeaders(),
+    timeout: 30000,
+  });
+  const data = res.data;
+  // touch.io returns { short_url } or { url } depending on endpoint
+  const url = data.url || data.short_url || data.file_url;
+  if (!url || !url.startsWith("http")) throw new Error("touch.io upload failed: " + JSON.stringify(data));
+  return url;
+}
+
+/**
+ * Upload a file, trying catbox first, falling back to touch.io.
+ */
+async function uploadMedia(buffer, filename) {
+  try {
+    return await uploadToCatbox(buffer, filename);
+  } catch (catboxErr) {
+    console.warn("Catbox upload failed, trying touch.io fallback:", catboxErr.message);
+    try {
+      return await uploadToTouchIO(buffer, filename);
+    } catch (touchErr) {
+      throw new Error(`All upload providers failed. Catbox: ${catboxErr.message}. touch.io: ${touchErr.message}`);
+    }
+  }
 }
 
 function validateUsername(username) {
@@ -1434,7 +1471,7 @@ app.post("/auth/register/complete", upload.single("profilePicture"), async (req,
 
   let profilePictureUrl = null; // No avatar from Autz.org, file upload only
   if (req.file) {
-    try { profilePictureUrl = await uploadToCatbox(req.file.buffer, req.file.originalname || "avatar.jpg"); }
+    try { profilePictureUrl = await uploadMedia(req.file.buffer, req.file.originalname || "avatar.jpg"); }
     catch (e) { console.error("Catbox avatar upload failed:", e.message); }
   }
 
@@ -1533,8 +1570,174 @@ app.get("/api/users/:userId/locality", requireAuth, async (req, res) => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
-//  SETTINGS
+//  PUBLIC PROFILE — /api/checkuser
 // ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Build the full public profile object for a user.
+ * Used by both /api/checkuser/me and /api/checkuser/:id
+ */
+async function buildFullProfile(userId, viewerUserId) {
+  const user = await db.collection("users").findOne({ userId });
+  if (!user) return null;
+
+  const levelInfo = buildLevelInfo(user.xp || 0);
+  const badges    = computeBadges({ ...user, level: levelInfo.level });
+  const rank      = getRank(levelInfo.level);
+  const topBadge  = getHighlightBadge(badges);
+
+  // Ranks across all leaderboard types
+  const [rankXp, rankRep, rankStreaks, rankVets] = await Promise.all([
+    computeRank(userId, "xp"),
+    computeRank(userId, "reputation"),
+    computeRank(userId, "streaks"),
+    computeRank(userId, "veterans"),
+  ]);
+
+  // Trend info for xp leaderboard
+  const xpTrend = await getRankTrend(userId, "xp", rankXp);
+
+  // Public spaces/feeds (non-private, non-banned) the user owns
+  const [ownedSpaces, ownedFeeds] = await Promise.all([
+    db.collection("spaces").find(
+      { ownerId: userId, banned: { $ne: true }, isPrivate: { $ne: true } },
+      { projection: { spaceId: 1, name: 1, bio: 1, profileImage: 1, memberCount: 1, xp: 1, premium: 1, joinLink: 1 } }
+    ).limit(10).toArray(),
+    db.collection("feeds").find(
+      { ownerId: userId, banned: { $ne: true }, isPrivate: { $ne: true } },
+      { projection: { feedId: 1, name: 1, bio: 1, profileImage: 1, memberCount: 1, xp: 1, premium: 1, joinLink: 1 } }
+    ).limit(10).toArray(),
+  ]);
+
+  // Mutual contacts count (if viewer is logged in)
+  let mutualContacts = null;
+  if (viewerUserId && viewerUserId !== userId) {
+    const viewer = await db.collection("users").findOne({ userId: viewerUserId }, { projection: { contactsList: 1 } });
+    const viewerContacts = new Set(viewer?.contactsList || []);
+    const userContacts   = new Set(user.contactsList || []);
+    let count = 0;
+    for (const id of viewerContacts) { if (userContacts.has(id)) count++; }
+    mutualContacts = count;
+  }
+
+  // Whether viewer is in this user's contacts
+  const isContact = viewerUserId
+    ? (user.contactsList || []).includes(viewerUserId)
+    : false;
+
+  // Whether viewer has this user blocked (or vice versa)
+  let isBlocked = false;
+  if (viewerUserId && viewerUserId !== userId) {
+    const block = await db.collection("blocks").findOne({
+      $or: [
+        { blockerId: viewerUserId, blockedId: userId },
+        { blockerId: userId, blockedId: viewerUserId },
+      ],
+    });
+    isBlocked = !!block;
+  }
+
+  return {
+    // ── Identity ──
+    userId:         user.userId,
+    name:           user.name,
+    username:       user.username,
+    tag:            user.tag,
+    description:    user.description || "",
+    spiritEmoji:    user.spiritEmoji  || null,
+    profilePicture: user.profilePicture,
+    profileBanner:  user.profileBanner  || null,
+    profileColor:   user.profileColor   || null,
+    contactNumber:  user.hideContact && viewerUserId !== userId ? null : user.contactNumber,
+
+    // ── Status / Meta ──
+    status:         user.status || "offline",
+    lastSeen:       user.lastSeen || null,
+    dateJoined:     user.dateJoined,
+    locality:       (user.showLocality || viewerUserId === userId) ? (user.locality || "Unknown") : null,
+    showLocality:   user.showLocality || false,
+    premium:        user.premium  || false,
+    premiumExpiry:  user.premiumExpiry || null,
+    verified:       user.verified || false,
+    position:       user.position || "member",
+    banned:         user.banned   || false,
+
+    // ── Progression ──
+    ...levelInfo,
+    rank,
+    topBadge,
+    badges,
+    reputation:     user.reputation || 0,
+    streaks:        user.streaks    || 0,
+    daysOnline:     user.daysOnline || 0,
+    giftSent:       user.giftSent   || 0,
+    exiles:         viewerUserId === userId ? (user.exiles || 0) : undefined,
+    warningCount:   viewerUserId === userId ? (user.warningCount || 0) : undefined,
+
+    // ── Leaderboard ranks ──
+    leaderboardRanks: {
+      xp:         rankXp,
+      reputation: rankRep,
+      streaks:    rankStreaks,
+      veterans:   rankVets,
+    },
+    xpTrend,
+
+    // ── Social counts ──
+    contacts:     user.contacts || 0,
+    mutualContacts,
+
+    // ── Viewer relationship ──
+    isContact,
+    isBlocked,
+    isSelf: viewerUserId === userId,
+
+    // ── Public groups ──
+    spaces: ownedSpaces,
+    feeds:  ownedFeeds,
+  };
+}
+
+/**
+ * GET /api/checkuser/me
+ * Full profile of the authenticated user. Includes private fields (exiles, warningCount).
+ */
+app.get("/api/checkuser/me", requireAuth, async (req, res) => {
+  const userId = req.user.userId;
+  const profile = await buildFullProfile(userId, userId);
+  if (!profile) return res.status(404).json({ error: "User not found." });
+  res.json({ user: profile });
+});
+
+/**
+ * GET /api/checkuser/:id
+ * Full public profile for any user. :id can be userId, username, or contactNumber.
+ * Auth optional — if authenticated, includes mutualContacts, isContact, isBlocked.
+ */
+app.get("/api/checkuser/:id", async (req, res) => {
+  const raw      = req.params.id.trim();
+  const viewerId = tryGetRequesterId(req);
+
+  // Resolve by userId, username, or contactNumber
+  const users = db.collection("users");
+  const user  = await users.findOne({
+    $or: [
+      { userId: raw },
+      { usernameLower: raw.toLowerCase() },
+      { contactNumber: raw },
+    ],
+  });
+
+  if (!user) return res.status(404).json({ error: "User not found." });
+  if (user.banned && viewerId !== user.userId)
+    return res.status(404).json({ error: "User not found." });
+
+  const profile = await buildFullProfile(user.userId, viewerId);
+  if (!profile) return res.status(404).json({ error: "User not found." });
+  res.json({ user: profile });
+});
+
+
 
 /**
  * PATCH /api/settings
@@ -1570,11 +1773,15 @@ app.patch("/api/settings",
       profileColor, onlineVisibility, hideContact,
       acceptMessages, blockNonPremium,
       blockedCountries, blockedCountriesAction,
+      showLocality,
     } = req.body;
 
     if (name !== undefined)        updates.name        = name.trim();
     if (description !== undefined) updates.description = description.trim();
     if (spiritEmoji !== undefined) updates.spiritEmoji = spiritEmoji.trim();
+
+    // showLocality — opt in/out of appearing in /api/nearby searches
+    if (showLocality !== undefined) updates.showLocality = showLocality === "true" || showLocality === true;
 
     // Username change
     if (username !== undefined) {
@@ -1598,7 +1805,7 @@ app.patch("/api/settings",
     // Profile picture
     if (req.files?.profilePicture?.[0]) {
       try {
-        updates.profilePicture = await uploadToCatbox(
+        updates.profilePicture = await uploadMedia(
           req.files.profilePicture[0].buffer,
           req.files.profilePicture[0].originalname || "avatar.jpg"
         );
@@ -1609,7 +1816,7 @@ app.patch("/api/settings",
     if (req.files?.profileBanner?.[0]) {
       if (!user.premium) return res.status(403).json({ error: "Profile banner is a premium feature." });
       try {
-        updates.profileBanner = await uploadToCatbox(
+        updates.profileBanner = await uploadMedia(
           req.files.profileBanner[0].buffer,
           req.files.profileBanner[0].originalname || "banner.jpg"
         );
@@ -1650,8 +1857,178 @@ app.patch("/api/settings",
 );
 
 // ────────────────────────────────────────────────────────────────────────────
-//  CONTACTS
+//  NEARBY — find people in the same country who opted in
 // ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/nearby?limit=20&page=1&sort=xp|members|recent
+ * Returns users in the same country as the requester who have showLocality: true.
+ * Auth required (so we know the requester's locality).
+ */
+app.get("/api/nearby", requireAuth, async (req, res) => {
+  const myId    = req.user.userId;
+  const limit   = Math.min(parseInt(req.query.limit) || 20, 50);
+  const page    = Math.max(parseInt(req.query.page)  || 1,  1);
+  const skip    = (page - 1) * limit;
+  const sort    = req.query.sort || "xp";
+
+  const me = await db.collection("users").findOne({ userId: myId }, { projection: { locality: 1 } });
+  if (!me?.locality || me.locality === "Unknown")
+    return res.status(400).json({ error: "Your location is not available. Please ensure geolocation is enabled on your account." });
+
+  const sortFieldMap = { xp: "xp", members: "contacts", recent: "dateJoined", reputation: "reputation" };
+  const sortField    = sortFieldMap[sort] || "xp";
+
+  const users = await db.collection("users").find({
+    userId:      { $ne: myId },
+    locality:    me.locality,
+    showLocality: true,
+    banned:      { $ne: true },
+  })
+  .sort({ [sortField]: -1 })
+  .skip(skip)
+  .limit(limit)
+  .project({
+    userId: 1, name: 1, username: 1, tag: 1,
+    profilePicture: 1, premium: 1, verified: 1,
+    position: 1, xp: 1, level: 1, reputation: 1,
+    streaks: 1, contacts: 1, dateJoined: 1,
+  })
+  .toArray();
+
+  const total = await db.collection("users").countDocuments({
+    userId:       { $ne: myId },
+    locality:     me.locality,
+    showLocality: true,
+    banned:       { $ne: true },
+  });
+
+  res.json({
+    locality: me.locality,
+    users: users.map(u => ({
+      userId:         u.userId,
+      name:           u.name,
+      username:       u.username,
+      tag:            u.tag,
+      profilePicture: u.profilePicture,
+      premium:        u.premium,
+      verified:       u.verified,
+      position:       u.position,
+      contacts:       u.contacts || 0,
+      reputation:     u.reputation || 0,
+      ...buildLevelInfo(u.xp || 0),
+    })),
+    total, page, limit, sort,
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+//  BLOCKED COUNTRIES (messaging)
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/settings/blocked-countries
+ * Returns the authenticated user's current blocked country list
+ * plus their showLocality preference.
+ */
+app.get("/api/settings/blocked-countries", requireAuth, async (req, res) => {
+  const user = await db.collection("users").findOne(
+    { userId: req.user.userId },
+    { projection: { "messagingSettings.blockedCountries": 1, showLocality: 1, locality: 1 } }
+  );
+  if (!user) return res.status(404).json({ error: "User not found." });
+  res.json({
+    blockedCountries: user.messagingSettings?.blockedCountries || [],
+    showLocality:     user.showLocality || false,
+    myLocality:       user.locality || "Unknown",
+  });
+});
+
+/**
+ * POST /api/settings/blocked-countries
+ * Add one or more country codes to the blocked list.
+ * body: { countries: ["NG", "GH"] }  OR  { countries: "NG,GH" }
+ */
+app.post("/api/settings/blocked-countries", requireAuth, async (req, res) => {
+  const userId  = req.user.userId;
+  let   raw     = req.body.countries;
+  if (!raw) return res.status(400).json({ error: "countries is required." });
+
+  const codes = (Array.isArray(raw) ? raw : raw.split(","))
+    .map(c => c.trim().toUpperCase())
+    .filter(Boolean);
+
+  if (codes.length === 0) return res.status(400).json({ error: "No valid country codes provided." });
+
+  await db.collection("users").updateOne(
+    { userId },
+    { $addToSet: { "messagingSettings.blockedCountries": { $each: codes } } }
+  );
+
+  const updated = await db.collection("users").findOne(
+    { userId },
+    { projection: { "messagingSettings.blockedCountries": 1 } }
+  );
+  res.json({
+    message:         `${codes.length} country code(s) blocked.`,
+    blockedCountries: updated.messagingSettings?.blockedCountries || [],
+  });
+});
+
+/**
+ * DELETE /api/settings/blocked-countries
+ * Remove one or more country codes from the blocked list.
+ * body: { countries: ["NG"] }  OR  { countries: "NG" }
+ */
+app.delete("/api/settings/blocked-countries", requireAuth, async (req, res) => {
+  const userId = req.user.userId;
+  let   raw    = req.body.countries;
+  if (!raw) return res.status(400).json({ error: "countries is required." });
+
+  const codes = (Array.isArray(raw) ? raw : raw.split(","))
+    .map(c => c.trim().toUpperCase())
+    .filter(Boolean);
+
+  await db.collection("users").updateOne(
+    { userId },
+    { $pullAll: { "messagingSettings.blockedCountries": codes } }
+  );
+
+  const updated = await db.collection("users").findOne(
+    { userId },
+    { projection: { "messagingSettings.blockedCountries": 1 } }
+  );
+  res.json({
+    message:         `${codes.length} country code(s) unblocked.`,
+    blockedCountries: updated.messagingSettings?.blockedCountries || [],
+  });
+});
+
+/**
+ * PUT /api/settings/blocked-countries
+ * Replace the entire blocked countries list at once.
+ * body: { countries: ["NG", "GH", "US"] }
+ */
+app.put("/api/settings/blocked-countries", requireAuth, async (req, res) => {
+  const userId = req.user.userId;
+  let   raw    = req.body.countries;
+
+  const codes = raw
+    ? (Array.isArray(raw) ? raw : raw.split(",")).map(c => c.trim().toUpperCase()).filter(Boolean)
+    : [];
+
+  await db.collection("users").updateOne(
+    { userId },
+    { $set: { "messagingSettings.blockedCountries": codes } }
+  );
+
+  res.json({
+    message:         "Blocked countries list updated.",
+    blockedCountries: codes,
+  });
+});
+
+
 
 /** Add a user to contacts */
 app.post("/api/contacts/:targetId", requireAuth, async (req, res) => {
@@ -1721,6 +2098,53 @@ app.get("/api/contacts", requireAuth, async (req, res) => {
 // ────────────────────────────────────────────────────────────────────────────
 //  BLOCKS
 // ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/blocks?limit=50&page=1
+ * Returns the authenticated user's blocked users list with their stubs.
+ */
+app.get("/api/blocks", requireAuth, async (req, res) => {
+  const myId  = req.user.userId;
+  const limit = Math.min(parseInt(req.query.limit) || 50, 100);
+  const page  = Math.max(parseInt(req.query.page)  || 1,  1);
+  const skip  = (page - 1) * limit;
+
+  const blocks = await db.collection("blocks")
+    .find({ blockerId: myId })
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .toArray();
+
+  const blockedIds = blocks.map(b => b.blockedId);
+
+  // Fetch from both users and bots
+  const [userDocs, botDocs] = await Promise.all([
+    db.collection("users").find({ userId: { $in: blockedIds } })
+      .project({ userId: 1, name: 1, username: 1, tag: 1, profilePicture: 1, premium: 1, verified: 1 })
+      .toArray(),
+    db.collection("bots").find({ botId: { $in: blockedIds } })
+      .project({ botId: 1, name: 1, username: 1, tag: 1, profilePicture: 1 })
+      .toArray(),
+  ]);
+
+  const entityMap = {
+    ...Object.fromEntries(userDocs.map(u => [u.userId, { ...u, isBot: false }])),
+    ...Object.fromEntries(botDocs.map(b => [b.botId, { userId: b.botId, name: b.name, username: b.username, tag: b.tag, profilePicture: b.profilePicture, premium: false, verified: false, isBot: true }])),
+  };
+
+  const total = await db.collection("blocks").countDocuments({ blockerId: myId });
+
+  res.json({
+    blocked: blocks.map(b => ({
+      blockedId:  b.blockedId,
+      blockedAt:  b.createdAt,
+      isBot:      b.isBot || false,
+      user:       entityMap[b.blockedId] || { userId: b.blockedId },
+    })),
+    total, page, limit,
+  });
+});
 
 app.post("/api/blocks/:targetId", requireAuth, async (req, res) => {
   const myId    = req.user.userId;
@@ -1802,7 +2226,7 @@ app.post("/api/messages",
       const file = req.files?.media?.[0];
       if (!file) return res.status(400).json({ error: "media file is required." });
 
-      try { content.mediaUrl = await uploadToCatbox(file.buffer, file.originalname || "media"); }
+      try { content.mediaUrl = await uploadMedia(file.buffer, file.originalname || "media"); }
       catch (e) { return res.status(500).json({ error: "Media upload failed: " + e.message }); }
 
       content.mediaSize     = file.size;
@@ -1820,7 +2244,7 @@ app.post("/api/messages",
     if (["video", "video_caption"].includes(type)) {
       const thumb = req.files?.thumbnail?.[0];
       if (thumb) {
-        try { content.thumbnailUrl = await uploadToCatbox(thumb.buffer, thumb.originalname || "thumb.jpg"); }
+        try { content.thumbnailUrl = await uploadMedia(thumb.buffer, thumb.originalname || "thumb.jpg"); }
         catch (e) { /* non-fatal */ }
       }
     }
@@ -1858,12 +2282,25 @@ app.get("/api/messages", requireAuth, async (req, res) => {
 
   const query = { conversationId, deleted: { $ne: true } };
 
+  // Respect per-user clearedAt — hide messages sent before the user cleared the chat
+  const convo = await db.collection("conversations").findOne({ conversationId });
+  const clearedAt = convo?.clearedAt?.[myId] || null;
+  if (clearedAt) query.sentAt = { $gt: clearedAt };
+
   if (beforeId) {
     const cursor = await messages.findOne({ messageId: beforeId });
-    if (cursor) query.sentAt = { $lt: cursor.sentAt };
+    if (cursor) {
+      query.sentAt = clearedAt
+        ? { $gt: clearedAt, $lt: cursor.sentAt }
+        : { $lt: cursor.sentAt };
+    }
   } else if (afterId) {
     const cursor = await messages.findOne({ messageId: afterId });
-    if (cursor) query.sentAt = { $gt: cursor.sentAt };
+    if (cursor) {
+      query.sentAt = clearedAt
+        ? { $gt: clearedAt, $gt: cursor.sentAt }   // after cursor (and after cleared)
+        : { $gt: cursor.sentAt };
+    }
   }
 
   const sort  = afterId ? 1 : -1; // newest first unless loading downward
@@ -2057,6 +2494,7 @@ app.get("/api/spaces/join-info/:joinId", async (req, res) => {
       profileImage: space.profileImage,
       memberCount:  space.memberCount || 0,
       premium:      space.premium || false,
+      isPrivate:    space.isPrivate || false,
       joinId:       space.joinId,
       joinLink:     space.joinLink,
       createdAt:    space.createdAt,
@@ -2076,6 +2514,7 @@ app.get("/api/feeds/join-info/:joinId", async (req, res) => {
       profileImage: feed.profileImage,
       memberCount:  feed.memberCount || 0,
       premium:      feed.premium || false,
+      isPrivate:    feed.isPrivate || false,
       joinId:       feed.joinId,
       joinLink:     feed.joinLink,
       createdAt:    feed.createdAt,
@@ -2595,12 +3034,15 @@ app.get("/api/search/users", requireAuth, async (req, res) => {
   // Use regex for prefix-style match on username and name (fast with indexes)
   const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
 
+  // Also try exact matches on userId and contactNumber
   const results = await users.find({
     banned: { $ne: true },
     userId: { $ne: req.user.userId },
     $or: [
       { usernameLower: { $regex: q.toLowerCase() } },
       { name: { $regex: regex } },
+      { userId: q },
+      { contactNumber: q },
     ],
   })
   .limit(limit)
@@ -2999,7 +3441,7 @@ app.post("/api/bots", requireAuth, upload.single("profilePicture"), async (req, 
   let profilePictureUrl = null;
   if (req.file) {
     try {
-      profilePictureUrl = await uploadToCatbox(
+      profilePictureUrl = await uploadMedia(
         req.file.buffer,
         req.file.originalname || "bot.jpg"
       );
@@ -3066,7 +3508,7 @@ app.patch("/api/bots/:botId", requireAuth,
     if (description !== undefined) updates.description = description.trim();
 
     if (req.file) {
-      try { updates.profilePicture = await uploadToCatbox(req.file.buffer, req.file.originalname || "bot.jpg"); }
+      try { updates.profilePicture = await uploadMedia(req.file.buffer, req.file.originalname || "bot.jpg"); }
       catch (e) { return res.status(500).json({ error: "Upload failed: " + e.message }); }
     }
 
@@ -3166,7 +3608,7 @@ app.post("/api/messages/to-bot",
     if (needsMedia.includes(type)) {
       const file = req.files?.media?.[0];
       if (!file) return res.status(400).json({ error: "media file is required." });
-      try { content.mediaUrl = await uploadToCatbox(file.buffer, file.originalname || "media"); }
+      try { content.mediaUrl = await uploadMedia(file.buffer, file.originalname || "media"); }
       catch (e) { return res.status(500).json({ error: "Media upload failed: " + e.message }); }
       content.mediaSize     = file.size;
       content.mediaMimeType = file.mimetype;
@@ -3352,7 +3794,7 @@ app.post("/api/bot/send", requireBotAuth,
     if (needsMedia.includes(type)) {
       const file = req.files?.media?.[0];
       if (!file) return res.status(400).json({ error: "media file is required." });
-      try { content.mediaUrl = await uploadToCatbox(file.buffer, file.originalname || "media"); }
+      try { content.mediaUrl = await uploadMedia(file.buffer, file.originalname || "media"); }
       catch (e) { return res.status(500).json({ error: "Upload failed: " + e.message }); }
       content.mediaSize     = file.size;
       content.mediaMimeType = file.mimetype;
@@ -3367,7 +3809,7 @@ app.post("/api/bot/send", requireBotAuth,
     if (["video", "video_caption"].includes(type)) {
       const thumb = req.files?.thumbnail?.[0];
       if (thumb) {
-        try { content.thumbnailUrl = await uploadToCatbox(thumb.buffer, thumb.originalname || "thumb.jpg"); }
+        try { content.thumbnailUrl = await uploadMedia(thumb.buffer, thumb.originalname || "thumb.jpg"); }
         catch (e) { /* non-fatal */ }
       }
     }
@@ -4542,7 +4984,7 @@ app.post("/api/spaces", requireAuth, upload.single("profileImage"), async (req, 
 
   let imageUrl = null;
   if (req.file) {
-    try { imageUrl = await uploadToCatbox(req.file.buffer, req.file.originalname || "space.jpg"); }
+    try { imageUrl = await uploadMedia(req.file.buffer, req.file.originalname || "space.jpg"); }
     catch (e) { /* non-fatal */ }
   }
 
@@ -4560,6 +5002,7 @@ app.post("/api/spaces", requireAuth, upload.single("profileImage"), async (req, 
     name:        name.trim(),
     bio:         bio?.trim() || "Hey this is my space",
     profileImage: imageUrl,
+    isPrivate:   req.body.isPrivate === "true" || req.body.isPrivate === true,
     memberCount: 1,
     premium:     false,
     premiumExpiry: null,
@@ -4604,7 +5047,7 @@ app.post("/api/feeds", requireAuth, upload.single("profileImage"), async (req, r
 
   let imageUrl = null;
   if (req.file) {
-    try { imageUrl = await uploadToCatbox(req.file.buffer, req.file.originalname || "feed.jpg"); }
+    try { imageUrl = await uploadMedia(req.file.buffer, req.file.originalname || "feed.jpg"); }
     catch (e) { /* non-fatal */ }
   }
 
@@ -4622,6 +5065,7 @@ app.post("/api/feeds", requireAuth, upload.single("profileImage"), async (req, r
     name:        name.trim(),
     bio:         bio?.trim() || "Hey this is my feed",
     profileImage: imageUrl,
+    isPrivate:   req.body.isPrivate === "true" || req.body.isPrivate === true,
     memberCount: 1,
     premium:     false,
     premiumExpiry: null,
@@ -4684,6 +5128,60 @@ app.get("/api/users/:userId/groups", async (req, res) => {
     spaces: spaces.map(sanitizeGroup),
     feeds:  feeds.map(sanitizeGroup),
   });
+});
+
+/**
+ * GET /api/me/spaces
+ * Returns all spaces the authenticated user is a member of (including private ones).
+ */
+app.get("/api/me/spaces", requireAuth, async (req, res) => {
+  const userId = req.user.userId;
+  const spaces = await db.collection("spaces")
+    .find({ "members.userId": userId, banned: { $ne: true } })
+    .toArray();
+  res.json({ spaces: spaces.map(s => ({
+    spaceId:      s.spaceId,
+    name:         s.name,
+    bio:          s.bio,
+    profileImage: s.profileImage,
+    memberCount:  s.memberCount || 0,
+    xp:           s.xp || 0,
+    premium:      s.premium || false,
+    premiumExpiry: s.premiumExpiry || null,
+    isPrivate:    s.isPrivate || false,
+    joinLink:     s.joinLink,
+    ownerId:      s.ownerId,
+    isOwner:      s.ownerId === userId,
+    isAdmin:      !!(s.members || []).find(m => m.userId === userId)?.isAdmin,
+    createdAt:    s.createdAt,
+  })) });
+});
+
+/**
+ * GET /api/me/feeds
+ * Returns all feeds the authenticated user is a member of (including private ones).
+ */
+app.get("/api/me/feeds", requireAuth, async (req, res) => {
+  const userId = req.user.userId;
+  const feeds = await db.collection("feeds")
+    .find({ "members.userId": userId, banned: { $ne: true } })
+    .toArray();
+  res.json({ feeds: feeds.map(f => ({
+    feedId:       f.feedId,
+    name:         f.name,
+    bio:          f.bio,
+    profileImage: f.profileImage,
+    memberCount:  f.memberCount || 0,
+    xp:           f.xp || 0,
+    premium:      f.premium || false,
+    premiumExpiry: f.premiumExpiry || null,
+    isPrivate:    f.isPrivate || false,
+    joinLink:     f.joinLink,
+    ownerId:      f.ownerId,
+    isOwner:      f.ownerId === userId,
+    isAdmin:      !!(f.members || []).find(m => m.userId === userId)?.isAdmin,
+    createdAt:    f.createdAt,
+  })) });
 });
 
 // ── Join Space ────────────────────────────────────────────────────────────────
@@ -4795,15 +5293,16 @@ app.patch("/api/spaces/:spaceId", requireAuth, upload.single("profileImage"), as
   const updates = {};
   if (req.body.name?.trim()) updates.name = req.body.name.trim();
   if (req.body.bio !== undefined) updates.bio = req.body.bio.trim();
+  if (req.body.isPrivate !== undefined) updates.isPrivate = req.body.isPrivate === "true" || req.body.isPrivate === true;
   if (req.file) {
-    try { updates.profileImage = await uploadToCatbox(req.file.buffer, req.file.originalname || "space.jpg"); }
+    try { updates.profileImage = await uploadMedia(req.file.buffer, req.file.originalname || "space.jpg"); }
     catch (e) { return res.status(500).json({ error: "Upload failed." }); }
   }
   if (Object.keys(updates).length === 0) return res.json({ message: "Nothing to update." });
 
   await spaces.updateOne({ spaceId: space.spaceId }, { $set: updates });
   broadcastToGroup(space.spaceId, { type: "groupUpdated", spaceId: space.spaceId, updates });
-  res.json({ message: "Space updated." });
+  res.json({ message: "Space updated.", space: sanitizeGroup({ ...space, ...updates }) });
 });
 
 // ── Edit Feed ─────────────────────────────────────────────────────────────────
@@ -4817,15 +5316,16 @@ app.patch("/api/feeds/:feedId", requireAuth, upload.single("profileImage"), asyn
   const updates = {};
   if (req.body.name?.trim()) updates.name = req.body.name.trim();
   if (req.body.bio !== undefined) updates.bio = req.body.bio.trim();
+  if (req.body.isPrivate !== undefined) updates.isPrivate = req.body.isPrivate === "true" || req.body.isPrivate === true;
   if (req.file) {
-    try { updates.profileImage = await uploadToCatbox(req.file.buffer, req.file.originalname || "feed.jpg"); }
+    try { updates.profileImage = await uploadMedia(req.file.buffer, req.file.originalname || "feed.jpg"); }
     catch (e) { return res.status(500).json({ error: "Upload failed." }); }
   }
   if (Object.keys(updates).length === 0) return res.json({ message: "Nothing to update." });
 
   await feeds.updateOne({ feedId: feed.feedId }, { $set: updates });
   broadcastToGroup(feed.feedId, { type: "groupUpdated", feedId: feed.feedId, updates });
-  res.json({ message: "Feed updated." });
+  res.json({ message: "Feed updated.", feed: sanitizeGroup({ ...feed, ...updates }) });
 });
 
 // ── Promote / Demote member ───────────────────────────────────────────────────
@@ -5080,7 +5580,7 @@ app.post("/api/:groupType/:groupId/messages",
     if (needsMedia.includes(type)) {
       const file = req.files?.media?.[0];
       if (!file) return res.status(400).json({ error: "media file is required." });
-      try { content.mediaUrl = await uploadToCatbox(file.buffer, file.originalname || "media"); }
+      try { content.mediaUrl = await uploadMedia(file.buffer, file.originalname || "media"); }
       catch (e) { return res.status(500).json({ error: "Upload failed: " + e.message }); }
       content.mediaSize     = file.size;
       content.mediaMimeType = file.mimetype;
@@ -5811,6 +6311,138 @@ app.get("/api/premium/status", requireAuth, async (req, res) => {
 // ════════════════════════════════════════════════════════════════════════════
 
 /**
+ * Compute a user's current rank for a given leaderboard type.
+ * Returns the integer rank (1-based).
+ */
+async function computeRank(userId, type) {
+  const user = await db.collection("users").findOne({ userId });
+  if (!user) return null;
+
+  if (type === "combined") {
+    const score = (user.xp || 0) * 0.5 + (user.reputation || 0) * 300 + (user.streaks || 0) * 20;
+    return await db.collection("users").countDocuments({
+      banned: { $ne: true },
+      $expr: {
+        $gt: [
+          { $add: [
+            { $multiply: [{ $ifNull: ["$xp",         0] }, 0.5] },
+            { $multiply: [{ $ifNull: ["$reputation", 0] }, 300] },
+            { $multiply: [{ $ifNull: ["$streaks",    0] },  20] },
+          ]},
+          score,
+        ],
+      },
+    }) + 1;
+  }
+  const fieldMap = { xp: "xp", reputation: "reputation", streaks: "streaks", veterans: "daysOnline" };
+  const field    = fieldMap[type] || "xp";
+  return await db.collection("users").countDocuments({
+    banned: { $ne: true },
+    [field]: { $gt: (user[field] || 0) },
+  }) + 1;
+}
+
+/**
+ * Returns trend info for a user on a given leaderboard type.
+ * trend: "up" | "down" | "same" | "new"
+ * delta: number of positions moved (positive = improved)
+ */
+async function getRankTrend(userId, type, currentRank) {
+  const snap = await db.collection("rankSnapshots").findOne({ userId, type });
+  if (!snap) return { trend: "new", delta: 0, previousRank: null };
+  const prev  = snap.rank;
+  const delta = prev - currentRank; // positive = moved up
+  return {
+    trend:        delta > 0 ? "up" : delta < 0 ? "down" : "same",
+    delta:        Math.abs(delta),
+    previousRank: prev,
+  };
+}
+
+/**
+ * Persist rank snapshot for a user so next call can compute trend.
+ * Called after every leaderboard fetch that includes the requester.
+ * Fire-and-forget (non-blocking).
+ */
+function saveRankSnapshot(userId, type, rank) {
+  db.collection("rankSnapshots").updateOne(
+    { userId, type },
+    { $set: { rank, updatedAt: new Date().toISOString() } },
+    { upsert: true }
+  ).catch(() => {});
+}
+
+/**
+ * Enrich a leaderboard entry list with trend data loaded from rankSnapshots.
+ * Also marks which entry is the requesting user (isSelf: true) and appends
+ * a "you" entry at the end if the requester isn't already visible on this page.
+ */
+async function enrichLeaderboard(entries, requesterId, type) {
+  if (!requesterId) return { entries, requester: null };
+
+  // Load snapshots for everyone on this page in one query
+  const ids   = entries.map(e => e.userId);
+  const snaps = await db.collection("rankSnapshots")
+    .find({ userId: { $in: ids }, type })
+    .toArray();
+  const snapMap = Object.fromEntries(snaps.map(s => [s.userId, s.rank]));
+
+  const enriched = entries.map(e => {
+    const prev  = snapMap[e.userId];
+    const delta = prev != null ? prev - e.rank : null;
+    return {
+      ...e,
+      isSelf:       e.userId === requesterId,
+      previousRank: prev ?? null,
+      trend:        delta == null ? "new" : delta > 0 ? "up" : delta < 0 ? "down" : "same",
+      trendDelta:   delta == null ? 0 : Math.abs(delta),
+    };
+  });
+
+  // Save snapshots for everyone on this page (background)
+  for (const e of entries) saveRankSnapshot(e.userId, type, e.rank);
+
+  // If requester isn't on this page, fetch their rank separately
+  let requester = null;
+  if (requesterId && !entries.find(e => e.userId === requesterId)) {
+    const currentRank = await computeRank(requesterId, type);
+    if (currentRank) {
+      const trendInfo = await getRankTrend(requesterId, type, currentRank);
+      const u = await db.collection("users").findOne(
+        { userId: requesterId },
+        { projection: { userId: 1, name: 1, username: 1, tag: 1, profilePicture: 1,
+            premium: 1, verified: 1, position: 1, xp: 1, level: 1,
+            reputation: 1, streaks: 1, daysOnline: 1 } }
+      );
+      if (u) {
+        requester = {
+          rank:         currentRank,
+          isSelf:       true,
+          ...trendInfo,
+          userId:       u.userId,
+          name:         u.name,
+          username:     u.username,
+          tag:          u.tag,
+          profilePicture: u.profilePicture,
+          premium:      u.premium,
+          verified:     u.verified,
+          position:     u.position,
+          reputation:   u.reputation || 0,
+          streaks:      u.streaks    || 0,
+          daysOnline:   u.daysOnline || 0,
+          ...buildLevelInfo(u.xp || 0),
+        };
+        saveRankSnapshot(requesterId, type, currentRank);
+      }
+    }
+  } else if (requesterId) {
+    requester = enriched.find(e => e.userId === requesterId) || null;
+  }
+
+  return { entries: enriched, requester };
+}
+
+/**
  * Shared leaderboard builder.
  * sortField: "xp" | "reputation" | "streaks" | "daysOnline"
  */
@@ -5846,54 +6478,69 @@ async function buildLeaderboard(sortField, limit, page) {
   }));
 }
 
+/** Parse optional auth cookie/header without hard-failing */
+function tryGetRequesterId(req) {
+  try {
+    const token = req.cookies?.token || req.headers["authorization"]?.replace("Bearer ", "");
+    if (!token) return null;
+    return jwt.verify(token, JWT_SECRET).userId;
+  } catch { return null; }
+}
+
 /**
  * GET /api/leaderboard/xp?limit=20&page=1
  * Top users by XP / level.
+ * If authenticated: includes isSelf, trend, trendDelta, previousRank on each entry
+ * + a top-level `requester` object showing your position even if off-page.
  */
 app.get("/api/leaderboard/xp", async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 20, 100);
   const page  = Math.max(parseInt(req.query.page)  || 1,  1);
-  const entries = await buildLeaderboard("xp", limit, page);
-  res.json({ leaderboard: entries, page, limit });
+  const raw   = await buildLeaderboard("xp", limit, page);
+  const requesterId = tryGetRequesterId(req);
+  const { entries, requester } = await enrichLeaderboard(raw, requesterId, "xp");
+  res.json({ leaderboard: entries, requester, page, limit });
 });
 
 /**
  * GET /api/leaderboard/reputation?limit=20&page=1
- * Top users by reputation (earned via level milestones).
  */
 app.get("/api/leaderboard/reputation", async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 20, 100);
   const page  = Math.max(parseInt(req.query.page)  || 1,  1);
-  const entries = await buildLeaderboard("reputation", limit, page);
-  res.json({ leaderboard: entries, page, limit });
+  const raw   = await buildLeaderboard("reputation", limit, page);
+  const requesterId = tryGetRequesterId(req);
+  const { entries, requester } = await enrichLeaderboard(raw, requesterId, "reputation");
+  res.json({ leaderboard: entries, requester, page, limit });
 });
 
 /**
  * GET /api/leaderboard/streaks?limit=20&page=1
- * Top users by current login streak.
  */
 app.get("/api/leaderboard/streaks", async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 20, 100);
   const page  = Math.max(parseInt(req.query.page)  || 1,  1);
-  const entries = await buildLeaderboard("streaks", limit, page);
-  res.json({ leaderboard: entries, page, limit });
+  const raw   = await buildLeaderboard("streaks", limit, page);
+  const requesterId = tryGetRequesterId(req);
+  const { entries, requester } = await enrichLeaderboard(raw, requesterId, "streaks");
+  res.json({ leaderboard: entries, requester, page, limit });
 });
 
 /**
  * GET /api/leaderboard/veterans?limit=20&page=1
- * Top users by total days online.
  */
 app.get("/api/leaderboard/veterans", async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 20, 100);
   const page  = Math.max(parseInt(req.query.page)  || 1,  1);
-  const entries = await buildLeaderboard("daysOnline", limit, page);
-  res.json({ leaderboard: entries, page, limit });
+  const raw   = await buildLeaderboard("daysOnline", limit, page);
+  const requesterId = tryGetRequesterId(req);
+  const { entries, requester } = await enrichLeaderboard(raw, requesterId, "veterans");
+  res.json({ leaderboard: entries, requester, page, limit });
 });
 
 /**
  * GET /api/leaderboard/combined?limit=20&page=1
  * Composite score: xp * 0.5 + reputation * 300 + streaks * 20
- * Uses MongoDB aggregation for the weighted sort.
  */
 app.get("/api/leaderboard/combined", async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 20, 100);
@@ -5921,23 +6568,29 @@ app.get("/api/leaderboard/combined", async (req, res) => {
     }},
   ]).toArray();
 
+  const raw = results.map((u, i) => ({
+    rank:           skip + i + 1,
+    userId:         u.userId,
+    name:           u.name,
+    username:       u.username,
+    tag:            u.tag,
+    profilePicture: u.profilePicture,
+    premium:        u.premium,
+    verified:       u.verified,
+    position:       u.position,
+    reputation:     u.reputation || 0,
+    streaks:        u.streaks    || 0,
+    daysOnline:     u.daysOnline || 0,
+    score:          Math.round(u.score),
+    ...buildLevelInfo(u.xp || 0),
+  }));
+
+  const requesterId = tryGetRequesterId(req);
+  const { entries, requester } = await enrichLeaderboard(raw, requesterId, "combined");
+
   res.json({
-    leaderboard: results.map((u, i) => ({
-      rank:           skip + i + 1,
-      userId:         u.userId,
-      name:           u.name,
-      username:       u.username,
-      tag:            u.tag,
-      profilePicture: u.profilePicture,
-      premium:        u.premium,
-      verified:       u.verified,
-      position:       u.position,
-      reputation:     u.reputation || 0,
-      streaks:        u.streaks    || 0,
-      daysOnline:     u.daysOnline || 0,
-      score:          Math.round(u.score),
-      ...buildLevelInfo(u.xp || 0),
-    })),
+    leaderboard: entries,
+    requester,
     page, limit,
     scoreFormula: "xp × 0.5 + reputation × 300 + streaks × 20",
   });
@@ -5945,43 +6598,23 @@ app.get("/api/leaderboard/combined", async (req, res) => {
 
 /**
  * GET /api/leaderboard/me?type=xp|reputation|streaks|veterans|combined
- * Returns the authenticated user's rank on the requested leaderboard.
+ * Returns the authenticated user's rank + trend on the requested leaderboard.
  */
 app.get("/api/leaderboard/me", requireAuth, async (req, res) => {
-  const type    = req.query.type || "xp";
-  const userId  = req.user.userId;
-  const user    = await db.collection("users").findOne({ userId });
+  const type   = req.query.type || "xp";
+  const userId = req.user.userId;
+  const user   = await db.collection("users").findOne({ userId });
   if (!user) return res.status(404).json({ error: "User not found." });
 
-  let rank;
+  const rank      = await computeRank(userId, type);
+  const trendInfo = await getRankTrend(userId, type, rank);
 
-  if (type === "combined") {
-    const userScore = (user.xp || 0) * 0.5 + (user.reputation || 0) * 300 + (user.streaks || 0) * 20;
-    rank = await db.collection("users").countDocuments({
-      banned: { $ne: true },
-      $expr: {
-        $gt: [
-          { $add: [
-            { $multiply: [{ $ifNull: ["$xp",         0] }, 0.5] },
-            { $multiply: [{ $ifNull: ["$reputation", 0] }, 300] },
-            { $multiply: [{ $ifNull: ["$streaks",    0] },  20] },
-          ]},
-          userScore,
-        ],
-      },
-    }) + 1;
-  } else {
-    const fieldMap = { xp: "xp", reputation: "reputation", streaks: "streaks", veterans: "daysOnline" };
-    const field    = fieldMap[type] || "xp";
-    const val      = user[field] || 0;
-    rank = await db.collection("users").countDocuments({
-      banned: { $ne: true },
-      [field]: { $gt: val },
-    }) + 1;
-  }
+  // Save snapshot for next call
+  saveRankSnapshot(userId, type, rank);
 
   res.json({
     rank,
+    ...trendInfo,
     userId:     user.userId,
     name:       user.name,
     username:   user.username,
@@ -6207,7 +6840,36 @@ app.get("/api/exiles/history", requireAuth, async (req, res) => {
 });
 
 /**
- * POST /api/bot/exiles/send
+ * GET /api/bot/groups/:groupType/:groupId/is-member/:userId
+ * Bot checks whether a given userId is an active member of a space or feed.
+ * Authorization: Bot <token>
+ * groupType: space | feed
+ * Returns: { isMember: true/false, isAdmin, isOwner, isBanned, isMuted, joinedAt }
+ */
+app.get("/api/bot/groups/:groupType/:groupId/is-member/:userId", requireBotAuth, async (req, res) => {
+  const { groupType, groupId, userId } = req.params;
+  const col     = groupType === "space" ? "spaces" : "feeds";
+  const idField = groupType === "space" ? "spaceId" : "feedId";
+
+  const group = await db.collection(col).findOne({ [idField]: groupId });
+  if (!group) return res.status(404).json({ error: "Group not found." });
+
+  const member = getMember(group, userId);
+
+  if (!member) return res.json({ isMember: false, isAdmin: false, isOwner: false, isBanned: false, isMuted: false, joinedAt: null });
+
+  res.json({
+    isMember: !member.isBanned,
+    isAdmin:  member.isAdmin  || group.ownerId === userId,
+    isOwner:  group.ownerId === userId,
+    isBanned: member.isBanned || false,
+    isMuted:  member.isMuted  || false,
+    joinedAt: member.joinedAt || null,
+  });
+});
+
+
+/**
  * Bot sends exiles on behalf of its owner.
  * Authorization: Bot <token>
  * body: { to: userId, amount: number, note?: string }
@@ -6263,7 +6925,7 @@ app.get("/api/leaderboard/spaces", async (req, res) => {
   const skip  = (page - 1) * limit;
 
   const spaces = await db.collection("spaces").find(
-    { banned: { $ne: true } },
+    { banned: { $ne: true }, isPrivate: { $ne: true } },
     { projection: {
       spaceId: 1, name: 1, bio: 1, profileImage: 1,
       memberCount: 1, xp: 1, premium: 1, premiumExpiry: 1,
@@ -6304,7 +6966,7 @@ app.get("/api/leaderboard/feeds", async (req, res) => {
   const skip  = (page - 1) * limit;
 
   const feeds = await db.collection("feeds").find(
-    { banned: { $ne: true } },
+    { banned: { $ne: true }, isPrivate: { $ne: true } },
     { projection: {
       feedId: 1, name: 1, bio: 1, profileImage: 1,
       memberCount: 1, xp: 1, premium: 1, premiumExpiry: 1,
@@ -6335,8 +6997,150 @@ app.get("/api/leaderboard/feeds", async (req, res) => {
 });
 
 // ════════════════════════════════════════════════════════════════════════════
-//  BOOTSTRAP
+//  EXPLORE
 // ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/explore
+ * Returns public spaces, feeds, and users sorted by various criteria.
+ *
+ * Query params:
+ *   type      = all | spaces | feeds | users   (default: all)
+ *   sort      = xp | members | recent | combined  (default: xp for groups, xp for users)
+ *   limit     = 1–50  (default 20)
+ *   page      = 1+    (default 1)
+ *   q         = optional search query (name / username / bio)
+ */
+app.get("/api/explore", async (req, res) => {
+  const type  = req.query.type  || "all";
+  const sort  = req.query.sort  || "xp";
+  const limit = Math.min(parseInt(req.query.limit) || 20, 50);
+  const page  = Math.max(parseInt(req.query.page)  || 1,  1);
+  const skip  = (page - 1) * limit;
+  const q     = req.query.q?.trim();
+
+  const result = {};
+
+  // ── Spaces ──
+  if (type === "all" || type === "spaces") {
+    const spaceFilter = { banned: { $ne: true }, isPrivate: { $ne: true } };
+    if (q) {
+      const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      spaceFilter.$or = [{ name: { $regex: rx } }, { bio: { $regex: rx } }];
+    }
+    const sortField = sort === "members" ? "memberCount" : "xp";
+    const spaces = await db.collection("spaces")
+      .find(spaceFilter, { projection: {
+        spaceId: 1, name: 1, bio: 1, profileImage: 1,
+        memberCount: 1, xp: 1, premium: 1, premiumExpiry: 1,
+        joinLink: 1, ownerId: 1, createdAt: 1,
+      }})
+      .sort({ [sortField]: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray();
+    result.spaces = spaces.map(s => ({
+      spaceId:      s.spaceId,
+      name:         s.name,
+      bio:          s.bio,
+      profileImage: s.profileImage,
+      memberCount:  s.memberCount || 0,
+      xp:           s.xp || 0,
+      premium:      s.premium || false,
+      premiumExpiry: s.premiumExpiry || null,
+      joinLink:     s.joinLink,
+      ownerId:      s.ownerId,
+      createdAt:    s.createdAt,
+    }));
+  }
+
+  // ── Feeds ──
+  if (type === "all" || type === "feeds") {
+    const feedFilter = { banned: { $ne: true }, isPrivate: { $ne: true } };
+    if (q) {
+      const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      feedFilter.$or = [{ name: { $regex: rx } }, { bio: { $regex: rx } }];
+    }
+    const sortField = sort === "members" ? "memberCount" : "xp";
+    const feeds = await db.collection("feeds")
+      .find(feedFilter, { projection: {
+        feedId: 1, name: 1, bio: 1, profileImage: 1,
+        memberCount: 1, xp: 1, premium: 1, premiumExpiry: 1,
+        joinLink: 1, ownerId: 1, createdAt: 1,
+      }})
+      .sort({ [sortField]: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray();
+    result.feeds = feeds.map(f => ({
+      feedId:       f.feedId,
+      name:         f.name,
+      bio:          f.bio,
+      profileImage: f.profileImage,
+      memberCount:  f.memberCount || 0,
+      xp:           f.xp || 0,
+      premium:      f.premium || false,
+      premiumExpiry: f.premiumExpiry || null,
+      joinLink:     f.joinLink,
+      ownerId:      f.ownerId,
+      createdAt:    f.createdAt,
+    }));
+  }
+
+  // ── Users (contacts / people to discover) ──
+  if (type === "all" || type === "users") {
+    const userFilter = { banned: { $ne: true } };
+    if (q) {
+      const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      userFilter.$or = [
+        { name: { $regex: rx } },
+        { usernameLower: { $regex: q.toLowerCase() } },
+      ];
+    }
+
+    // Sort field
+    const userSortMap = {
+      xp:         "xp",
+      reputation: "reputation",
+      streaks:    "streaks",
+      members:    "contacts",
+      combined:   "xp",
+      recent:     "dateJoined",
+    };
+    const userSortField = userSortMap[sort] || "xp";
+
+    const users = await db.collection("users")
+      .find(userFilter, { projection: {
+        userId: 1, name: 1, username: 1, tag: 1,
+        profilePicture: 1, premium: 1, verified: 1,
+        position: 1, xp: 1, level: 1, reputation: 1,
+        streaks: 1, daysOnline: 1, contacts: 1, dateJoined: 1,
+      }})
+      .sort({ [userSortField]: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray();
+
+    result.users = users.map(u => ({
+      userId:         u.userId,
+      name:           u.name,
+      username:       u.username,
+      tag:            u.tag,
+      profilePicture: u.profilePicture,
+      premium:        u.premium,
+      verified:       u.verified,
+      position:       u.position,
+      contacts:       u.contacts || 0,
+      reputation:     u.reputation || 0,
+      streaks:        u.streaks    || 0,
+      ...buildLevelInfo(u.xp || 0),
+    }));
+  }
+
+  res.json({ ...result, sort, page, limit });
+});
+
+
 
 connectDB()
   .then(() => {
