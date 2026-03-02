@@ -1285,7 +1285,7 @@ function switchView(view) {
   document.getElementById('tab-contacts-pill').style.display = view === 'contacts' ? '' : 'none';
 
   if (view === 'contacts') {
-    loadContacts();
+    loadContacts(true);
   }
 }
 
@@ -1545,124 +1545,137 @@ document.addEventListener('click', e => {
 });
 
 // ============================================================
-//  CONTACTS
+//  CONTACTS  (paginated)
 // ============================================================
-async function loadContacts() {
+let contactsPage = 1;
+let contactsHasMore = true;
+let contactsLoading = false;
+let contactsQuery = '';
+let contactsObserver = null;
+
+async function loadContacts(reset = true) {
+  if (contactsLoading) return;
+  if (reset) {
+    contactsPage = 1;
+    contactsHasMore = true;
+    contactsList = [];
+    document.getElementById('contacts-list-el').innerHTML = '';
+    document.getElementById('contacts-empty').style.display = 'none';
+  }
+  if (!contactsHasMore) return;
+  contactsLoading = true;
   try {
-    const r = await fetch('/api/contacts', { credentials: 'include' });
+    const q = contactsQuery ? `&q=${encodeURIComponent(contactsQuery)}` : '';
+    const r = await fetch(`/api/contacts?page=${contactsPage}&limit=30${q}`, { credentials: 'include' });
     if (!r.ok) throw new Error();
-    const { contacts } = await r.json();
-    contactsList = contacts || [];
-    renderContacts(contactsList);
+    const data = await r.json();
+    const batch = data.contacts || [];
+    const total = data.total ?? batch.length;
+    contactsList = reset ? batch : [...contactsList, ...batch];
+    contactsHasMore = contactsList.length < total;
+    batch.forEach(u => {
+      const card = buildContactCard(u);
+      document.getElementById('contacts-list-el').appendChild(card);
+    });
+    if (contactsList.length === 0) {
+      document.getElementById('contacts-empty').style.display = 'block';
+    }
+    attachContactSentinel();
   } catch {
     showToast('Could not load contacts');
+  } finally {
+    contactsLoading = false;
   }
 }
 
-function renderContacts(list) {
-  const el = document.getElementById('contacts-list-el');
-  const em = document.getElementById('contacts-empty');
-  const query = document.getElementById('contacts-search').value.trim().toLowerCase();
-  const filtered = query ? list.filter(c =>
-    (c.name||'').toLowerCase().includes(query) ||
-    (c.username||'').toLowerCase().includes(query) ||
-    (c.contactNumber||'').includes(query)
-  ) : list;
-
-  el.innerHTML = '';
-  if (!filtered.length) { em.style.display='block'; return; }
-  em.style.display='none';
-
-  filtered.forEach(u => {
-    const card = document.createElement('div');
-    card.className = 'contact-card';
-
-    // Avatar
-    const av = document.createElement('div');
-    av.className = 'contact-av';
-    av.style.background = avatarColor(u.userId);
-    if (u.profilePicture) {
-      const img = document.createElement('img');
-      img.src = u.profilePicture; img.alt = '';
-      img.onerror = () => { av.removeChild(img); av.textContent = initials(u.name); };
-      av.appendChild(img);
-    } else {
-      av.textContent = initials(u.name);
+function attachContactSentinel() {
+  const old = document.getElementById('contacts-sentinel');
+  if (old) old.remove();
+  if (!contactsHasMore) return;
+  const s = document.createElement('div');
+  s.id = 'contacts-sentinel';
+  s.style.height = '40px';
+  document.getElementById('contacts-list-el').appendChild(s);
+  if (contactsObserver) contactsObserver.disconnect();
+  contactsObserver = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting && !contactsLoading && contactsHasMore) {
+      contactsPage++;
+      loadContacts(false);
     }
-    card.appendChild(av);
-
-    // Info
-    const info = document.createElement('div');
-    info.className = 'contact-info';
-    const nameRow = document.createElement('div');
-    nameRow.className = 'contact-name';
-    // Verified BEFORE name
-    if (u.verified) {
-      const img = document.createElement('img');
-      img.src='/verified.png'; img.className='badge-img'; img.alt='';
-      img.onerror=()=>img.classList.add('err');
-      nameRow.appendChild(img);
-    }
-    const nameSpan = document.createElement('span');
-    nameSpan.textContent = u.name || 'Unknown';
-    nameRow.appendChild(nameSpan);
-    // Premium AFTER name
-    if (u.premium) {
-      const img = document.createElement('img');
-      img.src='/premium.png'; img.className='badge-img'; img.alt='';
-      img.onerror=()=>img.classList.add('err');
-      nameRow.appendChild(img);
-    }
-    info.appendChild(nameRow);
-    const sub = document.createElement('div');
-    sub.className = 'contact-sub';
-    sub.textContent = (u.contactNumber || '') + (u.username ? `  ·  @${u.username}` : '');
-    info.appendChild(sub);
-    card.appendChild(info);
-
-    // Actions
-    const actions = document.createElement('div');
-    actions.className = 'contact-actions';
-
-    const chatBtn = document.createElement('button');
-    chatBtn.className = 'contact-btn chat-btn';
-    chatBtn.title = 'Open Chat';
-    chatBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
-    chatBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      window.location.href = `/chat/${u.userId}`;
-    });
-    actions.appendChild(chatBtn);
-
-    const remBtn = document.createElement('button');
-    remBtn.className = 'contact-btn remove-btn';
-    remBtn.title = 'Remove Contact';
-    remBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="22" y1="11" x2="16" y2="11"/></svg>`;
-    remBtn.addEventListener('click', async e => {
-      e.stopPropagation();
-      try {
-        const res = await fetch(`/api/contacts/${u.userId}`, {
-          method: 'DELETE', credentials: 'include'
-        });
-        if (res.ok) {
-          contactsList = contactsList.filter(c => c.userId !== u.userId);
-          renderContacts(contactsList);
-          showToast('Contact removed', 'rgba(155,89,182,0.9)');
-        } else {
-          showToast('Failed to remove contact');
-        }
-      } catch { showToast('Error'); }
-    });
-    actions.appendChild(remBtn);
-    card.appendChild(actions);
-
-    // Click card → user profile
-    card.addEventListener('click', () => window.location.href = `/user/${u.userId}`);
-    el.appendChild(card);
-  });
+  }, { threshold: 0.1 });
+  contactsObserver.observe(s);
 }
 
-document.getElementById('contacts-search').addEventListener('input', () => renderContacts(contactsList));
+function buildContactCard(u) {
+  const card = document.createElement('div');
+  card.className = 'contact-card';
+
+  const av = document.createElement('div');
+  av.className = 'contact-av';
+  av.style.background = avatarColor(u.userId);
+  if (u.profilePicture) {
+    const img = document.createElement('img');
+    img.src = u.profilePicture; img.alt = '';
+    img.onerror = () => { av.removeChild(img); av.textContent = initials(u.name); };
+    av.appendChild(img);
+  } else { av.textContent = initials(u.name); }
+  card.appendChild(av);
+
+  const info = document.createElement('div');
+  info.className = 'contact-info';
+  const nameRow = document.createElement('div');
+  nameRow.className = 'contact-name';
+  if (u.verified) {
+    const img = document.createElement('img'); img.src='/verified.png'; img.className='badge-img'; img.alt=''; img.onerror=()=>img.classList.add('err'); nameRow.appendChild(img);
+  }
+  const nameSpan = document.createElement('span'); nameSpan.textContent = u.name || 'Unknown'; nameRow.appendChild(nameSpan);
+  if (u.premium) {
+    const img = document.createElement('img'); img.src='/premium.png'; img.className='badge-img'; img.alt=''; img.onerror=()=>img.classList.add('err'); nameRow.appendChild(img);
+  }
+  info.appendChild(nameRow);
+  const sub = document.createElement('div');
+  sub.className = 'contact-sub';
+  sub.textContent = (u.contactNumber || '') + (u.username ? `  ·  @${u.username}` : '');
+  info.appendChild(sub);
+  card.appendChild(info);
+
+  const actions = document.createElement('div');
+  actions.className = 'contact-actions';
+
+  const chatBtn = document.createElement('button');
+  chatBtn.className = 'contact-btn chat-btn'; chatBtn.title = 'Open Chat';
+  chatBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
+  chatBtn.addEventListener('click', e => { e.stopPropagation(); window.location.href = `/chat/${u.userId}`; });
+  actions.appendChild(chatBtn);
+
+  const remBtn = document.createElement('button');
+  remBtn.className = 'contact-btn remove-btn'; remBtn.title = 'Remove Contact';
+  remBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="22" y1="11" x2="16" y2="11"/></svg>`;
+  remBtn.addEventListener('click', async e => {
+    e.stopPropagation();
+    try {
+      const res = await fetch(`/api/contacts/${u.userId}`, { method: 'DELETE', credentials: 'include' });
+      if (res.ok) {
+        card.remove();
+        contactsList = contactsList.filter(c => c.userId !== u.userId);
+        showToast('Contact removed', 'rgba(155,89,182,0.9)');
+        if (!contactsList.length) document.getElementById('contacts-empty').style.display = 'block';
+      } else { showToast('Failed to remove contact'); }
+    } catch { showToast('Error'); }
+  });
+  actions.appendChild(remBtn);
+  card.appendChild(actions);
+
+  card.addEventListener('click', () => window.location.href = `/user/${u.userId}`);
+  return card;
+}
+
+let contactsSearchTimer = null;
+document.getElementById('contacts-search').addEventListener('input', () => {
+  contactsQuery = document.getElementById('contacts-search').value.trim();
+  clearTimeout(contactsSearchTimer);
+  contactsSearchTimer = setTimeout(() => loadContacts(true), 280);
+});
 
 // ── Add contact modal ──
 document.getElementById('contacts-add-btn').addEventListener('click', () => openAddModal());
@@ -1862,8 +1875,7 @@ async function addFoundContact() {
     if (r.ok) {
       statusEl.textContent = 'Contact added!';
       statusEl.className = 'modal-status ok';
-      contactsList.push(foundUser);
-      renderContacts(contactsList);
+      if (currentView === 'contacts') loadContacts(true);
       setTimeout(() => document.getElementById('add-contact-modal').classList.remove('open'), 1200);
     } else {
       statusEl.textContent = data.error || 'Failed.';
