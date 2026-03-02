@@ -1048,6 +1048,50 @@ body{
 .gs-btn.copy-btn{background:rgba(255,255,255,0.07);color:var(--text-primary);border:1px solid rgba(255,255,255,0.1);}
 .gs-btn.search-btn{background:rgba(255,255,255,0.07);color:var(--text-primary);border:1px solid rgba(255,255,255,0.1);}
 .gs-btn.report-btn{background:rgba(251,146,60,0.1);color:#fb923c;border:1px solid rgba(251,146,60,0.2);}
+/* ── Privacy toggle row ── */
+.gs-privacy-row{
+  width:100%;margin-top:8px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 14px;border-radius:var(--r-md);
+  background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+  cursor:pointer;transition:background 0.15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.gs-privacy-row:hover{background:rgba(255,255,255,0.07);}
+.gs-privacy-row:active{transform:scale(0.99);}
+.gs-privacy-row-left{display:flex;align-items:center;gap:10px;}
+.gs-privacy-icon{
+  width:32px;height:32px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  transition:background 0.2s;
+}
+.gs-privacy-icon.public{background:rgba(34,197,94,0.15);}
+.gs-privacy-icon.private{background:rgba(239,68,68,0.12);}
+.gs-privacy-icon svg{width:16px;height:16px;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.gs-privacy-icon.public svg{stroke:#22c55e;}
+.gs-privacy-icon.private svg{stroke:#ef4444;}
+.gs-privacy-text{}
+.gs-privacy-label{font-size:13px;font-weight:700;color:var(--text-pri);}
+.gs-privacy-sub{font-size:11px;color:var(--text-sec);margin-top:1px;}
+/* iOS-style toggle */
+.gs-toggle{
+  position:relative;width:44px;height:26px;flex-shrink:0;
+}
+.gs-toggle input{opacity:0;width:0;height:0;position:absolute;}
+.gs-toggle-track{
+  position:absolute;inset:0;border-radius:13px;cursor:pointer;
+  background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.1);
+  transition:background 0.22s,border-color 0.22s;
+}
+.gs-toggle input:checked ~ .gs-toggle-track{background:var(--red);border-color:rgba(239,68,68,0.5);}
+.gs-toggle-thumb{
+  position:absolute;top:3px;left:3px;
+  width:18px;height:18px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.35);
+  transition:transform 0.22s cubic-bezier(.34,1.2,.64,1);
+  pointer-events:none;
+}
+.gs-toggle input:checked ~ .gs-toggle-thumb{transform:translateX(18px);}
 /* members tab */
 .members-search-wrap{padding:12px 16px 8px;flex-shrink:0;}
 .members-search{
@@ -3361,6 +3405,42 @@ function renderGsInfo() {
     editBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit`;
     editBtn.onclick = openEditModal;
     actionsEl.appendChild(editBtn);
+
+    // ── Privacy toggle ──
+    const isPrivate = GROUP.isPrivate ?? false;
+    const privRow = document.createElement('div');
+    privRow.className = 'gs-privacy-row';
+    privRow.id = 'gsPrivacyRow';
+    privRow.innerHTML = `
+      <div class="gs-privacy-row-left">
+        <div class="gs-privacy-icon ${isPrivate ? 'private' : 'public'}" id="gsPrivacyIcon">
+          ${isPrivate
+            ? `<svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`
+            : `<svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>`}
+        </div>
+        <div class="gs-privacy-text">
+          <div class="gs-privacy-label" id="gsPrivacyLabel">${isPrivate ? 'Private' : 'Public'}</div>
+          <div class="gs-privacy-sub" id="gsPrivacySub">${isPrivate ? 'Only invited members can join' : 'Anyone with the link can join'}</div>
+        </div>
+      </div>
+      <label class="gs-toggle" onclick="event.stopPropagation()">
+        <input type="checkbox" id="gsPrivacyToggle" ${isPrivate ? 'checked' : ''} onchange="togglePrivacy(this)">
+        <div class="gs-toggle-track"></div>
+        <div class="gs-toggle-thumb"></div>
+      </label>`;
+    privRow.onclick = () => {
+      const cb = document.getElementById('gsPrivacyToggle');
+      cb.checked = !cb.checked;
+      togglePrivacy(cb);
+    };
+    // wrap actions + privacy in a column
+    actionsEl.style.flexDirection = 'column';
+    const btnsRow = document.createElement('div');
+    btnsRow.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;width:100%;';
+    // move existing buttons into btnsRow
+    while (actionsEl.firstChild) btnsRow.appendChild(actionsEl.firstChild);
+    actionsEl.appendChild(btnsRow);
+    actionsEl.appendChild(privRow);
   }
 
   const reportBtn = document.createElement('button'); reportBtn.className = 'gs-btn report-btn';
@@ -3379,6 +3459,49 @@ function renderGsInfo() {
 async function copyJoinLink() {
   const link = GROUP?.joinLink || window.location.href;
   try { await navigator.clipboard.writeText(link); showToast('Join link copied! 🔗'); } catch { showToast('Copy failed'); }
+}
+
+async function togglePrivacy(checkbox) {
+  const wantPrivate = checkbox.checked;
+  // Optimistically update UI immediately
+  updatePrivacyUI(wantPrivate);
+
+  try {
+    const res = await fetch(`/api/${GROUP_TYPE}s/${GROUP_ID}/privacy`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isPrivate: wantPrivate }),
+    });
+    const d = await res.json();
+    if (!res.ok) {
+      // Roll back on failure
+      checkbox.checked = !wantPrivate;
+      updatePrivacyUI(!wantPrivate);
+      showToast(d.error || 'Failed to update privacy');
+      return;
+    }
+    GROUP.isPrivate = wantPrivate;
+    showToast(wantPrivate ? '🔒 Group is now private' : '🌐 Group is now public');
+  } catch {
+    checkbox.checked = !wantPrivate;
+    updatePrivacyUI(!wantPrivate);
+    showToast('Network error');
+  }
+}
+
+function updatePrivacyUI(isPrivate) {
+  const icon  = document.getElementById('gsPrivacyIcon');
+  const label = document.getElementById('gsPrivacyLabel');
+  const sub   = document.getElementById('gsPrivacySub');
+  if (!icon) return;
+
+  icon.className = `gs-privacy-icon ${isPrivate ? 'private' : 'public'}`;
+  icon.innerHTML = isPrivate
+    ? `<svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`
+    : `<svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>`;
+  label.textContent = isPrivate ? 'Private' : 'Public';
+  sub.textContent   = isPrivate ? 'Only invited members can join' : 'Anyone with the link can join';
 }
 
 async function leaveGroup() {
