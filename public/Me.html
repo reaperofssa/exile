@@ -1184,6 +1184,16 @@ body{
           </button>
         </div>
         <div class="info-row">
+          <div class="info-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8"/><path d="M12 3v4"/></svg></div>
+          <div class="info-row-content">
+            <div class="info-label">User ID</div>
+            <div class="info-value" id="info-userid" style="font-family:monospace;font-size:12px;opacity:0.8">—</div>
+          </div>
+          <button class="copy-btn" id="btn-copy-userid" onclick="copyUserId(this)" title="Copy ID">
+            <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+        </div>
+        <div class="info-row">
           <div class="info-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
           <div>
             <div class="info-label">Joined</div>
@@ -1576,6 +1586,11 @@ function renderProfile(u, me) {
   document.title = `EXILE — ${u.name || u.username}`;
   const isSelf = me && me.userId === u.userId;
 
+  // Store user globally for copy functions
+  window._profileUser = u;
+  const copyLinkBtn = document.getElementById('btn-copy-link');
+  if (copyLinkBtn) copyLinkBtn.dataset.userId = u.userId || '';
+
   // Apply accent color
   if (u.profileColor) applyAccentColor(u.profileColor);
 
@@ -1705,6 +1720,9 @@ function renderProfile(u, me) {
     document.getElementById('info-contact').textContent = u.contactNumber;
   }
   document.getElementById('info-joined').textContent = fmtDate(u.dateJoined);
+  if (u.userId) {
+    document.getElementById('info-userid').textContent = u.userId;
+  }
   if (u.locality && (u.showLocality || isSelf)) {
     document.getElementById('info-locality-row').style.display = '';
     document.getElementById('info-locality').textContent = u.locality;
@@ -1857,8 +1875,19 @@ function copyContactNumber(btn) {
   }).catch(() => showToast('Failed to copy', 'rgba(239,68,68,0.9)'));
 }
 
+function copyUserId(btn) {
+  const id = document.getElementById('info-userid').textContent;
+  if (!id || id === '—') return;
+  navigator.clipboard.writeText(id).then(() => {
+    btn.classList.add('copied');
+    showToast('ID copied!', 'rgba(34,197,94,0.9)');
+    setTimeout(() => btn.classList.remove('copied'), 1800);
+  }).catch(() => showToast('Failed to copy', 'rgba(239,68,68,0.9)'));
+}
+
 function copyProfileLink(btn) {
-  const url = window.location.href;
+  const userId = btn.dataset.userId || (window._profileUser && window._profileUser.userId) || '';
+  const url = `https://exile.nett.to/user/${userId}`;
   navigator.clipboard.writeText(url).then(() => {
     btn.classList.add('copied');
     btn.innerHTML = `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Copied!`;
