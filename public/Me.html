@@ -1,0 +1,1667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="manifest" href="/manifest.json">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>EXILE — Profile</title>
+<style>
+/* ============================================================
+   TOKENS (mirror of home page)
+   ============================================================ */
+:root {
+  --deep:          #120812;
+  --mid:           #1e0e24;
+  --surface:       #1c1128;
+  --amber:         #c97b3a;
+  --amber-light:   #e8a85c;
+  --violet:        #9b59b6;
+  --violet-glow:   rgba(155,89,182,0.3);
+  --violet-dim:    rgba(155,89,182,0.12);
+  --green:         #22c55e;
+  --red:           #ef4444;
+  --text-pri:      rgba(255,255,255,0.93);
+  --text-sec:      rgba(255,255,255,0.55);
+  --text-dim:      rgba(255,255,255,0.3);
+  --glass-bg:      rgba(255,255,255,0.06);
+  --glass-border:  rgba(255,255,255,0.10);
+  --glass-top:     rgba(255,255,255,0.18);
+  --r-sm: 8px; --r-md: 14px; --r-lg: 20px;
+  --tab-h: 58px; --header-h: 44px;
+
+  /* Accent — dynamically set from user.profileColor */
+  --accent:        #9b59b6;
+  --accent-rgb:    155,89,182;
+  --accent-glow:   rgba(155,89,182,0.35);
+  --accent-dim:    rgba(155,89,182,0.12);
+  --accent-smoke:  rgba(155,89,182,0.06);
+}
+
+body.dark-mode {
+  --deep:          #000000;
+  --mid:           #0a0a0a;
+  --surface:       #0d0d0d;
+  --amber:         #8b5a2b;
+  --amber-light:   #a07038;
+  --violet:        #7a46a0;
+  --violet-glow:   rgba(122,70,160,0.2);
+  --violet-dim:    rgba(122,70,160,0.12);
+  --text-pri:      rgba(255,255,255,0.88);
+  --text-sec:      rgba(255,255,255,0.45);
+  --text-dim:      rgba(255,255,255,0.22);
+}
+
+*{
+  -webkit-user-select:none;
+  -moz-user-select:none;
+  user-select:none;
+  -webkit-touch-callout:none;
+  -webkit-tap-highlight-color:transparent;
+}
+input,textarea{
+  -webkit-user-select:text;
+  -moz-user-select:text;
+  user-select:text;
+  -webkit-touch-callout:default;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow-x:hidden;}
+body{
+  font-family:'SF Pro Display',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--deep); color:var(--text-pri);
+  min-height:100vh; -webkit-font-smoothing:antialiased;
+  overscroll-behavior:none;
+  transition:background 0.3s,color 0.3s;
+}
+
+/* ── Backgrounds ── */
+.bg-base{ position:fixed;inset:0;z-index:-3; background:var(--deep); }
+.bg-glow{
+  position:fixed;inset:0;z-index:-2;pointer-events:none;
+  background:
+    radial-gradient(ellipse 70% 55% at 20% 10%, var(--accent-smoke) 0%, transparent 65%),
+    radial-gradient(ellipse 50% 45% at 80% 85%, rgba(201,123,58,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 15% 20%, rgba(155,89,182,0.10) 0%, transparent 70%),
+    radial-gradient(ellipse 30% 40% at 85% 80%, rgba(201,123,58,0.07) 0%, transparent 60%);
+}
+
+/* Smoke accent layer */
+.bg-smoke{
+  position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(ellipse 80% 40% at 50% -10%, var(--accent-glow) 0%, transparent 60%);
+  opacity:0.35;
+  animation:smokeFloat 8s ease-in-out infinite alternate;
+}
+@keyframes smokeFloat{
+  0%  { transform:translateY(0px) scale(1); opacity:0.35; }
+  50% { transform:translateY(-15px) scale(1.04); opacity:0.45; }
+  100%{ transform:translateY(5px) scale(0.97); opacity:0.32; }
+}
+
+/* SVG bg pattern */
+.bg-pattern{
+  position:fixed;inset:0;z-index:-1;pointer-events:none;
+  overflow:hidden;opacity:1;
+}
+.bg-pattern svg{ position:absolute;inset:0;width:100%;height:100%; }
+.bp-sym{
+  transform-origin:center;
+  animation:bpDrift linear infinite;
+  will-change:transform,opacity;
+}
+@keyframes bpDrift{
+  0%   { transform:translateY(0px)   rotate(0deg)   scale(1);    opacity:var(--op-from); }
+  30%  { transform:translateY(-8px)  rotate(4deg)   scale(1.02); opacity:var(--op-to); }
+  60%  { transform:translateY(-3px)  rotate(-3deg)  scale(0.98); opacity:var(--op-mid); }
+  100% { transform:translateY(0px)   rotate(0deg)   scale(1);    opacity:var(--op-from); }
+}
+
+/* ── Glass ── */
+.glass{
+  background:linear-gradient(160deg,rgba(255,255,255,0.09) 0%,rgba(255,255,255,0.04) 40%,rgba(255,255,255,0.035) 100%);
+  backdrop-filter:blur(28px) saturate(1.4);
+  -webkit-backdrop-filter:blur(28px) saturate(1.4);
+  border:1px solid var(--glass-border);
+  border-top-color:var(--glass-top);
+  box-shadow:0 1px 0 inset rgba(255,255,255,0.10),0 8px 32px rgba(0,0,0,0.35);
+}
+.accent-glass{
+  background:linear-gradient(160deg, var(--accent-smoke) 0%, rgba(255,255,255,0.03) 100%);
+  backdrop-filter:blur(28px) saturate(1.4);
+  -webkit-backdrop-filter:blur(28px) saturate(1.4);
+  border:1px solid rgba(var(--accent-rgb),0.2);
+  border-top-color:rgba(var(--accent-rgb),0.35);
+  box-shadow:0 0 0 0 transparent, 0 1px 0 inset rgba(var(--accent-rgb),0.15), 0 8px 32px rgba(0,0,0,0.35);
+}
+
+/* ============================================================
+   HEADER  (exact copy from home)
+   ============================================================ */
+.site-header{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  height:calc(var(--header-h) + env(safe-area-inset-top, 0px));
+  display:flex;align-items:flex-end;justify-content:space-between;
+  padding:0 16px;
+  padding-top:env(safe-area-inset-top, 0px);
+  background:linear-gradient(180deg,rgba(255,255,255,0.08) 0%,rgba(255,255,255,0.03) 100%);
+  backdrop-filter:blur(32px) saturate(1.3);
+  -webkit-backdrop-filter:blur(32px) saturate(1.3);
+  border-bottom:1px solid rgba(255,255,255,0.08);
+}
+.site-header > *:not(.exile-island-wrap){ margin-bottom:7px; }
+.logo{display:flex;align-items:center;gap:6px;text-decoration:none;}
+.logo-text{
+  font-size:15px;font-weight:800;letter-spacing:3.5px;text-transform:uppercase;
+  background:linear-gradient(120deg,#fff 20%,var(--amber-light) 55%,var(--violet) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+/* Community pill */
+.community-pill{
+  display:flex;align-items:center;gap:5px;
+  background:rgba(201,123,58,0.12);border:1px solid rgba(201,123,58,0.28);
+  border-radius:20px;padding:4px 10px 4px 8px;cursor:pointer;text-decoration:none;
+  transition:background 0.18s,transform 0.15s;flex-shrink:0;
+}
+.community-pill:hover{background:rgba(201,123,58,0.2);transform:scale(1.02);}
+.community-pill:active{transform:scale(0.97);}
+.community-pill svg{width:13px;height:13px;stroke:var(--amber-light);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
+.community-pill span{font-size:11px;font-weight:700;color:var(--amber-light);letter-spacing:0.3px;}
+/* EXILE ISLAND */
+.exile-island-wrap{position:absolute;left:50%;transform:translateX(-50%);bottom:7px;display:flex;flex-direction:column;align-items:center;z-index:210;}
+.exile-island{
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  max-width:36px;height:30px;padding:0 9px;position:relative;border-radius:22px;
+  cursor:pointer;user-select:none;
+  background:rgba(255,255,255,0.08);
+  backdrop-filter:blur(20px) saturate(1.8) brightness(1.1);
+  -webkit-backdrop-filter:blur(20px) saturate(1.8) brightness(1.1);
+  border:1px solid rgba(255,255,255,0.22);border-bottom-color:rgba(255,255,255,0.08);
+  box-shadow:0 1px 0 inset rgba(255,255,255,0.35),0 -1px 0 inset rgba(0,0,0,0.15),0 4px 20px rgba(0,0,0,0.28);
+  transition:max-width 0.35s cubic-bezier(0.34,1.15,0.64,1),border-radius 0.35s cubic-bezier(0.34,1.15,0.64,1),box-shadow 0.2s;
+  overflow:hidden;white-space:nowrap;
+}
+.exile-island:active{opacity:0.82;}
+.exile-island.open{max-width:180px;border-radius:14px;box-shadow:0 1px 0 inset rgba(255,255,255,0.35),0 -1px 0 inset rgba(0,0,0,0.15),0 6px 28px rgba(155,89,182,0.22),0 4px 20px rgba(0,0,0,0.28);}
+.island-expanded-content{display:flex;align-items:center;gap:6px;opacity:0;transition:opacity 0.15s 0s;white-space:nowrap;overflow:hidden;min-width:0;}
+.exile-island.open .island-expanded-content{opacity:1;transition-delay:0.2s;}
+.island-sword-icon{width:15px;height:15px;flex-shrink:0;}
+.island-label{font-size:10.5px;font-weight:700;letter-spacing:0.3px;color:var(--text-pri);overflow:hidden;text-overflow:ellipsis;}
+.island-online-dot{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 5px rgba(34,197,94,0.9);flex-shrink:0;}
+.island-unread-pip{position:absolute;top:-4px;right:-3px;width:15px;height:15px;border-radius:50%;background:var(--red);color:#fff;font-size:8px;font-weight:700;display:none;align-items:center;justify-content:center;border:2px solid var(--deep);}
+.island-unread-pip.show{display:flex;}
+/* Island drop panel */
+.island-panel{position:absolute;top:calc(100% + 7px);left:50%;transform:translateX(-50%) translateY(-8px) scale(0.96);transform-origin:top center;z-index:209;width:256px;background:rgba(255,255,255,0.055);backdrop-filter:blur(20px) saturate(1.8) brightness(1.05);-webkit-backdrop-filter:blur(20px) saturate(1.8) brightness(1.05);border:1px solid rgba(255,255,255,0.18);border-bottom-color:rgba(255,255,255,0.07);box-shadow:0 1px 0 inset rgba(255,255,255,0.28),0 12px 40px rgba(0,0,0,0.45);border-radius:18px;padding:0;opacity:0;pointer-events:none;overflow:hidden;transition:opacity 0.2s ease,transform 0.28s cubic-bezier(0.34,1.2,0.64,1);}
+.island-panel.open{opacity:1;pointer-events:all;transform:translateX(-50%) translateY(0) scale(1);}
+.cp-page{display:none;flex-direction:column;}.cp-page.active{display:flex;}
+.cp-header{display:flex;align-items:center;justify-content:space-between;padding:9px 12px 7px;border-bottom:1px solid rgba(255,255,255,0.07);}
+.cp-title{font-size:10px;font-weight:700;letter-spacing:0.7px;color:var(--text-dim);text-transform:uppercase;}
+.cp-nav-btns{display:flex;gap:3px;}
+.cp-nav-btn{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.08);color:var(--text-sec);font-size:10px;border-radius:6px;padding:3px 7px;cursor:pointer;transition:background 0.15s;}
+.cp-nav-btn:hover{background:rgba(255,255,255,0.13);}
+.cp-nav-btn.active{background:var(--violet-dim);border-color:rgba(155,89,182,0.3);color:var(--violet);}
+.cp-profile-row{display:flex;align-items:center;gap:9px;padding:9px 12px 6px;}
+.cp-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--amber),var(--violet));flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;}
+.cp-avatar img{width:100%;height:100%;object-fit:cover;}
+.cp-user-info{min-width:0;flex:1;}
+.cp-name{font-size:12.5px;font-weight:700;color:var(--text-pri);display:flex;align-items:center;gap:4px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.cp-sub{font-size:9.5px;color:var(--text-sec);margin-top:1px;display:flex;align-items:center;gap:4px;}
+.cp-badge-img{width:12px;height:12px;flex-shrink:0;}.cp-badge-img.err{display:none;}
+.cp-stats-row{display:grid;grid-template-columns:1fr 1fr 1fr;padding:4px 10px 8px;gap:5px;}
+.cp-stat{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:5px;text-align:center;}
+.cp-stat-val{font-size:12px;font-weight:800;color:var(--text-pri);}
+.cp-stat-lbl{font-size:7.5px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-top:1px;}
+.cp-xp-bar-wrap{padding:0 12px 9px;}
+.cp-xp-label{display:flex;justify-content:space-between;font-size:9.5px;color:var(--text-sec);margin-bottom:4px;}
+.cp-xp-bar{height:3px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;}
+.cp-xp-fill{height:100%;background:linear-gradient(90deg,var(--violet),var(--amber));border-radius:2px;transition:width 0.6s ease;}
+.cp-actions{padding:3px 8px 9px;display:flex;flex-direction:column;gap:1px;}
+.cp-action{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:9px;cursor:pointer;transition:background 0.15s;}
+.cp-action:hover{background:rgba(255,255,255,0.07);}
+.cp-action svg{width:14px;height:14px;flex-shrink:0;opacity:0.6;}
+.cp-action-label{font-size:12px;color:var(--text-pri);flex:1;}
+.cp-action.danger .cp-action-label{color:var(--red);}.cp-action.danger svg{opacity:0.7;}
+.cp-divider{height:1px;background:rgba(255,255,255,0.06);margin:0 12px;}
+.cp-notif-list{max-height:220px;overflow-y:auto;padding:5px 8px;}
+.cp-notif-empty{text-align:center;padding:22px 14px;font-size:11.5px;color:var(--text-dim);}
+.cp-setting-row{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;}
+.cp-setting-row .label{font-size:12px;color:var(--text-pri);}
+.toggle-sw{width:36px;height:20px;background:rgba(255,255,255,0.12);border-radius:10px;position:relative;cursor:pointer;border:none;transition:background 0.2s;flex-shrink:0;}
+.toggle-sw.on{background:var(--violet);}
+.toggle-sw::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform 0.2s;}
+.toggle-sw.on::after{transform:translateX(16px);}
+/* Back bar — sits just below the fixed header */
+.back-bar{
+  position:fixed;
+  top:calc(var(--header-h) + env(safe-area-inset-top, 0px));
+  left:0;right:0;z-index:190;
+  padding:8px 14px 4px;
+  pointer-events:none;
+}
+.back-btn{
+  display:inline-flex;align-items:center;gap:4px;
+  background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.10);
+  border-radius:20px;padding:5px 11px 5px 8px;
+  color:var(--text-sec);font-size:12px;font-weight:600;
+  text-decoration:none;cursor:pointer;
+  transition:background 0.15s,color 0.15s;
+  pointer-events:all;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+}
+.back-btn:hover{background:rgba(255,255,255,0.13);color:var(--text-pri);}
+.back-btn:active{transform:scale(0.96);}
+.back-btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+
+/* ============================================================
+   MAIN SCROLL CONTAINER
+   ============================================================ */
+.page-scroll{
+  padding-top:calc(var(--header-h) + env(safe-area-inset-top, 0px) + 38px);
+  padding-bottom:calc(var(--tab-h) + env(safe-area-inset-bottom, 0px) + 20px);
+  overflow-y:auto;
+  min-height:100vh;
+}
+
+/* ============================================================
+   BANNER / HERO
+   ============================================================ */
+.profile-banner{
+  width:100%;
+  height:200px;
+  position:relative;
+  overflow:hidden;
+  background:linear-gradient(135deg, var(--deep) 0%, var(--mid) 100%);
+}
+.banner-img{
+  width:100%;height:100%;
+  object-fit:cover;
+  display:block;
+}
+.banner-overlay{
+  position:absolute;inset:0;
+  background:linear-gradient(
+    to bottom,
+    rgba(var(--accent-rgb),0.12) 0%,
+    transparent 40%,
+    rgba(18,8,18,0.8) 100%
+  );
+}
+/* Accent border at bottom of banner */
+.banner-accent-line{
+  position:absolute;bottom:0;left:0;right:0;
+  height:2px;
+  background:linear-gradient(90deg, transparent 0%, var(--accent) 35%, var(--amber-light) 65%, transparent 100%);
+  box-shadow:0 0 12px rgba(var(--accent-rgb),0.6);
+}
+
+/* No banner state: colored gradient */
+.banner-no-img{
+  width:100%;height:200px;
+  position:relative;
+  overflow:hidden;
+}
+.banner-no-img-inner{
+  width:100%;height:100%;
+  background:linear-gradient(135deg,
+    rgba(var(--accent-rgb),0.25) 0%,
+    var(--deep) 60%
+  );
+}
+
+/* ============================================================
+   PROFILE HEADER SECTION
+   ============================================================ */
+.profile-head-wrap{
+  position:relative;
+  margin-top:-52px;
+  padding:0 16px 0 16px;
+}
+.profile-avatar-wrap{
+  width:88px;height:88px;
+  border-radius:50%;
+  border:3px solid var(--accent);
+  box-shadow:0 0 0 2px var(--deep), 0 0 20px rgba(var(--accent-rgb),0.5);
+  overflow:hidden;
+  background:linear-gradient(135deg, var(--accent), var(--amber));
+  display:flex;align-items:center;justify-content:center;
+  font-size:32px;font-weight:800;color:#fff;
+  position:relative;z-index:2;
+  transition:box-shadow 0.3s;
+}
+.profile-avatar-wrap img{width:100%;height:100%;object-fit:cover;}
+
+.profile-name-row{
+  display:flex;align-items:center;gap:6px;
+  margin-top:10px;
+  flex-wrap:wrap;
+}
+.profile-name{
+  font-size:22px;font-weight:800;color:var(--text-pri);
+  letter-spacing:-0.3px;
+}
+.badge-img{width:18px;height:18px;flex-shrink:0;}
+.badge-img.err{display:none;}
+
+.profile-tag{
+  font-size:13px;color:var(--text-sec);margin-top:2px;
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+}
+.online-dot{
+  width:7px;height:7px;border-radius:50%;
+  background:var(--green);
+  box-shadow:0 0 6px rgba(34,197,94,0.9);
+  display:inline-block;
+}
+.offline-dot{
+  width:7px;height:7px;border-radius:50%;
+  background:var(--text-dim);
+  display:inline-block;
+}
+
+/* Rank pill */
+.rank-pill{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 10px;border-radius:20px;
+  background:rgba(var(--accent-rgb),0.15);
+  border:1px solid rgba(var(--accent-rgb),0.3);
+  font-size:10px;font-weight:700;letter-spacing:0.4px;
+  color:var(--accent);margin-top:6px;
+  text-transform:uppercase;
+}
+
+.profile-bio{
+  font-size:13.5px;color:var(--text-sec);
+  margin-top:10px;line-height:1.55;
+  max-width:420px;
+}
+
+/* Spirit emoji */
+.spirit-emoji{
+  font-size:20px;margin-left:4px;
+}
+
+/* ============================================================
+   ACTION BUTTONS
+   ============================================================ */
+.action-row{
+  display:flex;gap:8px;
+  margin-top:14px;
+  flex-wrap:wrap;
+}
+.act-btn{
+  flex:1;min-width:100px;
+  padding:10px 16px;
+  border-radius:12px;
+  border:none;cursor:pointer;
+  font-size:13px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  transition:all 0.2s;
+  -webkit-tap-highlight-color:transparent;
+}
+.act-btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
+.act-btn.primary{
+  background:var(--accent);
+  color:#fff;
+  box-shadow:0 4px 16px rgba(var(--accent-rgb),0.4);
+}
+.act-btn.primary:hover{filter:brightness(1.12);}
+.act-btn.primary:active{transform:scale(0.97);}
+.act-btn.secondary{
+  background:rgba(255,255,255,0.08);
+  border:1px solid rgba(var(--accent-rgb),0.25);
+  color:var(--text-pri);
+}
+.act-btn.secondary:hover{background:rgba(var(--accent-rgb),0.12);}
+.act-btn.secondary:active{transform:scale(0.97);}
+.act-btn.danger{
+  background:rgba(239,68,68,0.12);
+  border:1px solid rgba(239,68,68,0.3);
+  color:var(--red);
+}
+
+/* ============================================================
+   STATS GRID
+   ============================================================ */
+.section{
+  margin:20px 16px 0;
+}
+.section-title{
+  font-size:10px;font-weight:700;letter-spacing:0.7px;
+  text-transform:uppercase;color:var(--text-dim);
+  margin-bottom:10px;
+  display:flex;align-items:center;gap:6px;
+}
+.section-title::after{
+  content:'';flex:1;height:1px;
+  background:linear-gradient(90deg, rgba(var(--accent-rgb),0.25) 0%, transparent 100%);
+}
+
+.stats-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:8px;
+}
+.stat-card{
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(var(--accent-rgb),0.12);
+  border-radius:12px;
+  padding:12px 8px;
+  text-align:center;
+  transition:border-color 0.2s;
+}
+.stat-card:hover{border-color:rgba(var(--accent-rgb),0.28);}
+.stat-val{font-size:18px;font-weight:800;color:var(--text-pri);}
+.stat-lbl{font-size:9px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);margin-top:3px;}
+
+/* XP bar */
+.xp-bar-section{
+  margin:16px 16px 0;
+}
+.xp-labels{
+  display:flex;justify-content:space-between;
+  font-size:11px;color:var(--text-sec);margin-bottom:6px;
+}
+.xp-rank-label{font-weight:700;color:var(--accent);}
+.xp-bar-track{
+  height:5px;
+  background:rgba(255,255,255,0.08);
+  border-radius:3px;overflow:hidden;
+}
+.xp-bar-fill{
+  height:100%;
+  background:linear-gradient(90deg, var(--accent) 0%, var(--amber-light) 100%);
+  border-radius:3px;
+  box-shadow:0 0 8px rgba(var(--accent-rgb),0.5);
+  transition:width 0.8s cubic-bezier(0.34,1.15,0.64,1);
+}
+
+/* ============================================================
+   INFO ROWS
+   ============================================================ */
+.info-list{
+  background:rgba(255,255,255,0.03);
+  border:1px solid rgba(var(--accent-rgb),0.10);
+  border-radius:16px;
+  overflow:hidden;
+}
+.info-row{
+  display:flex;align-items:center;gap:12px;
+  padding:12px 14px;
+  border-bottom:1px solid rgba(255,255,255,0.05);
+}
+.info-row:last-child{border-bottom:none;}
+.info-icon{
+  width:32px;height:32px;border-radius:9px;
+  background:rgba(var(--accent-rgb),0.10);
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.info-icon svg{width:16px;height:16px;fill:none;stroke:var(--accent);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.info-label{font-size:11px;color:var(--text-dim);margin-bottom:1px;}
+.info-value{font-size:13.5px;font-weight:600;color:var(--text-pri);}
+.info-value.contact-num{letter-spacing:0.8px;font-size:13px;}
+
+/* ============================================================
+   LEADERBOARD RANKS
+   ============================================================ */
+.lb-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;
+}
+.lb-card{
+  background:rgba(255,255,255,0.03);
+  border:1px solid rgba(var(--accent-rgb),0.12);
+  border-radius:12px;
+  padding:12px 14px;
+  display:flex;align-items:center;gap:10px;
+}
+.lb-icon{font-size:18px;flex-shrink:0;}
+.lb-info{}
+.lb-val{font-size:16px;font-weight:800;color:var(--text-pri);}
+.lb-lbl{font-size:9px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);}
+.trend-arrow{font-size:10px;margin-left:3px;}
+.trend-up{color:var(--green);}
+.trend-down{color:var(--red);}
+.trend-same{color:var(--text-dim);}
+
+/* ============================================================
+   BADGES
+   ============================================================ */
+.badges-wrap{
+  display:flex;flex-wrap:wrap;gap:6px;
+}
+.badge-chip{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:5px 10px;border-radius:20px;
+  font-size:11px;font-weight:600;
+  cursor:default;
+}
+.badge-chip.bronze  {background:rgba(180,100,50,0.15); border:1px solid rgba(180,100,50,0.3);  color:#c8804a;}
+.badge-chip.silver  {background:rgba(160,160,180,0.12); border:1px solid rgba(160,160,180,0.28); color:#b8b8cc;}
+.badge-chip.gold    {background:rgba(215,165,30,0.15);  border:1px solid rgba(215,165,30,0.32);  color:#d4a827;}
+.badge-chip.platinum{background:rgba(100,180,220,0.12); border:1px solid rgba(100,180,220,0.3);  color:#7ec4d8;}
+.badge-chip.diamond {background:rgba(120,200,255,0.12); border:1px solid rgba(120,200,255,0.3);  color:#90d4ff;}
+.badge-chip.legendary{background:rgba(var(--accent-rgb),0.15); border:1px solid rgba(var(--accent-rgb),0.35); color:var(--accent);}
+
+/* ============================================================
+   PUBLIC GROUPS
+   ============================================================ */
+.groups-list{display:flex;flex-direction:column;gap:8px;}
+.group-card{
+  display:flex;align-items:center;gap:12px;
+  background:rgba(255,255,255,0.035);
+  border:1px solid rgba(var(--accent-rgb),0.10);
+  border-radius:14px;
+  padding:12px 14px;
+  cursor:pointer;
+  transition:background 0.15s,border-color 0.15s;
+  text-decoration:none;
+}
+.group-card:hover{background:rgba(var(--accent-rgb),0.07);border-color:rgba(var(--accent-rgb),0.22);}
+.group-avatar{
+  width:40px;height:40px;border-radius:12px;
+  background:linear-gradient(135deg,var(--accent),var(--amber));
+  flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;
+  font-size:16px;font-weight:800;color:#fff;
+}
+.group-avatar img{width:100%;height:100%;object-fit:cover;}
+.group-info{flex:1;min-width:0;}
+.group-name{font-size:13.5px;font-weight:700;color:var(--text-pri);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.group-sub{font-size:11px;color:var(--text-dim);margin-top:1px;}
+.group-type-tag{
+  font-size:9px;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;
+  padding:2px 8px;border-radius:8px;
+}
+.group-type-tag.space{background:rgba(155,89,182,0.15);color:var(--violet);}
+.group-type-tag.feed{background:rgba(201,123,58,0.15);color:var(--amber-light);}
+
+/* ============================================================
+   CONTROL PANEL (self-view only)
+   ============================================================ */
+.cp-section{
+  margin:20px 16px 0;
+  background:rgba(var(--accent-rgb),0.05);
+  border:1px solid rgba(var(--accent-rgb),0.18);
+  border-radius:16px;
+  overflow:hidden;
+}
+.cp-section-title{
+  font-size:10px;font-weight:700;letter-spacing:0.7px;text-transform:uppercase;
+  color:var(--accent);padding:12px 14px 8px;
+  border-bottom:1px solid rgba(var(--accent-rgb),0.12);
+  display:flex;align-items:center;gap:6px;
+}
+.cp-section-title svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.cp-action{
+  display:flex;align-items:center;gap:12px;
+  padding:11px 14px;border-bottom:1px solid rgba(255,255,255,0.04);
+  cursor:pointer;transition:background 0.15s;
+  text-decoration:none;
+}
+.cp-action:last-child{border-bottom:none;}
+.cp-action:hover{background:rgba(var(--accent-rgb),0.08);}
+.cp-action:active{background:rgba(var(--accent-rgb),0.14);}
+.cp-action-icon{
+  width:30px;height:30px;border-radius:8px;
+  background:rgba(var(--accent-rgb),0.12);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.cp-action-icon svg{width:15px;height:15px;fill:none;stroke:var(--accent);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.cp-action-label{flex:1;font-size:13.5px;color:var(--text-pri);font-weight:500;}
+.cp-action-arrow{color:var(--text-dim);}
+.cp-action.danger .cp-action-icon{background:rgba(239,68,68,0.1);}
+.cp-action.danger .cp-action-icon svg{stroke:var(--red);}
+.cp-action.danger .cp-action-label{color:var(--red);}
+
+/* Self private info */
+.private-info-row{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 14px;
+  background:rgba(255,255,255,0.02);
+  border-radius:8px;
+  margin:0 14px 10px;
+}
+.private-val{font-size:12px;color:var(--text-sec);}
+.private-icon{font-size:14px;}
+
+/* ============================================================
+   TAB BAR  (exact copy from home)
+   ============================================================ */
+.tab-bar{
+  position:fixed;bottom:0;left:0;right:0;z-index:200;
+  height:var(--tab-h);display:flex;align-items:center;padding:0 4px;
+  background:rgba(12,6,18,0.82);
+  backdrop-filter:blur(32px) saturate(1.4);-webkit-backdrop-filter:blur(32px) saturate(1.4);
+  border-top:1px solid rgba(255,255,255,0.08);
+  box-shadow:0 -2px 20px rgba(0,0,0,0.4);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+.tab-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;cursor:pointer;padding:8px 4px;border-radius:var(--r-md);
+  transition:background 0.15s;text-decoration:none;position:relative;
+}
+.tab-item:hover{background:rgba(255,255,255,0.055);}
+.tab-item svg{width:18px;height:18px;fill:none;stroke:var(--text-dim);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:stroke 0.2s;}
+.tab-item span{font-size:9px;color:var(--text-dim);font-weight:500;transition:color 0.2s;}
+.tab-item.active svg{stroke:var(--violet);}
+.tab-item.active span{color:var(--violet);font-weight:700;}
+.tab-active-pill{
+  position:absolute;top:3px;width:26px;height:3px;
+  background:var(--violet);border-radius:2px;
+  box-shadow:0 0 8px var(--violet-glow);
+}
+.tab-active-pill.amber{background:var(--amber-light);box-shadow:0 0 8px rgba(201,123,58,0.6);}
+
+/* Toast */
+.toast{
+  position:fixed;bottom:calc(var(--tab-h)+16px);left:50%;
+  transform:translateX(-50%) translateY(80px);
+  opacity:0;
+  background:rgba(239,68,68,0.9);color:#fff;
+  padding:9px 18px;border-radius:20px;font-size:12px;font-weight:500;
+  transition:transform 0.3s ease, opacity 0.3s ease;z-index:999;pointer-events:none;white-space:nowrap;
+}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+
+/* Banned overlay */
+.banned-overlay{
+  position:fixed;inset:0;z-index:500;
+  background:rgba(0,0,0,0.92);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;padding:32px;
+}
+.banned-icon{font-size:56px;}
+.banned-title{font-size:22px;font-weight:800;color:var(--red);}
+.banned-sub{font-size:14px;color:var(--text-sec);text-align:center;max-width:280px;}
+
+/* Loading state */
+.skeleton{
+  background:linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.05) 75%);
+  background-size:200% 100%;
+  animation:shimmer 1.4s infinite;
+  border-radius:8px;
+}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:rgba(var(--accent-rgb),0.2);border-radius:2px;}
+
+/* Not found state */
+.not-found{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:80px 32px;gap:12px;text-align:center;
+}
+.not-found-icon{font-size:56px;opacity:0.5;}
+.not-found-title{font-size:20px;font-weight:700;color:var(--text-sec);}
+.not-found-sub{font-size:13px;color:var(--text-dim);}
+</style>
+</head>
+<body>
+
+<!-- Dark mode init -->
+<script>(function(){ if(localStorage.getItem('theme')==='dark') document.body.classList.add('dark-mode'); })();</script>
+
+<div class="bg-base"></div>
+<div class="bg-glow" id="bg-glow"></div>
+<div class="bg-smoke" id="bg-smoke"></div>
+
+<!-- Background SVG -->
+<div class="bg-pattern" aria-hidden="true">
+<svg viewBox="0 0 390 844" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gp1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#9b59b6" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#c97b3a" stop-opacity="0.10"/>
+    </linearGradient>
+    <linearGradient id="gp2" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#c97b3a" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#9b59b6" stop-opacity="0.08"/>
+    </linearGradient>
+    <linearGradient id="gp3" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#9b59b6" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#e8a85c" stop-opacity="0.06"/>
+    </linearGradient>
+  </defs>
+  <g class="bp-sym" style="--op-from:0.55;--op-to:0.7;--op-mid:0.6;animation-duration:9.2s;animation-delay:-1.1s">
+    <rect x="18" y="48" width="62" height="36" rx="18" fill="url(#gp1)" stroke="rgba(155,89,182,0.18)" stroke-width="1"/>
+    <circle cx="18" cy="84" r="6" fill="url(#gp1)"/>
+  </g>
+  <g class="bp-sym" style="--op-from:0.35;--op-to:0.5;--op-mid:0.4;animation-duration:12s;animation-delay:-4.5s">
+    <rect x="28" y="102" width="38" height="22" rx="11" fill="url(#gp3)" stroke="rgba(201,123,58,0.15)" stroke-width="0.8"/>
+    <circle cx="28" cy="124" r="4" fill="url(#gp3)"/>
+  </g>
+  <g class="bp-sym" style="--op-from:0.45;--op-to:0.6;--op-mid:0.5;animation-duration:10.5s;animation-delay:-2.8s">
+    <rect x="292" y="62" width="76" height="42" rx="21" fill="url(#gp2)" stroke="rgba(201,123,58,0.18)" stroke-width="1"/>
+    <circle cx="368" cy="104" r="7" fill="url(#gp2)"/>
+  </g>
+  <g class="bp-sym" style="--op-from:0.3;--op-to:0.45;--op-mid:0.35;animation-duration:14.1s;animation-delay:-6s">
+    <rect x="12" y="310" width="54" height="30" rx="15" fill="url(#gp1)" stroke="rgba(155,89,182,0.14)" stroke-width="0.8"/>
+    <circle cx="12" cy="340" r="5" fill="url(#gp1)"/>
+  </g>
+  <g class="bp-sym" style="--op-from:0.38;--op-to:0.52;--op-mid:0.44;animation-duration:11.3s;animation-delay:-3.3s">
+    <rect x="300" y="280" width="68" height="38" rx="19" fill="url(#gp2)" stroke="rgba(201,123,58,0.16)" stroke-width="0.8"/>
+    <circle cx="368" cy="318" r="6" fill="url(#gp2)"/>
+  </g>
+  <g class="bp-sym" style="--op-from:0.2;--op-to:0.3;--op-mid:0.24;animation-duration:19s;animation-delay:-6.7s">
+    <g transform="translate(195,460)" fill="rgba(201,123,58,0.1)" stroke="rgba(201,123,58,0.22)" stroke-width="0.9" stroke-linejoin="round">
+      <polygon points="0,-14 3.5,-5 13,-5 5.5,1.5 8.5,11 0,5.5 -8.5,11 -5.5,1.5 -13,-5 -3.5,-5"/>
+    </g>
+  </g>
+  <g class="bp-sym" style="--op-from:0.3;--op-to:0.45;--op-mid:0.36;animation-duration:15s;animation-delay:-0.8s">
+    <g transform="translate(175,30) rotate(-35)" fill="none" stroke="rgba(155,89,182,0.28)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="0,-18 16,10 0,4 -16,10" fill="rgba(155,89,182,0.08)"/>
+      <line x1="0" y1="4" x2="0" y2="10"/>
+    </g>
+  </g>
+  <circle cx="142" cy="58" r="2.5" fill="rgba(201,123,58,0.25)"><animate attributeName="opacity" values="0.25;0.55;0.25" dur="4.2s" repeatCount="indefinite" begin="-1.1s"/></circle>
+  <circle cx="258" cy="132" r="2" fill="rgba(155,89,182,0.3)"><animate attributeName="opacity" values="0.3;0.6;0.3" dur="5.8s" repeatCount="indefinite" begin="-2.9s"/></circle>
+  <circle cx="62" cy="240" r="1.8" fill="rgba(155,89,182,0.22)"><animate attributeName="opacity" values="0.22;0.45;0.22" dur="6.4s" repeatCount="indefinite" begin="-4.1s"/></circle>
+  <circle cx="335" cy="478" r="2.2" fill="rgba(201,123,58,0.2)"><animate attributeName="opacity" values="0.2;0.42;0.2" dur="7.1s" repeatCount="indefinite" begin="-0.6s"/></circle>
+</svg>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- HEADER — exact copy from home -->
+<header class="site-header">
+  <a href="/" class="logo">
+    <svg width="22" height="22" viewBox="0 0 44 44" fill="none">
+      <defs>
+        <linearGradient id="sg" x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#e8a85c"/><stop offset="55%" stop-color="#c97b3a"/><stop offset="100%" stop-color="#9b59b6"/>
+        </linearGradient>
+        <linearGradient id="bg2" x1="22" y1="2" x2="22" y2="38" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#fff" stop-opacity="0.95"/><stop offset="60%" stop-color="#e8a85c"/><stop offset="100%" stop-color="#c97b3a"/>
+        </linearGradient>
+        <filter id="gf2"><feGaussianBlur stdDeviation="1.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      </defs>
+      <circle cx="22" cy="22" r="21" fill="url(#sg)" opacity="0.18"/>
+      <circle cx="22" cy="22" r="21" stroke="url(#sg)" stroke-width="1" opacity="0.45"/>
+      <g filter="url(#gf2)">
+        <polygon points="22,4 23.5,26 22,27.5 20.5,26" fill="url(#bg2)"/>
+        <polygon points="22,2 23.2,5.5 22,7 20.8,5.5" fill="#fff" opacity="0.95"/>
+      </g>
+      <g filter="url(#gf2)">
+        <rect x="13" y="26" width="18" height="3" rx="1.5" fill="url(#sg)" transform="rotate(-8,22,27.5)"/>
+        <circle cx="13.5" cy="26.5" r="1.5" fill="#c97b3a" transform="rotate(-8,22,27.5)"/>
+        <circle cx="30.5" cy="26.5" r="1.5" fill="#c97b3a" transform="rotate(-8,22,27.5)"/>
+      </g>
+      <rect x="21" y="29.5" width="2" height="8" rx="1" fill="url(#sg)" opacity="0.9"/>
+      <ellipse cx="22" cy="38.5" rx="2.5" ry="1.8" fill="#c97b3a" opacity="0.95"/>
+    </svg>
+    <div class="logo-text">EXILE</div>
+  </a>
+
+  <!-- EXILE ISLAND — centered -->
+  <div class="exile-island-wrap">
+    <div class="exile-island" id="exile-island">
+      <svg class="island-sword-icon" viewBox="0 0 24 24" fill="none">
+        <defs>
+          <linearGradient id="swordG" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#e8a85c"/><stop offset="100%" stop-color="#9b59b6"/>
+          </linearGradient>
+        </defs>
+        <path stroke="url(#swordG)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M14.5 17.5L3 6V3h3l11.5 11.5"/>
+        <path stroke="url(#swordG)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M13 19l6-6"/>
+        <path stroke="url(#swordG)" stroke-width="2" stroke-linecap="round" d="M16 16l4.5 4.5"/>
+        <path stroke="url(#swordG)" stroke-width="2" stroke-linecap="round" d="M7.5 7.5l-2.5 2.5"/>
+      </svg>
+      <div class="island-expanded-content">
+        <span class="island-label" id="island-name-label">EXILE</span>
+        <div class="island-online-dot" id="island-dot" style="display:none"></div>
+      </div>
+      <div class="island-unread-pip" id="island-pip"></div>
+    </div>
+    <!-- Drop panel -->
+    <div class="island-panel" id="island-panel">
+      <div class="cp-header">
+        <div class="cp-title" id="cp-page-title">Profile</div>
+        <div class="cp-nav-btns">
+          <button class="cp-nav-btn active" data-page="0"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></button>
+          <button class="cp-nav-btn" data-page="1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></button>
+          <button class="cp-nav-btn" data-page="2"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+        </div>
+      </div>
+      <!-- Page 0: Profile -->
+      <div class="cp-page active" id="cp-page-0">
+        <div class="cp-profile-row">
+          <div class="cp-avatar" id="cp-avatar">?</div>
+          <div class="cp-user-info">
+            <div class="cp-name" id="cp-name">Loading…</div>
+            <div class="cp-sub"><span id="cp-tag">—</span></div>
+          </div>
+        </div>
+        <div class="cp-stats-row">
+          <div class="cp-stat"><div class="cp-stat-val" id="cp-level">—</div><div class="cp-stat-lbl">Level</div></div>
+          <div class="cp-stat"><div class="cp-stat-val" id="cp-streaks">—</div><div class="cp-stat-lbl">Streak</div></div>
+          <div class="cp-stat"><div class="cp-stat-val" id="cp-reputation">—</div><div class="cp-stat-lbl">Rep</div></div>
+        </div>
+        <div class="cp-xp-bar-wrap">
+          <div class="cp-xp-label"><span id="cp-xp-progress">0 XP</span><span id="cp-xp-next">/ 100 XP</span></div>
+          <div class="cp-xp-bar"><div class="cp-xp-fill" id="cp-xp-fill" style="width:0%"></div></div>
+        </div>
+        <div class="cp-divider"></div>
+        <div class="cp-actions" id="cp-actions-auth">
+          <div class="cp-action" onclick="window.location.href='/me'">
+            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <div class="cp-action-label">My Profile</div>
+          </div>
+          <div class="cp-action" onclick="window.location.href='/settings.html'">
+            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <div class="cp-action-label">Settings</div>
+          </div>
+          <div class="cp-action danger" id="cp-logout">
+            <svg viewBox="0 0 24 24" stroke="var(--red)" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <div class="cp-action-label">Sign Out</div>
+          </div>
+        </div>
+        <!-- Shown when logged out -->
+        <div class="cp-actions" id="cp-actions-guest" style="display:none">
+          <div class="cp-action" onclick="window.location.href='/login'">
+            <svg viewBox="0 0 24 24" stroke="var(--violet)" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+            <div class="cp-action-label" style="color:var(--violet)">Sign In</div>
+          </div>
+        </div>
+      </div>
+      <!-- Page 1: Notifications -->
+      <div class="cp-page" id="cp-page-1">
+        <div class="cp-notif-list" id="cp-notif-list">
+          <div class="cp-notif-empty">No notifications</div>
+        </div>
+      </div>
+      <!-- Page 2: Settings -->
+      <div class="cp-page" id="cp-page-2">
+        <div class="cp-setting-row">
+          <div class="label">Push Notifications</div>
+          <button class="toggle-sw on" id="notif-toggle"></button>
+        </div>
+        <div class="cp-divider"></div>
+        <div class="cp-actions">
+          <div class="cp-action" onclick="window.location.href='/settings.html'">
+            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <div class="cp-action-label">All Settings</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Community pill -->
+  <a class="community-pill" href="/community.html">
+    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <span>Community</span>
+  </a>
+</header>
+
+<!-- BACK BUTTON — sits just below the header -->
+<div class="back-bar">
+  <a href="javascript:history.length > 1 ? history.back() : (window.location.href='/')" class="back-btn">
+    <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+    Back
+  </a>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="page-scroll" id="page-scroll">
+  <!-- Loading skeleton -->
+  <div id="loading-state">
+    <div style="height:200px" class="skeleton" style="border-radius:0;margin-bottom:60px"></div>
+    <div style="padding:0 16px;margin-top:60px">
+      <div class="skeleton" style="width:88px;height:88px;border-radius:50%;margin-bottom:12px"></div>
+      <div class="skeleton" style="width:180px;height:24px;margin-bottom:8px"></div>
+      <div class="skeleton" style="width:120px;height:16px;margin-bottom:8px"></div>
+      <div class="skeleton" style="width:280px;height:14px"></div>
+    </div>
+  </div>
+
+  <!-- Not found state -->
+  <div id="not-found-state" style="display:none">
+    <div class="not-found">
+      <div class="not-found-icon">👤</div>
+      <div class="not-found-title">User not found</div>
+      <div class="not-found-sub">This profile doesn't exist or has been removed.</div>
+    </div>
+  </div>
+
+  <!-- Profile content -->
+  <div id="profile-content" style="display:none">
+
+    <!-- Banner -->
+    <div id="banner-wrap">
+      <div class="banner-no-img" id="banner-no-img">
+        <div class="banner-no-img-inner" id="banner-no-img-inner"></div>
+        <div class="banner-accent-line" id="banner-accent-line-1"></div>
+      </div>
+      <div id="banner-with-img" style="display:none" class="profile-banner">
+        <img id="banner-img" class="banner-img" src="" alt="">
+        <div class="banner-overlay" id="banner-overlay"></div>
+        <div class="banner-accent-line" id="banner-accent-line-2"></div>
+      </div>
+    </div>
+
+    <!-- Profile head -->
+    <div class="profile-head-wrap">
+      <div class="profile-avatar-wrap" id="profile-avatar">?</div>
+      <div class="profile-name-row" id="profile-name-row">
+        <span class="profile-name" id="profile-name">Loading…</span>
+      </div>
+      <div class="profile-tag" id="profile-tag">
+        <span id="profile-username">@—</span>
+        <span id="online-indicator"></span>
+        <span id="last-seen-label"></span>
+      </div>
+      <div id="rank-pill-wrap"></div>
+      <div class="profile-bio" id="profile-bio"></div>
+
+      <!-- Action buttons (non-self) -->
+      <div class="action-row" id="action-row" style="display:none">
+        <button class="act-btn primary" id="btn-message" onclick="">
+          <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Message
+        </button>
+        <button class="act-btn secondary" id="btn-add-contact">
+          <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+          <span id="add-contact-label">Add</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- XP Bar -->
+    <div class="xp-bar-section" id="xp-bar-section">
+      <div class="xp-labels">
+        <span><span class="xp-rank-label" id="xp-rank-name">Newcomer</span> · Level <span id="xp-level">1</span></span>
+        <span id="xp-progress-label">0 / 100 XP</span>
+      </div>
+      <div class="xp-bar-track">
+        <div class="xp-bar-fill" id="xp-bar-fill" style="width:0%"></div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="section">
+      <div class="section-title">Stats</div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-val" id="stat-level">—</div>
+          <div class="stat-lbl">Level</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" id="stat-rep">—</div>
+          <div class="stat-lbl">Rep</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" id="stat-streak">—</div>
+          <div class="stat-lbl">Streak</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" id="stat-days">—</div>
+          <div class="stat-lbl">Days</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Info rows -->
+    <div class="section">
+      <div class="section-title">Info</div>
+      <div class="info-list" id="info-list">
+        <div class="info-row" id="info-contact-row" style="display:none">
+          <div class="info-icon"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.62 3.38 2 2 0 0 1 3.61 1.2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.81a16 16 0 0 0 6 6l.96-.96a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
+          <div>
+            <div class="info-label">Contact Number</div>
+            <div class="info-value contact-num" id="info-contact">—</div>
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+          <div>
+            <div class="info-label">Joined</div>
+            <div class="info-value" id="info-joined">—</div>
+          </div>
+        </div>
+        <div class="info-row" id="info-locality-row" style="display:none">
+          <div class="info-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
+          <div>
+            <div class="info-label">Location</div>
+            <div class="info-value" id="info-locality">—</div>
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+          <div>
+            <div class="info-label">Position</div>
+            <div class="info-value" id="info-position">Member</div>
+          </div>
+        </div>
+        <div class="info-row" id="info-mutual-row" style="display:none">
+          <div class="info-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+          <div>
+            <div class="info-label">Mutual Contacts</div>
+            <div class="info-value" id="info-mutual">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Leaderboard ranks -->
+    <div class="section" id="lb-section">
+      <div class="section-title">Rankings</div>
+      <div class="lb-grid">
+        <div class="lb-card">
+          <div class="lb-icon">⚡</div>
+          <div class="lb-info">
+            <div class="lb-val">#<span id="lb-xp">—</span><span id="lb-xp-trend" class="trend-arrow"></span></div>
+            <div class="lb-lbl">XP Rank</div>
+          </div>
+        </div>
+        <div class="lb-card">
+          <div class="lb-icon">🏅</div>
+          <div class="lb-info">
+            <div class="lb-val">#<span id="lb-rep">—</span></div>
+            <div class="lb-lbl">Reputation</div>
+          </div>
+        </div>
+        <div class="lb-card">
+          <div class="lb-icon">🔥</div>
+          <div class="lb-info">
+            <div class="lb-val">#<span id="lb-streak">—</span></div>
+            <div class="lb-lbl">Streaks</div>
+          </div>
+        </div>
+        <div class="lb-card">
+          <div class="lb-icon">🗓️</div>
+          <div class="lb-info">
+            <div class="lb-val">#<span id="lb-vet">—</span></div>
+            <div class="lb-lbl">Veterans</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Badges -->
+    <div class="section" id="badges-section" style="display:none">
+      <div class="section-title">Badges</div>
+      <div class="badges-wrap" id="badges-wrap"></div>
+    </div>
+
+    <!-- Public Groups -->
+    <div class="section" id="groups-section" style="display:none">
+      <div class="section-title">Spaces & Feeds</div>
+      <div class="groups-list" id="groups-list"></div>
+    </div>
+
+    <!-- Self-only: private info + control panel -->
+    <div id="self-section" style="display:none">
+      <div class="section">
+        <div class="section-title">Private</div>
+        <div class="info-list">
+          <div class="info-row">
+            <div class="info-icon"><svg viewBox="0 0 24 24"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6"/></svg></div>
+            <div>
+              <div class="info-label">Exiles</div>
+              <div class="info-value" id="self-exiles">0</div>
+            </div>
+          </div>
+          <div class="info-row">
+            <div class="info-icon"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+            <div>
+              <div class="info-label">Warnings</div>
+              <div class="info-value" id="self-warnings">0</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cp-section" style="margin:20px 16px 0">
+        <div class="cp-section-title">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Control Panel
+        </div>
+        <a class="cp-action" href="/settings.html">
+          <div class="cp-action-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
+          <span class="cp-action-label">Settings</span>
+          <svg class="cp-action-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </a>
+        <a class="cp-action" href="/bots.html">
+          <div class="cp-action-icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M9 11V7a3 3 0 0 1 6 0v4"/><circle cx="9" cy="16" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="16" r="1" fill="currentColor" stroke="none"/><line x1="12" y1="3" x2="12" y2="5"/></svg></div>
+          <span class="cp-action-label">My Bots</span>
+          <svg class="cp-action-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </a>
+        <div class="cp-action danger" id="btn-logout" style="cursor:pointer">
+          <div class="cp-action-icon"><svg viewBox="0 0 24 24" stroke="var(--red)"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></div>
+          <span class="cp-action-label">Sign Out</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom spacer -->
+    <div style="height:20px"></div>
+  </div>
+</div>
+
+<!-- TAB BAR — exact home layout -->
+<nav class="tab-bar">
+  <a class="tab-item" href="/" id="tab-chats">
+    <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    <span>My Chats</span>
+  </a>
+  <div class="tab-item" id="tab-contacts" onclick="handleContactsTab()">
+    <div class="tab-active-pill amber" id="tab-contacts-pill" style="display:none"></div>
+    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <span>Contacts</span>
+  </div>
+  <a class="tab-item" href="/explore.html">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+    <span>Explore</span>
+  </a>
+  <div class="tab-item active" id="tab-me">
+    <div class="tab-active-pill" id="tab-me-pill"></div>
+    <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    <span>Me</span>
+  </div>
+  <a class="tab-item" href="/settings.html">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    <span>Settings</span>
+  </a>
+</nav>
+
+<script>
+(function(){ if(localStorage.getItem('theme')==='dark') document.body.classList.add('dark-mode'); })();
+
+// ============================================================
+//  UTILS
+// ============================================================
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function initials(name) {
+  if (!name) return '?';
+  return name.trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+}
+function fmtDate(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
+}
+function fmtRelative(d) {
+  if (!d) return '';
+  const diff = Date.now() - new Date(d).getTime();
+  const m = Math.floor(diff/60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m/60);
+  if (h < 24) return `${h}h ago`;
+  const days = Math.floor(h/24);
+  if (days < 7) return `${days}d ago`;
+  return fmtDate(d);
+}
+
+let toastTimer = null;
+function showToast(msg, color = 'rgba(155,89,182,0.9)') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = color;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ============================================================
+//  ACCENT COLOR INJECTION
+// ============================================================
+function applyAccentColor(hex) {
+  if (!hex || !/^#[0-9a-fA-F]{3,6}$/.test(hex)) return;
+  // Parse hex to rgb
+  let r, g, b;
+  const h = hex.replace('#', '');
+  if (h.length === 3) {
+    r = parseInt(h[0]+h[0], 16);
+    g = parseInt(h[1]+h[1], 16);
+    b = parseInt(h[2]+h[2], 16);
+  } else {
+    r = parseInt(h.slice(0,2), 16);
+    g = parseInt(h.slice(2,4), 16);
+    b = parseInt(h.slice(4,6), 16);
+  }
+  const root = document.documentElement;
+  root.style.setProperty('--accent', hex);
+  root.style.setProperty('--accent-rgb', `${r},${g},${b}`);
+  root.style.setProperty('--accent-glow', `rgba(${r},${g},${b},0.35)`);
+  root.style.setProperty('--accent-dim', `rgba(${r},${g},${b},0.12)`);
+  root.style.setProperty('--accent-smoke', `rgba(${r},${g},${b},0.06)`);
+  // Also update the banner accent line color inline
+  const lines = document.querySelectorAll('.banner-accent-line');
+  lines.forEach(l => {
+    l.style.background = `linear-gradient(90deg, transparent 0%, ${hex} 35%, #e8a85c 65%, transparent 100%)`;
+    l.style.boxShadow = `0 0 12px rgba(${r},${g},${b},0.6)`;
+  });
+}
+
+// ============================================================
+//  ROUTING — detect if /user/:id or /me
+// ============================================================
+function getTargetId() {
+  const path = window.location.pathname;
+  // /user/<id_or_username>
+  const m = path.match(/^\/user\/(.+)$/i);
+  if (m) return m[1];
+  return null; // means "me"
+}
+
+// ============================================================
+//  ISLAND PANEL
+// ============================================================
+let _islandOpen = false;
+let _meLoggedIn = false;
+
+function initIsland() {
+  const islandEl = document.getElementById('exile-island');
+  const panelEl  = document.getElementById('island-panel');
+  const titles   = ['Profile', 'Notifications', 'Settings'];
+
+  islandEl.addEventListener('click', e => {
+    e.stopPropagation();
+    _islandOpen = !_islandOpen;
+    islandEl.classList.toggle('open', _islandOpen);
+    if (_islandOpen) setTimeout(() => panelEl.classList.add('open'), 80);
+    else panelEl.classList.remove('open');
+  });
+  document.addEventListener('click', e => {
+    if (_islandOpen && !panelEl.contains(e.target) && !islandEl.contains(e.target)) {
+      _islandOpen = false;
+      islandEl.classList.remove('open');
+      panelEl.classList.remove('open');
+    }
+  });
+  document.querySelectorAll('.cp-nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.page);
+      document.querySelectorAll('.cp-page').forEach((p,i) => p.classList.toggle('active', i===idx));
+      document.querySelectorAll('.cp-nav-btn').forEach((b,i) => b.classList.toggle('active', i===idx));
+      document.getElementById('cp-page-title').textContent = titles[idx];
+    });
+  });
+  const logoutBtn = document.getElementById('cp-logout');
+  if (logoutBtn) logoutBtn.addEventListener('click', async () => {
+    await fetch('/auth/logout', { method:'POST', credentials:'include' });
+    window.location.replace('/login');
+  });
+}
+
+function populateIsland(user) {
+  if (!user) {
+    document.getElementById('cp-name').textContent = 'Not signed in';
+    document.getElementById('cp-tag').textContent = '';
+    document.getElementById('cp-actions-auth').style.display = 'none';
+    document.getElementById('cp-actions-guest').style.display = 'flex';
+    return;
+  }
+  // Name + badges
+  const nameEl = document.getElementById('cp-name');
+  nameEl.innerHTML = '';
+  if (user.verified) { const i=document.createElement('img');i.src='/verified.png';i.className='cp-badge-img';i.onerror=()=>i.classList.add('err');nameEl.appendChild(i); }
+  const ns = document.createElement('span'); ns.textContent = user.name || 'Unknown'; nameEl.appendChild(ns);
+  if (user.premium) { const i=document.createElement('img');i.src='/premium.png';i.className='cp-badge-img';i.onerror=()=>i.classList.add('err');nameEl.appendChild(i); }
+
+  document.getElementById('cp-tag').textContent = user.username ? `@${user.username}` : '';
+  document.getElementById('cp-level').textContent   = user.level || '—';
+  document.getElementById('cp-streaks').textContent  = user.streaks || 0;
+  document.getElementById('cp-reputation').textContent = user.reputation || 0;
+
+  const li = user.levelInfo || {};
+  document.getElementById('cp-xp-progress').textContent = `${li.progressXp||0} XP`;
+  document.getElementById('cp-xp-next').textContent = `/ ${li.neededXp||0} XP`;
+  document.getElementById('cp-xp-fill').style.width = (li.progressPct||0) + '%';
+
+  // Avatar
+  const avEl = document.getElementById('cp-avatar');
+  if (user.profilePicture) { avEl.innerHTML = `<img src="${esc(user.profilePicture)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`; }
+  else { avEl.textContent = initials(user.name); }
+
+  // Island label = first name
+  const lbl = document.getElementById('island-name-label');
+  if (lbl) lbl.textContent = (user.name||'').split(' ')[0] || 'EXILE';
+
+  document.getElementById('island-dot').style.display = '';
+  document.getElementById('cp-actions-auth').style.display = 'flex';
+  document.getElementById('cp-actions-guest').style.display = 'none';
+}
+
+// ============================================================
+//  CONTACTS TAB — goes home; if logged out just go home too
+// ============================================================
+function handleContactsTab() {
+  window.location.href = '/';
+}
+
+// ============================================================
+//  LOAD PROFILE
+// ============================================================
+let myUserId = null;
+let viewedUserId = null;
+
+async function tryGetMe() {
+  try {
+    const r = await fetch('/api/me', { credentials:'include' });
+    if (!r.ok) return null;
+    const { user } = await r.json();
+    return user;
+  } catch { return null; }
+}
+
+async function loadProfile() {
+  const targetRaw = getTargetId();
+  const me = await tryGetMe();
+  if (me) { myUserId = me.userId; _meLoggedIn = true; }
+
+  // Always populate island (shows sign-in if guest)
+  populateIsland(me);
+
+  let profileData = null;
+
+  if (!targetRaw) {
+    // /me — must be logged in
+    if (!me) { window.location.replace('/login'); return; }
+    try {
+      const r = await fetch('/api/checkuser/me', { credentials:'include' });
+      if (!r.ok) throw new Error();
+      const { user } = await r.json();
+      profileData = user;
+    } catch {
+      showNotFound(); return;
+    }
+  } else {
+    // /user/:id — optional auth, redirect to username
+    try {
+      const r = await fetch(`/api/checkuser/${encodeURIComponent(targetRaw)}`, { credentials:'include' });
+      if (!r.ok) { showNotFound(); return; }
+      const { user } = await r.json();
+      profileData = user;
+      // Redirect /user/:userId → /user/:username
+      if (user.username && targetRaw !== user.username && targetRaw === user.userId) {
+        window.history.replaceState(null, '', `/user/${user.username}`);
+      }
+    } catch {
+      showNotFound(); return;
+    }
+  }
+
+  if (!profileData) { showNotFound(); return; }
+  viewedUserId = profileData.userId;
+  renderProfile(profileData, me);
+}
+
+function showNotFound() {
+  document.getElementById('loading-state').style.display = 'none';
+  document.getElementById('not-found-state').style.display = 'block';
+}
+
+// ============================================================
+//  RENDER
+// ============================================================
+function renderProfile(u, me) {
+  document.getElementById('loading-state').style.display = 'none';
+  document.getElementById('profile-content').style.display = 'block';
+  document.title = `EXILE — ${u.name || u.username}`;
+  const isSelf = me && me.userId === u.userId;
+
+  // Apply accent color
+  if (u.profileColor) applyAccentColor(u.profileColor);
+
+  // ── Banner ──
+  if (u.profileBanner) {
+    document.getElementById('banner-no-img').style.display = 'none';
+    const bw = document.getElementById('banner-with-img');
+    bw.style.display = 'block';
+    document.getElementById('banner-img').src = u.profileBanner;
+    // tint overlay with accent
+    if (u.profileColor) {
+      document.getElementById('banner-overlay').style.background =
+        `linear-gradient(to bottom, rgba(${u.profileColor.replace('#','').match(/.{2}/g).map(x=>parseInt(x,16)).join(',')},0.18) 0%, transparent 40%, rgba(18,8,18,0.8) 100%)`;
+    }
+  } else {
+    // Color the no-img banner
+    if (u.profileColor) {
+      const [r,g,b] = u.profileColor.replace('#','').match(/.{2}/g).map(x=>parseInt(x,16));
+      document.getElementById('banner-no-img-inner').style.background =
+        `linear-gradient(135deg, rgba(${r},${g},${b},0.35) 0%, var(--deep) 65%)`;
+    }
+  }
+
+  // ── Avatar ──
+  const avEl = document.getElementById('profile-avatar');
+  if (u.profilePicture) {
+    avEl.innerHTML = `<img src="${esc(u.profilePicture)}" alt="">`;
+  } else {
+    avEl.textContent = initials(u.name);
+  }
+
+  // ── Name row ──
+  const nameRow = document.getElementById('profile-name-row');
+  nameRow.innerHTML = '';
+  const nameSpan = document.createElement('span');
+  nameSpan.className = 'profile-name';
+  nameSpan.textContent = u.name || u.username;
+  nameRow.appendChild(nameSpan);
+  if (u.verified) {
+    const img = document.createElement('img');
+    img.src = '/verified.png'; img.className = 'badge-img'; img.alt = '';
+    img.onerror = () => img.classList.add('err');
+    nameRow.appendChild(img);
+  }
+  if (u.premium) {
+    const img = document.createElement('img');
+    img.src = '/premium.png'; img.className = 'badge-img'; img.alt = '';
+    img.onerror = () => img.classList.add('err');
+    nameRow.appendChild(img);
+  }
+  if (u.spiritEmoji) {
+    const span = document.createElement('span');
+    span.className = 'spirit-emoji';
+    span.textContent = u.spiritEmoji;
+    nameRow.appendChild(span);
+  }
+
+  // ── Tag & online ──
+  document.getElementById('profile-username').textContent = u.username ? `@${u.username}` : '';
+  const onlineEl = document.getElementById('online-indicator');
+  const lastSeenEl = document.getElementById('last-seen-label');
+  if (u.status === 'online') {
+    onlineEl.innerHTML = '<span class="online-dot"></span>';
+    lastSeenEl.textContent = 'Online';
+  } else {
+    onlineEl.innerHTML = '<span class="offline-dot"></span>';
+    lastSeenEl.textContent = u.lastSeen ? `Last seen ${fmtRelative(u.lastSeen)}` : 'Offline';
+  }
+
+  // ── Rank pill ──
+  if (u.rank) {
+    document.getElementById('rank-pill-wrap').innerHTML =
+      `<div class="rank-pill">⚔️ ${esc(u.rank.label)}</div>`;
+  }
+
+  // ── Bio ──
+  const bioEl = document.getElementById('profile-bio');
+  bioEl.textContent = u.description || (isSelf ? 'No bio yet — add one in settings.' : '');
+  bioEl.style.display = u.description || isSelf ? '' : 'none';
+
+  // ── Action buttons ──
+  if (!isSelf) {
+    const ar = document.getElementById('action-row');
+    ar.style.display = 'flex';
+    const msgBtn   = document.getElementById('btn-message');
+    const addBtn   = document.getElementById('btn-add-contact');
+    const addLabel = document.getElementById('add-contact-label');
+
+    if (!me) {
+      // Not logged in — redirect to login on click
+      msgBtn.onclick = () => { showToast('Sign in to message'); setTimeout(() => window.location.href='/login', 900); };
+      addBtn.onclick = () => { showToast('Sign in to add contacts'); setTimeout(() => window.location.href='/login', 900); };
+      msgBtn.style.opacity = '0.55';
+      addBtn.style.opacity = '0.55';
+      addLabel.textContent = 'Add';
+    } else {
+      msgBtn.onclick = () => { window.location.href = `/chat/${u.userId}`; };
+      if (u.isContact) {
+        addLabel.textContent = 'In Contacts';
+        addBtn.disabled = true;
+        addBtn.style.opacity = '0.5';
+      } else {
+        addLabel.textContent = 'Add';
+        addBtn.onclick = () => addContact(u.userId, addBtn, addLabel);
+      }
+    }
+  }
+
+  // ── XP bar ──
+  const li = u.levelInfo || {};
+  document.getElementById('xp-level').textContent = u.level || li.level || 1;
+  document.getElementById('xp-rank-name').textContent = u.rank?.label || 'Newcomer';
+  document.getElementById('xp-progress-label').textContent = `${li.progressXp||0} / ${li.neededXp||0} XP`;
+  setTimeout(() => {
+    document.getElementById('xp-bar-fill').style.width = (li.progressPct || 0) + '%';
+  }, 100);
+
+  // ── Stats ──
+  document.getElementById('stat-level').textContent = u.level || li.level || 1;
+  document.getElementById('stat-rep').textContent = u.reputation || 0;
+  document.getElementById('stat-streak').textContent = u.streaks || 0;
+  document.getElementById('stat-days').textContent = u.daysOnline || 0;
+
+  // ── Info rows ──
+  if (u.contactNumber) {
+    document.getElementById('info-contact-row').style.display = '';
+    document.getElementById('info-contact').textContent = u.contactNumber;
+  }
+  document.getElementById('info-joined').textContent = fmtDate(u.dateJoined);
+  if (u.locality && (u.showLocality || isSelf)) {
+    document.getElementById('info-locality-row').style.display = '';
+    document.getElementById('info-locality').textContent = u.locality;
+  }
+  document.getElementById('info-position').textContent =
+    u.position ? (u.position.charAt(0).toUpperCase() + u.position.slice(1)) : 'Member';
+  if (!isSelf && u.mutualContacts !== null && u.mutualContacts !== undefined) {
+    document.getElementById('info-mutual-row').style.display = '';
+    document.getElementById('info-mutual').textContent = u.mutualContacts;
+  }
+
+  // ── Leaderboard ──
+  const lb = u.leaderboardRanks || {};
+  document.getElementById('lb-xp').textContent = lb.xp || '—';
+  document.getElementById('lb-rep').textContent = lb.reputation || '—';
+  document.getElementById('lb-streak').textContent = lb.streaks || '—';
+  document.getElementById('lb-vet').textContent = lb.veterans || '—';
+  if (u.xpTrend) {
+    const tEl = document.getElementById('lb-xp-trend');
+    if (u.xpTrend === 'up') { tEl.textContent = ' ↑'; tEl.className = 'trend-arrow trend-up'; }
+    else if (u.xpTrend === 'down') { tEl.textContent = ' ↓'; tEl.className = 'trend-arrow trend-down'; }
+    else { tEl.textContent = ' →'; tEl.className = 'trend-arrow trend-same'; }
+  }
+
+  // ── Badges ──
+  if (u.badges && u.badges.length > 0) {
+    document.getElementById('badges-section').style.display = '';
+    const bw = document.getElementById('badges-wrap');
+    bw.innerHTML = '';
+    u.badges.slice(0, 20).forEach(b => {
+      const chip = document.createElement('div');
+      chip.className = `badge-chip ${b.tier || 'bronze'}`;
+      chip.title = b.desc || '';
+      chip.innerHTML = `${b.icon || '🏅'} ${esc(b.label)}`;
+      bw.appendChild(chip);
+    });
+  }
+
+  // ── Groups ──
+  const allGroups = [...(u.spaces||[]).map(s=>({...s,gtype:'space',id:s.spaceId})),
+                     ...(u.feeds||[]).map(f=>({...f,gtype:'feed',id:f.feedId}))];
+  if (allGroups.length > 0) {
+    document.getElementById('groups-section').style.display = '';
+    const gl = document.getElementById('groups-list');
+    gl.innerHTML = '';
+    allGroups.forEach(g => {
+      const card = document.createElement('a');
+      card.className = 'group-card';
+      card.href = `/${g.gtype}/${g.id}`;
+      const av = document.createElement('div');
+      av.className = 'group-avatar';
+      if (g.profileImage) av.innerHTML = `<img src="${esc(g.profileImage)}" alt="">`;
+      else av.textContent = initials(g.name);
+      card.appendChild(av);
+      const info = document.createElement('div');
+      info.className = 'group-info';
+      info.innerHTML = `
+        <div class="group-name">${esc(g.name)}</div>
+        <div class="group-sub">${g.memberCount || 0} members</div>
+      `;
+      card.appendChild(info);
+      const tag = document.createElement('div');
+      tag.className = `group-type-tag ${g.gtype}`;
+      tag.textContent = g.gtype;
+      card.appendChild(tag);
+      gl.appendChild(card);
+    });
+  }
+
+  // ── Self section ──
+  if (isSelf) {
+    document.getElementById('self-section').style.display = '';
+    document.getElementById('self-exiles').textContent = u.exiles || 0;
+    document.getElementById('self-warnings').textContent = u.warningCount || 0;
+
+    document.getElementById('btn-logout').addEventListener('click', async () => {
+      await fetch('/auth/logout', { method:'POST', credentials:'include' });
+      window.location.replace('/login');
+    });
+  }
+}
+
+// ============================================================
+//  ADD CONTACT
+// ============================================================
+async function addContact(userId, btn, labelEl) {
+  btn.disabled = true;
+  labelEl.textContent = '…';
+  try {
+    const r = await fetch(`/api/contacts/${userId}`, { method:'POST', credentials:'include' });
+    const data = await r.json();
+    if (r.ok) {
+      labelEl.textContent = 'Added ✓';
+      btn.style.background = 'rgba(34,197,94,0.15)';
+      btn.style.borderColor = 'rgba(34,197,94,0.3)';
+      showToast('Contact added!', 'rgba(34,197,94,0.9)');
+    } else {
+      labelEl.textContent = 'Add';
+      btn.disabled = false;
+      showToast(data.error || 'Failed', 'rgba(239,68,68,0.9)');
+    }
+  } catch {
+    labelEl.textContent = 'Add';
+    btn.disabled = false;
+    showToast('Network error', 'rgba(239,68,68,0.9)');
+  }
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  initIsland();
+  loadProfile();
+});
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js")
+      .then(() => {}).catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
