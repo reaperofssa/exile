@@ -1288,7 +1288,28 @@ app.get("/user/:id", async (req, res) => {
 
     if (user && user.banned) {
       // Banned user — still serve the page (it'll show not found)
-      return res.sendFile(path.join(__dirname, "public", "me.html"));
+      return res.sendFile(path.join(__dirname, "public", "Me.html"));
+    }
+
+    if (user && user.username && raw !== user.username && raw === user.userId) {
+      // Redirect numeric userId → username
+      return res.redirect(301, `/user/${user.username}`);
+    }
+  } catch { /* ignore, just serve page */ }
+  res.sendFile(path.join(__dirname, "public", "Me.html"));
+});
+
+app.get("/u/:id", async (req, res) => {
+  const raw = req.params.id;
+  // Try to resolve userId → username for canonical URL
+  try {
+    const user = await db.collection("users").findOne({
+      $or: [{ userId: raw }, { usernameLower: raw.toLowerCase() }],
+    }, { projection: { username: 1, userId: 1, banned: 1 } });
+
+    if (user && user.banned) {
+      // Banned user — still serve the page (it'll show not found)
+      return res.sendFile(path.join(__dirname, "public", "Me.html"));
     }
 
     if (user && user.username && raw !== user.username && raw === user.userId) {
