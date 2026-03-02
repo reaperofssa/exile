@@ -403,6 +403,100 @@ body{
 ::-webkit-scrollbar{width:4px;}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12);border-radius:2px;}
+/* ─── GROUP SHEET ─────────────────────────────────────────────────────── */
+#group-sheet-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:900;
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+  animation:overlayIn .18s ease;
+}
+@keyframes overlayIn{from{opacity:0}to{opacity:1}}
+
+#group-sheet{
+  position:fixed;bottom:0;left:0;right:0;z-index:901;
+  background:var(--mid);
+  border-top:1px solid var(--glass-border);
+  border-radius:24px 24px 0 0;
+  padding:10px 18px calc(env(safe-area-inset-bottom,0px) + 24px);
+  max-height:82vh;overflow-y:auto;
+  animation:sheetUp .28s cubic-bezier(.32,1.14,.56,1);
+}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes sheetDown{from{transform:translateY(0)}to{transform:translateY(100%)}}
+@keyframes overlayOut{from{opacity:1}to{opacity:0}}
+
+.gs-handle{
+  width:38px;height:4px;border-radius:2px;
+  background:rgba(255,255,255,0.15);margin:0 auto 18px;
+}
+.gs-header{display:flex;align-items:center;gap:13px;margin-bottom:12px;}
+.gs-av{
+  width:52px;height:52px;border-radius:14px;flex-shrink:0;
+  background:var(--surface);display:flex;align-items:center;justify-content:center;
+  font-size:18px;font-weight:800;color:var(--text-pri);overflow:hidden;
+}
+.gs-av img{width:100%;height:100%;object-fit:cover;}
+.gs-meta{flex:1;min-width:0;}
+.gs-name{font-size:17px;font-weight:800;color:var(--text-pri);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.gs-sub{font-size:12px;color:var(--text-sec);margin-top:2px;}
+.gs-privacy-badge{
+  font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;
+  letter-spacing:.5px;white-space:nowrap;
+}
+.gs-privacy-badge.public{background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.25);}
+.gs-privacy-badge.private{background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.2);}
+
+.gs-bio{
+  font-size:13px;color:var(--text-sec);line-height:1.55;
+  margin-bottom:14px;min-height:0;
+}
+.gs-stats{
+  display:flex;gap:18px;margin-bottom:18px;flex-wrap:wrap;
+}
+.gs-stat-item{
+  display:flex;flex-direction:column;align-items:flex-start;
+}
+.gs-stat-val{font-size:16px;font-weight:800;color:var(--text-pri);}
+.gs-stat-lbl{font-size:10.5px;color:var(--text-dim);margin-top:1px;}
+
+.gs-actions{display:flex;flex-direction:column;gap:10px;margin-bottom:16px;}
+
+.gs-btn{
+  width:100%;padding:14px;border-radius:14px;border:none;
+  font-size:14px;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:opacity .15s,transform .12s;
+}
+.gs-btn:active{transform:scale(0.98);opacity:.88;}
+.gs-btn.primary{background:var(--violet);color:#fff;}
+.gs-btn.secondary{background:var(--glass-bg);color:var(--text-pri);border:1px solid var(--glass-border);}
+.gs-btn.danger{background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.2);}
+.gs-btn:disabled{opacity:.38;pointer-events:none;}
+
+.gs-link-row{margin-top:4px;}
+.gs-link-label{font-size:10.5px;color:var(--text-dim);margin-bottom:6px;letter-spacing:.4px;text-transform:uppercase;}
+.gs-link-box{
+  display:flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,.04);border:1px solid var(--glass-border);
+  border-radius:10px;padding:9px 12px;
+}
+.gs-link-text{
+  flex:1;font-size:12px;color:var(--text-sec);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.gs-copy-btn{
+  flex-shrink:0;background:var(--violet);color:#fff;
+  border:none;border-radius:7px;padding:5px 11px;
+  font-size:11.5px;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;gap:5px;
+  transition:opacity .15s;
+}
+.gs-copy-btn:active{opacity:.7;}
+
+.gs-skel-btn{
+  height:50px;border-radius:14px;
+  background:linear-gradient(90deg,rgba(255,255,255,.04) 0%,rgba(255,255,255,.08) 50%,rgba(255,255,255,.04) 100%);
+  background-size:200% 100%;animation:shimmer 1.4s infinite;
+}
 </style>
 </head>
 <body>
@@ -1026,7 +1120,7 @@ function groupCardH(g, type){
   const avBg=avatarColor(id);
   const avHtml=g.profileImage?`<img src="${esc(g.profileImage)}" alt="">`:(type==='space'?'💬':'📡');
   const premDot=g.premium?'<span class="group-premium-dot"></span>':'';
-  return `<div class="group-card-h" onclick="joinGroup('${esc(id)}','${type}','${esc(g.joinLink||'')}')">
+  return `<div class="group-card-h" onclick="joinGroup('${esc(id)}','${type}')">
     <div class="group-av-h" style="background:${avBg}">${avHtml}</div>
     <div class="group-card-h-name">${premDot}${esc(g.name||'Unnamed')}</div>
     <div class="group-card-h-sub">${fmtNum(g.memberCount||0)} members</div>
@@ -1089,7 +1183,7 @@ function buildGroupCard(g){
   const type=g._type;
   const pill=`<span class="type-pill ${type}">${type}</span>`;
   const premium=g.premium?`<img src="/premium.png" class="badge-img" alt="P" onerror="this.classList.add('err')" style="width:12px;height:12px">`:'';
-  return `<div class="disc-card" onclick="joinGroup('${esc(g._id)}','${type}','${esc(g.joinLink||'')}')">
+  return `<div class="disc-card" onclick="joinGroup('${esc(g._id)}','${type}')">
     <div class="disc-av" style="background:${avBg}">${avHtml}</div>
     <div class="disc-info">
       <div class="disc-row1">
@@ -1105,10 +1199,7 @@ function buildGroupCard(g){
   </div>`;
 }
 
-function joinGroup(id, type, joinLink){
-  if(joinLink) window.location.href=`/group/${type}/${id}`;
-  else window.location.href=`/group/${type}/${id}`;
-}
+function joinGroup(id, type){ openGroupSheet(id, type); }
 
 document.getElementById('load-more-groups').addEventListener('click',()=>loadGroupsFull());
 
@@ -1167,7 +1258,7 @@ function buildUserCard(u){
   const verified=u.verified?`<img src="/verified.png" class="badge-img" alt="V" onerror="this.classList.add('err')" style="width:12px;height:12px">`:'';
   const premium=u.premium?`<img src="/premium.png" class="badge-img" alt="P" onerror="this.classList.add('err')" style="width:12px;height:12px">`:'';
   const self=u.userId===myUserId?`<span class="type-pill user">you</span>`:'';
-  return `<div class="disc-card" onclick="window.location.href='/profile/${esc(u.userId)}'">
+  return `<div class="disc-card" onclick="window.location.href='/user/${esc(u.userId)}'">
     <div class="disc-av" style="background:${avBg}">${avHtml}</div>
     <div class="disc-info">
       <div class="disc-row1">
@@ -1346,7 +1437,7 @@ function buildLbUserCard(e){
   const avHtml=e.profilePicture?`<img src="${esc(e.profilePicture)}" alt="">`:initials(e.name||'?');
   const scoreVal=lbSort==='streaks'?e.streaks:lbSort==='reputation'?e.reputation:lbSort==='veterans'?e.daysOnline:lbSort==='combined'?fmtNum(e.score||e.xp||0):fmtNum(e.xp||0);
   const scoreLbl=lbSort==='streaks'?'days':lbSort==='reputation'?'rep':lbSort==='veterans'?'days':lbSort==='combined'?'score':'XP';
-  return `<div class="lb-card${e.isSelf?' self':''}" onclick="window.location.href='/profile/${esc(e.userId)}'">
+  return `<div class="lb-card${e.isSelf?' self':''}" onclick="window.location.href='/user/${esc(e.userId)}'">
     <div class="lb-rank ${rankClass(e.rank)}">${e.rank<=3?['🥇','🥈','🥉'][e.rank-1]:e.rank}</div>
     <div class="lb-av" style="background:${avBg}">${avHtml}</div>
     <div class="lb-info">
@@ -1364,7 +1455,7 @@ function buildLbGroupCard(g, type){
   const avHtml=g.profileImage?`<img src="${esc(g.profileImage)}" alt="">`:initials(g.name||'?');
   const scoreVal=lbGroupSort==='xp'?fmtNum(g.xp||0):fmtNum(g.memberCount||0);
   const scoreLbl=lbGroupSort==='xp'?'XP':'members';
-  return `<div class="lb-card" onclick="joinGroup('${esc(id||'')}','${type}','')">
+  return `<div class="lb-card" onclick="joinGroup('${esc(id||'')}','${type}')">
     <div class="lb-rank ${rankClass(g.rank)}">${g.rank<=3?['🥇','🥈','🥉'][g.rank-1]:g.rank}</div>
     <div class="lb-av" style="background:${avBg}">${avHtml}</div>
     <div class="lb-info">
@@ -1460,6 +1551,196 @@ async function init(){
 }
 
 document.addEventListener('DOMContentLoaded',init);
+
+// ═══════════════════════════════════════════════════════════════════════
+//  GROUP SHEET
+// ═══════════════════════════════════════════════════════════════════════
+let _sheetGroup = null; // { id, type }
+let _sheetJoinLink = null;
+
+function openGroupSheet(id, type){
+  _sheetGroup = { id, type };
+  _sheetJoinLink = null;
+
+  const overlay = document.getElementById('group-sheet-overlay');
+  const sheet   = document.getElementById('group-sheet');
+  overlay.style.display = 'block';
+  sheet.style.display   = 'block';
+
+  // Reset to loading state
+  document.getElementById('gs-name').textContent    = 'Loading…';
+  document.getElementById('gs-sub').textContent     = '';
+  document.getElementById('gs-bio').textContent     = '';
+  document.getElementById('gs-stats').innerHTML     = '';
+  document.getElementById('gs-actions').innerHTML   = '<div class="gs-skel-btn"></div><div class="gs-skel-btn" style="opacity:.5"></div>';
+  document.getElementById('gs-link-row').style.display = 'none';
+  document.getElementById('gs-privacy-badge').style.display = 'none';
+  const avEl = document.getElementById('gs-av');
+  avEl.innerHTML = ''; avEl.style.background = 'var(--surface)';
+
+  // Fetch group info + membership status + join link in parallel
+  const col      = type === 'space' ? 'spaces' : 'feeds';
+  const idField  = type === 'space' ? 'spaceId' : 'feedId';
+  const infoUrl  = `/api/${col}/${id}`;
+  const memUrl   = `/api/${type}/${id}/me/status`;
+  const linkUrl  = `/api/${col}/${id}/join-link`;
+
+  Promise.all([
+    fetch(infoUrl).then(r=>r.json()).catch(()=>null),
+    fetch(memUrl,{credentials:'include'}).then(r=>r.json()).catch(()=>null),
+    fetch(linkUrl,{credentials:'include'}).then(r=>r.json()).catch(()=>null),
+  ]).then(([groupRes, memRes, linkRes]) => {
+    const g   = groupRes?.[type === 'space' ? 'space' : 'feed'];
+    if (!g) {
+      renderSheetError('Could not load group info.');
+      return;
+    }
+    renderSheet(g, type, memRes, linkRes);
+  });
+}
+
+function renderSheetError(msg){
+  document.getElementById('gs-name').textContent  = 'Oops';
+  document.getElementById('gs-bio').textContent   = msg;
+  document.getElementById('gs-actions').innerHTML = `<button class="gs-btn secondary" onclick="closeGroupSheet()">Close</button>`;
+}
+
+function renderSheet(g, type, mem, linkRes){
+  const id = type === 'space' ? g.spaceId : g.feedId;
+
+  // Avatar
+  const avEl = document.getElementById('gs-av');
+  avEl.style.background = avatarColor(id);
+  if(g.profileImage){
+    const img = new Image();
+    img.src = g.profileImage;
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:inherit';
+    img.onerror = () => { avEl.innerHTML = initials(g.name||'?'); };
+    avEl.innerHTML = ''; avEl.appendChild(img);
+  } else {
+    avEl.textContent = initials(g.name||'?');
+  }
+
+  // Name + sub
+  document.getElementById('gs-name').textContent = g.name || 'Unnamed';
+  const memberCount = g.memberCount || 0;
+  document.getElementById('gs-sub').textContent  =
+    `${fmtNum(memberCount)} member${memberCount!==1?'s':''} · ${type}`;
+
+  // Privacy badge
+  const isPrivate = g.isPrivate ?? false; // default public
+  const badge = document.getElementById('gs-privacy-badge');
+  badge.textContent = isPrivate ? '🔒 Private' : '🌐 Public';
+  badge.className   = `gs-privacy-badge ${isPrivate ? 'private' : 'public'}`;
+  badge.style.display = 'block';
+
+  // Bio
+  document.getElementById('gs-bio').textContent = g.bio || '';
+
+  // Stats
+  document.getElementById('gs-stats').innerHTML = `
+    <div class="gs-stat-item">
+      <span class="gs-stat-val">${fmtNum(g.memberCount||0)}</span>
+      <span class="gs-stat-lbl">Members</span>
+    </div>
+    <div class="gs-stat-item">
+      <span class="gs-stat-val">${fmtNum(g.xp||0)}</span>
+      <span class="gs-stat-lbl">XP</span>
+    </div>
+    ${g.premium ? `<div class="gs-stat-item"><span class="gs-stat-val" style="color:var(--amber-light)">✦ Premium</span><span class="gs-stat-lbl">Community</span></div>` : ''}
+  `;
+
+  // Actions
+  const isMember  = mem?.isMember  ?? false;
+  const isOwner   = mem?.isOwner   ?? false;
+  const isBanned  = mem?.isBanned  ?? false;
+  const chatPath  = type === 'space' ? `/space/${id}` : `/feed/${id}`;
+  const joinPath  = type === 'space' ? `/join-space/` : `/join-feed/`;
+
+  let actionsHtml = '';
+
+  if(isBanned){
+    actionsHtml = `<button class="gs-btn danger" disabled>🚫 You're banned from this ${type}</button>`;
+  } else if(isMember){
+    actionsHtml = `
+      <button class="gs-btn primary" onclick="window.location.href='${chatPath}'">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        Go to ${type === 'space' ? 'Space' : 'Feed'} Chat
+      </button>
+      <button class="gs-btn secondary" onclick="closeGroupSheet()">Close</button>`;
+  } else if(isPrivate){
+    actionsHtml = `
+      <button class="gs-btn secondary" disabled>🔒 Private — invite only</button>
+      <button class="gs-btn secondary" onclick="closeGroupSheet()">Close</button>`;
+  } else {
+    // Public + not a member — show join button using the join link
+    _sheetJoinLink = linkRes?.joinLink || null;
+    const joinId   = linkRes?.joinId   || null;
+    if(joinId){
+      const fullLink = `https://exile.nett.to${joinPath}${joinId}`;
+      _sheetJoinLink = fullLink;
+      actionsHtml = `
+        <button class="gs-btn primary" onclick="navigateJoin()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+          Join ${type === 'space' ? 'Space' : 'Feed'}
+        </button>
+        <button class="gs-btn secondary" onclick="closeGroupSheet()">Close</button>`;
+
+      // Show link row
+      const linkRow  = document.getElementById('gs-link-row');
+      const linkText = document.getElementById('gs-link-text');
+      linkText.textContent     = fullLink;
+      linkRow.style.display    = 'block';
+    } else {
+      actionsHtml = `
+        <button class="gs-btn secondary" onclick="closeGroupSheet()">Close</button>`;
+    }
+  }
+
+  document.getElementById('gs-actions').innerHTML = actionsHtml;
+}
+
+function navigateJoin(){
+  if(_sheetJoinLink) window.location.href = _sheetJoinLink;
+}
+
+function copyGroupLink(){
+  if(!_sheetJoinLink) return;
+  navigator.clipboard.writeText(_sheetJoinLink).then(()=>{
+    const btn = document.getElementById('gs-copy-btn');
+    const orig = btn.innerHTML;
+    btn.textContent = 'Copied!';
+    btn.style.background = 'var(--green)';
+    setTimeout(()=>{ btn.innerHTML = orig; btn.style.background = ''; }, 1800);
+  }).catch(()=>{
+    // Fallback for older browsers
+    const ta = document.createElement('textarea');
+    ta.value = _sheetJoinLink;
+    ta.style.cssText = 'position:fixed;opacity:0';
+    document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+  });
+}
+
+function closeGroupSheet(){
+  const overlay = document.getElementById('group-sheet-overlay');
+  const sheet   = document.getElementById('group-sheet');
+  sheet.style.animation   = 'sheetDown .22s cubic-bezier(.4,0,1,1) forwards';
+  overlay.style.animation = 'overlayOut .22s ease forwards';
+  setTimeout(()=>{
+    sheet.style.display   = 'none';
+    overlay.style.display = 'none';
+    sheet.style.animation = '';
+    overlay.style.animation = '';
+    _sheetGroup = null;
+    _sheetJoinLink = null;
+  }, 220);
+}
+// Close sheet on back gesture / Escape
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeGroupSheet(); });
+history.pushState(null,'','');
+window.addEventListener('popstate', ()=>{ closeGroupSheet(); history.pushState(null,'',''); });
 </script>
 <script src="/socket.io/socket.io.js"></script>
 <script>
@@ -1471,5 +1752,42 @@ if("serviceWorker" in navigator){
   });
 }
 </script>
+<!-- ═══════════════════════════════════════════════════════════ GROUP SHEET -->
+<div id="group-sheet-overlay" onclick="closeGroupSheet()" style="display:none"></div>
+<div id="group-sheet" role="dialog" aria-modal="true" style="display:none">
+  <div class="gs-handle"></div>
+
+  <!-- Header skeleton / real -->
+  <div class="gs-header">
+    <div class="gs-av" id="gs-av"></div>
+    <div class="gs-meta">
+      <div class="gs-name" id="gs-name">Loading…</div>
+      <div class="gs-sub" id="gs-sub"></div>
+    </div>
+    <div id="gs-privacy-badge" class="gs-privacy-badge" style="display:none"></div>
+  </div>
+
+  <div class="gs-bio" id="gs-bio"></div>
+
+  <div class="gs-stats" id="gs-stats"></div>
+
+  <!-- Actions -->
+  <div class="gs-actions" id="gs-actions">
+    <div class="gs-skel-btn"></div>
+  </div>
+
+  <!-- Join link row (public only) -->
+  <div class="gs-link-row" id="gs-link-row" style="display:none">
+    <div class="gs-link-label">Invite link</div>
+    <div class="gs-link-box">
+      <span class="gs-link-text" id="gs-link-text"></span>
+      <button class="gs-copy-btn" id="gs-copy-btn" onclick="copyGroupLink()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        Copy
+      </button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
