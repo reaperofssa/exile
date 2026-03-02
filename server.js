@@ -7496,6 +7496,128 @@ app.get("/api/explore/bots", async (req, res) => {
 });
 
 // ════════════════════════════════════════════════════════════════════════════
+//  GROUP SHEET APIS  (join-link lookup + privacy toggle)
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/spaces/:spaceId/join-link
+ * GET /api/feeds/:feedId/join-link
+ *
+ * Returns the public join link for a space or feed by its internal ID.
+ * Only returns the link if the group is public (isPrivate !== true).
+ * No auth required — used by the explore sheet to build the join URL.
+ *
+ * Response (public):  { joinLink, joinId, isPrivate: false }
+ * Response (private): { isPrivate: true }
+ * Response (not found): 404
+ */
+app.get("/api/spaces/:spaceId/join-link", async (req, res) => {
+  try {
+    const space = await db.collection("spaces").findOne(
+      { spaceId: req.params.spaceId },
+      { projection: { spaceId: 1, isPrivate: 1, joinId: 1, joinLink: 1, banned: 1 } }
+    );
+    if (!space)        return res.status(404).json({ error: "Space not found." });
+    if (space.banned)  return res.status(403).json({ error: "This space is unavailable." });
+    if (space.isPrivate) return res.json({ isPrivate: true });
+    res.json({
+      isPrivate: false,
+      joinId:    space.joinId,
+      joinLink:  space.joinLink || `${HOST}/join-space/${space.joinId}`,
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+app.get("/api/feeds/:feedId/join-link", async (req, res) => {
+  try {
+    const feed = await db.collection("feeds").findOne(
+      { feedId: req.params.feedId },
+      { projection: { feedId: 1, isPrivate: 1, joinId: 1, joinLink: 1, banned: 1 } }
+    );
+    if (!feed)        return res.status(404).json({ error: "Feed not found." });
+    if (feed.banned)  return res.status(403).json({ error: "This feed is unavailable." });
+    if (feed.isPrivate) return res.json({ isPrivate: true });
+    res.json({
+      isPrivate: false,
+      joinId:    feed.joinId,
+      joinLink:  feed.joinLink || `${HOST}/join-feed/${feed.joinId}`,
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+/**
+ * PATCH /api/spaces/:spaceId/privacy
+ * PATCH /api/feeds/:feedId/privacy
+ *
+ * Toggle a space or feed between public and private.
+ * Only the owner or an admin member may call this.
+ * Body: { isPrivate: true | false }   (explicit set)
+ *       {}                             (omit body → toggles current value)
+ *
+ * Defaults: if the document has no `isPrivate` field it is treated as public
+ *           (false), matching the legacy behaviour for all existing groups.
+ *
+ * Response: { isPrivate: <new value>, message: "..." }
+ */
+app.patch("/api/spaces/:spaceId/privacy", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const space  = await db.collection("spaces").findOne({ spaceId: req.params.spaceId });
+    if (!space) return res.status(404).json({ error: "Space not found." });
+    if (space.ownerId !== userId && !isAdmin(space, userId))
+      return res.status(403).json({ error: "Only the owner or an admin can change privacy." });
+
+    const current   = space.isPrivate ?? false;               // default: public
+    const next      = req.body.hasOwnProperty("isPrivate")
+                        ? !!req.body.isPrivate
+                        : !current;                           // toggle when not specified
+
+    await db.collection("spaces").updateOne(
+      { spaceId: req.params.spaceId },
+      { $set: { isPrivate: next, updatedAt: new Date().toISOString() } }
+    );
+
+    res.json({
+      isPrivate: next,
+      message: next ? "Space is now private." : "Space is now public.",
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+app.patch("/api/feeds/:feedId/privacy", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const feed   = await db.collection("feeds").findOne({ feedId: req.params.feedId });
+    if (!feed) return res.status(404).json({ error: "Feed not found." });
+    if (feed.ownerId !== userId && !isAdmin(feed, userId))
+      return res.status(403).json({ error: "Only the owner or an admin can change privacy." });
+
+    const current   = feed.isPrivate ?? false;
+    const next      = req.body.hasOwnProperty("isPrivate")
+                        ? !!req.body.isPrivate
+                        : !current;
+
+    await db.collection("feeds").updateOne(
+      { feedId: req.params.feedId },
+      { $set: { isPrivate: next, updatedAt: new Date().toISOString() } }
+    );
+
+    res.json({
+      isPrivate: next,
+      message: next ? "Feed is now private." : "Feed is now public.",
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
 //  STICKERS
 // ════════════════════════════════════════════════════════════════════════════
 
