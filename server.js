@@ -1274,7 +1274,7 @@ app.get("/api/me/banned", async (req, res) => {
 // ── Profile page routes ──
 // /me → my profile (serves me.html)
 app.get("/me", (_req, res) =>
-  res.sendFile(path.join(__dirname, "public", "me.html"))
+  res.sendFile(path.join(__dirname, "public", "Me.html"))
 );
 
 // /user/:id → redirect to /user/:username if given userId, else serve me.html
@@ -1296,7 +1296,7 @@ app.get("/user/:id", async (req, res) => {
       return res.redirect(301, `/user/${user.username}`);
     }
   } catch { /* ignore, just serve page */ }
-  res.sendFile(path.join(__dirname, "public", "me.html"));
+  res.sendFile(path.join(__dirname, "public", "Me.html"));
 });
 
 // ════════════════════════════════════════════════════════════════════════════
