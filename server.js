@@ -1256,6 +1256,49 @@ app.get("/", (req, res) => {
 // ── Health ──
 app.get("/api/connect", (_req, res) => res.json({ status: "ok", message: "Server is running." }));
 
+// ── Ban status check (used by home page to auto-logout banned users) ──
+app.get("/api/me/banned", async (req, res) => {
+  const token = req.cookies?.token;
+  if (!token) return res.json({ banned: false });
+  let decoded;
+  try { decoded = jwt.verify(token, JWT_SECRET); }
+  catch { return res.json({ banned: false }); }
+  try {
+    const user = await db.collection("users").findOne({ userId: decoded.userId }, { projection: { banned: 1 } });
+    return res.json({ banned: !!(user?.banned) });
+  } catch {
+    return res.json({ banned: false });
+  }
+});
+
+// ── Profile page routes ──
+// /me → my profile (serves me.html)
+app.get("/me", (_req, res) =>
+  res.sendFile(path.join(__dirname, "public", "me.html"))
+);
+
+// /user/:id → redirect to /user/:username if given userId, else serve me.html
+app.get("/user/:id", async (req, res) => {
+  const raw = req.params.id;
+  // Try to resolve userId → username for canonical URL
+  try {
+    const user = await db.collection("users").findOne({
+      $or: [{ userId: raw }, { usernameLower: raw.toLowerCase() }],
+    }, { projection: { username: 1, userId: 1, banned: 1 } });
+
+    if (user && user.banned) {
+      // Banned user — still serve the page (it'll show not found)
+      return res.sendFile(path.join(__dirname, "public", "me.html"));
+    }
+
+    if (user && user.username && raw !== user.username && raw === user.userId) {
+      // Redirect numeric userId → username
+      return res.redirect(301, `/user/${user.username}`);
+    }
+  } catch { /* ignore, just serve page */ }
+  res.sendFile(path.join(__dirname, "public", "me.html"));
+});
+
 // ════════════════════════════════════════════════════════════════════════════
 //  BOOTSTRAP — promote @saul to admin (public, one-shot)
 // ════════════════════════════════════════════════════════════════════════════
