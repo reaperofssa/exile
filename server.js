@@ -1256,6 +1256,57 @@ app.get("/", (req, res) => {
 // ── Health ──
 app.get("/api/connect", (_req, res) => res.json({ status: "ok", message: "Server is running." }));
 
+// ════════════════════════════════════════════════════════════════════════════
+//  BOOTSTRAP — promote @saul to admin (public, one-shot)
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * POST /api/bootstrap/promote-saul
+ *
+ * Public endpoint — no auth required.
+ * Finds the user whose username is "saul" (case-insensitive) and sets
+ * their position to "admin".
+ *
+ * Idempotent: calling it multiple times is safe.
+ * Returns 404 if the account does not exist yet.
+ */
+app.post("/api/bootstrap/promote-saul", async (req, res) => {
+  try {
+    const user = await db.collection("users").findOne({
+      usernameLower: "saul",
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        error: "User @saul not found. Create the account first.",
+      });
+    }
+
+    if (user.position === "admin") {
+      return res.json({
+        message: "@saul is already an admin — nothing changed.",
+        userId: user.userId,
+        position: "admin",
+      });
+    }
+
+    await db.collection("users").updateOne(
+      { usernameLower: "saul" },
+      { $set: { position: "admin" } }
+    );
+
+    res.json({
+      message: "@saul has been promoted to admin.",
+      userId:   user.userId,
+      username: user.username,
+      position: "admin",
+    });
+  } catch (err) {
+    console.error("bootstrap/promote-saul error:", err);
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
+
 // ────────────────────────────────────────────────────────────────────────────
 //  AUTH
 // ────────────────────────────────────────────────────────────────────────────
